@@ -1,0 +1,4306 @@
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import {
+  Users,
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
+  UserCheck,
+  Target,
+  FileCheck,
+  Building,
+  Home,
+  Monitor,
+  Briefcase,
+  DollarSign,
+  MapPin,
+  Bot,
+  User,
+  Loader,
+  MessageCircle,
+  Send,
+  RefreshCw,
+  Plus,
+  X,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Edit,
+  ChevronDown,
+  ChevronUp  
+} from "lucide-react";
+import DatePicker from "react-datepicker";
+import { Input } from "./ui/input";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { toast } from "sonner";
+import { ResourceRequestService } from "../services/RequestResourceService";
+import { OpportunityService } from "../services/OpportunityService";
+import { ChatService } from "../services/AI/ChatbotService";
+import { DemandService } from "../services/DemandService";
+import { SkillService } from "../services/SkillsService";
+
+// Search Filter Component
+const SearchFilter = ({ value, onChange, placeholder = "Search..." }) => (
+  <div className="relative w-full max-w-md">
+    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+    <Input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+    />
+  </div>
+);
+
+// Pagination Component
+const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems }) => {
+  const itemsPerPageOptions = [5, 10, 20, 50];
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-gray-50 rounded-lg">
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-gray-600">
+          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} requests
+        </span>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Requests per page:</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {itemsPerPageOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center gap-1"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Previous
+        </Button>
+        
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(pageNum)}
+                className={`w-8 h-8 p-0 ${currentPage === pageNum ? 'bg-blue-600 text-white' : ''}`}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center gap-1"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Resource Group Card Component
+const ResourceGroupCard = ({ 
+  group, 
+  type, // "demand" or "opportunity"
+  isExpanded,
+  onToggle,
+  selectedRequests,
+  toggleSelection,
+  handleViewRequest,
+  handleApproveRequest,
+  handleRejectRequest,
+  getStatusColor,
+  getPriorityColor,
+  getWorkModeIcon
+}) => {
+  const allSelected = group.requests.every(req => 
+    selectedRequests.includes(req.numericId)
+  );
+  const allActionable = group.requests.every(req => 
+    req.status === "Submitted"
+  );
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-100">
+        <CardContent className="p-6">
+          {/* Group Header */}
+          <div className="flex items-start mb-4">
+            {/* Select All for Group */}
+            {allActionable && (
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  group.requests.forEach(req => {
+                    if (req.status === "Submitted") {
+                      toggleSelection(req.numericId);
+                    }
+                  });
+                }}
+                className="mt-2 mr-3 w-6 h-5 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            
+            <div 
+              className="flex-1 cursor-pointer" 
+              onClick={() => onToggle(group.groupKey)}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                {/* <h3 className="text-xl font-bold text-gray-800">
+                  {type === "demand" 
+                    ? `Demand: DM-${group.groupId}` 
+                    : `Opportunity: GRP-${group.groupId}`}
+                </h3> */}
+                <h3 className="text-gray-800 text-xl font-bold">{group.title}</h3>
+                <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                  {type === "demand" ? "Demand" : "Opportunity"}
+                </Badge>
+                <Badge className={getPriorityColor(group.priority)}>
+                  {group.priority}
+                </Badge>
+                <Badge className={`${getStatusColor(group.status)} border`}>
+                  {group.status.replace("_", " ")}
+                </Badge>
+              </div>
+              
+              <div className="space-y-1">
+                {/* <h3 className="text-gray-700 text-xl font-bold">{group.title}</h3> */}
+                <p className="text-gray-600 text-sm">{group.description}</p>
+                
+                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-2">
+                  <span className="flex items-center gap-1">
+                    <Target className="w-4 h-4" />
+                    {group.clientName}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {group.requests.length} resource{group.requests.length > 1 ? 's' : ''}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {group.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {getWorkModeIcon(group.workMode)}
+                    {group.workMode}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <div className="flex items-center gap-2">
+                <div>
+                  
+                  <p className="font-mono font-bold text-blue-600">
+                    {type === "demand" ? `DM-${group.groupId}` : `GRP-${group.groupId}`}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle(group.groupKey);
+                  }}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Submitted: {group.submittedDate}
+              </p>
+            </div>
+          </div>
+          
+          {/* Group Actions - Only show if any request is actionable */}
+          {group.requests.some(req => req.status === "Submitted") && (
+            <div className="flex gap-3 mb-4">
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Get all actionable request IDs in this group
+                  const actionableIds = group.requests
+                    .filter(req => req.status === "Submitted")
+                    .map(req => req.numericId);
+                  if (actionableIds.length > 0) {
+                    // Select all actionable requests in this group
+                    actionableIds.forEach(id => {
+                      if (!selectedRequests.includes(id)) {
+                        toggleSelection(id);
+                      }
+                    });
+                    // Then open approval modal
+                    handleApproveRequest();
+                  }
+                }}
+                className="flex-1 bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve All ({group.requests.filter(req => req.status === "Submitted").length})
+              </Button>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Get all actionable request IDs in this group
+                  const actionableIds = group.requests
+                    .filter(req => req.status === "Submitted")
+                    .map(req => req.numericId);
+                  if (actionableIds.length > 0) {
+                    // Select all actionable requests in this group
+                    actionableIds.forEach(id => {
+                      if (!selectedRequests.includes(id)) {
+                        toggleSelection(id);
+                      }
+                    });
+                    // Then open rejection modal
+                    handleRejectRequest();
+                  }
+                }}
+                variant="destructive"
+                className="flex-1"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Reject All
+              </Button>
+            </div>
+          )}
+          
+          {/* Expanded Content */}
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mt-4 pt-4 border-t border-gray-200"
+            >
+              <div className="space-y-3">
+                {group.requests.map((request, index) => (
+                  <div key={request.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-start">
+                      <input
+                        type="checkbox"
+                        checked={selectedRequests.includes(request.numericId)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelection(request.numericId);
+                        }}
+                        className="mt-1 mr-3 w-5 h-4 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      
+                      <div 
+                        className="flex-1 cursor-pointer" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewRequest(request);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-800">{request.requestTitle}</h4>
+                          <Badge className={getPriorityColor(request.priority)} size="sm">
+                            {request.priority}
+                          </Badge>
+                          <Badge className={`${getStatusColor(request.status)} border text-xs`}>
+                            {request.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>Experience: {request.experienceRange}</p>
+                          {request.primarySkills?.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span>Skills:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {request.primarySkills.slice(0, 3).map((skill, idx) => (
+                                  <Badge key={idx} variant="outline" size="sm">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                                {request.primarySkills.length > 3 && (
+                                  <Badge variant="outline" size="sm">
+                                    +{request.primarySkills.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-blue-600">{request.requestId}</p>
+                        <p className="text-xs text-gray-500">Request ID</p>
+                      </div>
+                    </div>
+                    
+                    {request.status === "Submitted" && (
+                      <div className="flex gap-2 mt-3 pl-8">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveRequest(request);
+                          }}
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRejectRequest(request);
+                          }}
+                        >
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+// Statistics Cards Component
+const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunityRequests, demands }) => {
+  const getTabSpecificCounts = () => {
+    switch (activeTab) {
+      case "resource":
+        const pendingResource = resourceRequests.filter(req => req.status === "Submitted").length;
+        const processedResource = resourceRequests.filter(req => 
+          req.status === "Approved" || req.status === "Rejected"
+        ).length;
+        return [
+          {
+            title: "Total Resource Requests",
+            value: resourceRequests.length,
+            icon: FileCheck,
+            color: "from-purple-400 to-purple-600",
+            description: "All resource requests"
+          },
+          {
+            title: "Pending Review",
+            value: pendingResource,
+            icon: Clock,
+            color: "from-blue-400 to-blue-600",
+            description: "Awaiting approval"
+          },
+          {
+            title: "Processed",
+            value: processedResource,
+            icon: CheckCircle,
+            color: "from-green-400 to-green-600",
+            description: "Approved/Rejected"
+          },
+          {
+            title: "Linked to Demands",
+            value: resourceRequests.filter(req => req.demandId).length,
+            icon: Target,
+            color: "from-orange-400 to-orange-600",
+            description: "Demand-based requests"
+          }
+        ];
+      
+      case "opportunity":
+        const pendingOpportunity = opportunityRequests.filter(req => req.status === "Draft").length;
+        const processedOpportunity = opportunityRequests.filter(req => 
+          req.status === "HRApproved" || req.status === "Rejected"
+        ).length;
+        return [
+          {
+            title: "Opportunity Groups",
+            value: opportunityRequests.length,
+            icon: FileCheck,
+            color: "from-purple-400 to-purple-600",
+            description: "All opportunity groups"
+          },
+          {
+            title: "Pending Review",
+            value: pendingOpportunity,
+            icon: Clock,
+            color: "from-blue-400 to-blue-600",
+            description: "Draft groups"
+          },
+          {
+            title: "Processed",
+            value: processedOpportunity,
+            icon: CheckCircle,
+            color: "from-green-400 to-green-600",
+            description: "HR Approved/Rejected"
+          },
+          {
+            title: "Total Resources",
+            value: opportunityRequests.reduce((sum, group) => sum + (group.numberOfResources || 0), 0),
+            icon: Users,
+            color: "from-orange-400 to-orange-600",
+            description: "Total resources requested"
+          }
+        ];
+      
+      case "demands":
+        const openDemands = demands.filter(demand => demand.overallStatus === "Open").length;
+        const inProgressDemands = demands.filter(demand => demand.overallStatus === "InProgress").length;
+        const completedDemands = demands.filter(demand => demand.overallStatus === "Completed").length;
+        const rejectedDemands = demands.filter(demand => demand.overallStatus === "Rejected").length;
+        const holdDemands = demands.filter(demand => demand.overallStatus === "Hold").length;
+        const closedDemands = demands.filter(demand => demand.overallStatus === "Closed").length;
+        
+        return [
+          {
+            title: "Total Demands",
+            value: demands.length,
+            icon: FileCheck,
+            color: "from-purple-400 to-purple-600",
+            description: "All active demands"
+          },
+          {
+            title: "Open",
+            value: openDemands,
+            icon: Clock,
+            color: "from-blue-400 to-blue-600",
+            description: "Open demands"
+          },
+          {
+            title: "In Progress",
+            value: inProgressDemands,
+            icon: CheckCircle,
+            color: "from-yellow-400 to-yellow-600",
+            description: "Demands in progress"
+          },
+          {
+            title: "Completed",
+            value: completedDemands,
+            icon: CheckCircle,
+            color: "from-green-400 to-green-600",
+            description: "Fulfilled demands"
+          }
+        ];
+      
+      default:
+        return [
+          {
+            title: "Total Requests",
+            value: resourceRequests.length + opportunityRequests.length,
+            icon: FileCheck,
+            color: "from-purple-400 to-purple-600",
+            description: "All requests"
+          },
+          {
+            title: "Pending Review",
+            value: resourceRequests.filter(req => req.status === "Submitted").length + 
+                   opportunityRequests.filter(req => req.status === "Draft").length,
+            icon: Clock,
+            color: "from-blue-400 to-blue-600",
+            description: "Awaiting approval"
+          },
+          {
+            title: "Processed",
+            value: resourceRequests.filter(req => req.status === "Approved" || req.status === "Rejected").length +
+                   opportunityRequests.filter(req => req.status === "HRApproved" || req.status === "Rejected").length,
+            icon: CheckCircle,
+            color: "from-green-400 to-green-600",
+            description: "Approved/Rejected"
+          },
+          {
+            title: "Active Demands",
+            value: demands.length,
+            icon: Target,
+            color: "from-orange-400 to-orange-600",
+            description: "Current demand pipeline"
+          },
+        ];
+    }
+  };
+
+  const stats = getTabSpecificCounts();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.1 }}
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+    >
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <Card
+            key={index}
+            className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-200"
+            onClick={() => onTabChange(activeTab)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-gray-600 text-xs font-medium mb-1 truncate">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</p>
+                  <p className="text-xs text-gray-500 truncate">{stat.description}</p>
+                </div>
+                <div
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-lg flex-shrink-0 ml-2`}
+                >
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </motion.div>
+  );
+};
+
+// RequestTab Component with Pagination
+const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [isGroupApprovalModalOpen, setIsGroupApprovalModalOpen] = useState(false);
+  const [isGroupRejectionModalOpen, setIsGroupRejectionModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [approvalComments, setApprovalComments] = useState("");
+  const [groupApprovalComments, setGroupApprovalComments] = useState("");
+  const [groupRejectionReason, setGroupRejectionReason] = useState("");
+  const [actionSuccess, setActionSuccess] = useState({ show: false, type: "", requestId: "" });
+  const [sortField, setSortField] = useState("default");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [requestFilter, setRequestFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedRequests, setSelectedRequests] = useState([]);
+  const [expandedGroups, setExpandedGroups] = useState([]);
+  const [expandedAll, setExpandedAll] = useState(false);
+  
+  // Helper functions
+  const toggleSelection = (requestId) => {
+    setSelectedRequests(prev => 
+      prev.includes(requestId) 
+        ? prev.filter(id => id !== requestId)
+        : [...prev, requestId]
+    );
+  };
+
+  const toggleAllSelection = () => {
+    const actionableRequests = (type === "resource" 
+      ? requests.filter(req => req.status === "Submitted")
+      : requests.filter(req => req.status === "Draft")
+    ).map(req => req.numericId);
+    
+    if (selectedRequests.length === actionableRequests.length) {
+      setSelectedRequests([]);
+    } else {
+      setSelectedRequests(actionableRequests);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedRequests([]);
+  };
+
+  // Group management functions
+  const toggleGroup = (groupKey) => {
+    setExpandedGroups(prev => 
+      prev.includes(groupKey)
+        ? prev.filter(key => key !== groupKey)
+        : [...prev, groupKey]
+    );
+  };
+
+  const expandAll = () => {
+    if (!resourceGroupedRequests) return;
+    
+    const allGroupKeys = [
+      ...Object.keys(resourceGroupedRequests.demand || {}),
+      ...Object.keys(resourceGroupedRequests.opportunity || {}),
+      ...(resourceGroupedRequests.single?.map(req => req.groupKey) || [])
+    ];
+    setExpandedGroups(allGroupKeys);
+    setExpandedAll(true);
+  };
+
+  const collapseAll = () => {
+    setExpandedGroups([]);
+    setExpandedAll(false);
+  };
+
+  const toggleAllGroups = () => {
+    if (expandedAll) {
+      collapseAll();
+    } else {
+      expandAll();
+    }
+  };
+
+  // Filter requests based on selection
+  const filteredRequests = useMemo(() => {
+    if (type !== "resource") return requests;
+
+    return requests.filter(request => {
+      if (requestFilter === "all") return true;
+      if (requestFilter === "opportunity") return request.groupId !== null;
+      if (requestFilter === "demand") return request.demandId !== null;
+      if (requestFilter === "approved") return request.status === "Approved";
+      if (requestFilter === "rejected") return request.status === "Rejected";
+      return true;
+    });
+  }, [requests, requestFilter, type]);
+
+  // Apply search filter to requests
+  const searchedRequests = useMemo(() => {
+    if (!searchQuery.trim()) return filteredRequests;
+
+    const query = searchQuery.toLowerCase().trim();
+    return filteredRequests.filter(request => {
+      return (
+        request.requestId?.toLowerCase().includes(query) ||
+        `DM-${request.demandId}`.toLowerCase().includes(query) ||
+        `GRP-${request.groupId}`.toLowerCase().includes(query) ||
+        request.projectName?.toLowerCase().includes(query) ||
+        request.clientName?.toLowerCase().includes(query) ||
+        request.description?.toLowerCase().includes(query) ||
+        request.requestedBy?.toLowerCase().includes(query) ||
+        request.location?.toLowerCase().includes(query) ||
+        request.status?.toLowerCase().includes(query) ||
+        request.priority?.toLowerCase().includes(query)
+      );
+    });
+  }, [filteredRequests, searchQuery]);
+
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, requestFilter]);
+
+  const priorityOrder = { Urgent: 1, High: 2, Medium: 3, Low: 4 };
+
+  // Sort requests
+  const sortedRequests = useMemo(() => {
+    const sorted = [...searchedRequests];
+    if (sortField === "default") {
+      if (type === "opportunity") {
+        return sorted.sort((a, b) => b.numericId - a.numericId);
+      }
+      return sorted.sort((a, b) => {
+        const isAActionable = a.status === "Submitted";
+        const isBActionable = b.status === "Submitted";
+        if (isAActionable && !isBActionable) return -1;
+        if (!isAActionable && isBActionable) return 1;
+        return new Date(b.submittedDate) - new Date(a.submittedDate);
+      });
+    } else if (sortField === "id") {
+      return sorted.sort((a, b) =>
+        sortDirection === "asc"
+          ? a.id.localeCompare(b.id)
+          : b.id.localeCompare(a.id)
+      );
+    } else if (sortField === "priority") {
+      return sorted.sort((a, b) => {
+        const priorityA = priorityOrder[a.priority] || 5;
+        const priorityB = priorityOrder[b.priority] || 5;
+        return sortDirection === "asc" ? priorityA - priorityB : priorityB - priorityA;
+      });
+    } else if (sortField === "submittedDate") {
+      return sorted.sort((a, b) =>
+        sortDirection === "asc"
+          ? new Date(a.submittedDate) - new Date(b.submittedDate)
+          : new Date(b.submittedDate) - new Date(a.submittedDate)
+      );
+    }
+    return sorted;
+  }, [searchedRequests, sortField, sortDirection, type]);
+
+  // Group requests by demandId and groupId for resource tab
+  const resourceGroupedRequests = useMemo(() => {
+    if (type !== "resource" || requestFilter !== "all") return null;
+    
+    const groups = {
+      demand: {},
+      opportunity: {},
+      single: []
+    };
+    
+    sortedRequests.forEach(request => {
+      if (request.demandId) {
+        const key = `demand-${request.demandId}`;
+        if (!groups.demand[key]) {
+          groups.demand[key] = {
+            groupKey: key,
+            groupId: request.demandId,
+            title: request.requestTitle || request.demandTitle || request.projectName,
+            description: request.description,
+            clientName: request.clientName,
+            projectName: request.projectName,
+            priority: request.priority,
+            status: request.status,
+            submittedDate: request.submittedDate,
+            location: request.location,
+            workMode: request.workMode,
+            requestedBy: request.requestedBy,
+            requests: []
+          };
+        }
+        groups.demand[key].requests.push(request);
+      } else if (request.groupId) {
+        const key = `group-${request.groupId}`;
+        if (!groups.opportunity[key]) {
+          groups.opportunity[key] = {
+            groupKey: key,
+            groupId: request.groupId,
+            title: request.requestTitle || request.groupTitle || request.projectName,
+            description: request.description,
+            clientName: request.clientName,
+            projectName: request.projectName,
+            priority: request.priority,
+            status: request.status,
+            submittedDate: request.submittedDate,
+            location: request.location,
+            workMode: request.workMode,
+            requestedBy: request.requestedBy,
+            requests: []
+          };
+        }
+        groups.opportunity[key].requests.push(request);
+      } else {
+        groups.single.push({
+          ...request,
+          groupKey: `single-${request.id}`
+        });
+      }
+    });
+    
+    return groups;
+  }, [sortedRequests, type, requestFilter]);
+
+  // Group requests for opportunity tab
+  const opportunityGroupedRequests = useMemo(() => {
+    if (type === "resource") return [];
+    
+    const groups = {};
+    sortedRequests.forEach((req) => {
+      if (!req.groupId) return;
+      const key = req.groupId;
+      if (!groups[key]) {
+        groups[key] = {
+          groupId: req.groupId,
+          requests: [],
+          projectName: req.projectName,
+          totalResources: 0,
+          status: req.status,
+          priority: req.priority,
+          submittedDate: req.submittedDate,
+          clientName: req.clientName,
+          description: req.description || "",
+          workMode: req.workMode,
+          locationType: req.locationType,
+          location: req.location,
+          requestedBy: req.requestedBy,
+          estimatedCostTotal: req.estimatedCostTotal,
+        };
+      }
+      groups[key].requests.push(req);
+      groups[key].totalResources += req.numberOfResources;
+    });
+    return Object.values(groups).sort((a, b) => b.groupId - a.groupId);
+  }, [sortedRequests, type]);
+
+  // Pagination calculations
+  const shouldShowGroups = type === "resource" && requestFilter === "all" && resourceGroupedRequests;
+  
+  // Calculate total items for pagination
+  const totalGroupedItems = shouldShowGroups 
+    ? (Object.keys(resourceGroupedRequests.demand || {}).length + 
+       Object.keys(resourceGroupedRequests.opportunity || {}).length + 
+       resourceGroupedRequests.single.length)
+    : sortedRequests.length;
+
+  // Get paginated items based on view type
+  const paginatedItems = useMemo(() => {
+    if (shouldShowGroups) {
+      const allItems = [
+        ...Object.values(resourceGroupedRequests.demand || {}),
+        ...Object.values(resourceGroupedRequests.opportunity || {}),
+        ...(resourceGroupedRequests.single || [])
+      ];
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      return allItems.slice(startIndex, startIndex + itemsPerPage);
+    } else {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      return sortedRequests.slice(startIndex, startIndex + itemsPerPage);
+    }
+  }, [shouldShowGroups, resourceGroupedRequests, sortedRequests, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(totalGroupedItems / itemsPerPage);
+
+  // Paginate grouped requests for opportunity tab
+  const paginatedGroupedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return opportunityGroupedRequests.slice(startIndex, startIndex + itemsPerPage);
+  }, [opportunityGroupedRequests, currentPage, itemsPerPage]);
+
+  const totalGroupPages = Math.ceil(opportunityGroupedRequests.length / itemsPerPage);
+
+  // Regular paginated requests for non-grouped view
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedRequests.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedRequests, currentPage, itemsPerPage]);
+
+  const handleViewRequest = (request) => {
+    setSelectedRequest(request);
+    setIsViewModalOpen(true);
+  };
+
+  const handleApproveRequest = (request = null) => {
+    if (request) {
+      setSelectedRequest(request);
+      setSelectedRequests([]); // Clear bulk selection if single approval
+    }
+    setApprovalComments("");
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleRejectRequest = (request = null) => {
+    if (request) {
+      setSelectedRequest(request);
+      setSelectedRequests([]); // Clear bulk selection if single rejection
+    }
+    setRejectionReason("");
+    setIsRejectionModalOpen(true);
+  };
+
+  const handleBulkApprove = () => {
+    setSelectedRequest(null); // Clear single selection if bulk approval
+    setApprovalComments("");
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleBulkReject = () => {
+    setSelectedRequest(null); // Clear single selection if bulk rejection
+    setRejectionReason("");
+    setIsRejectionModalOpen(true);
+  };
+
+  const handleGroupApprove = (groupId) => {
+    setSelectedGroupId(groupId);
+    setGroupApprovalComments("");
+    setIsGroupApprovalModalOpen(true);
+  };
+
+  const handleGroupReject = (groupId) => {
+    setSelectedGroupId(groupId);
+    setGroupRejectionReason("");
+    setIsGroupRejectionModalOpen(true);
+  };
+
+  const confirmApproval = async () => {
+    // Get request IDs - handle both single request and multiple selected requests
+    let requestIds = [];
+    let singleRequestId = [];
+
+    if (selectedRequests.length > 0) {
+      // Multiple selected requests from bulk approval
+      requestIds = selectedRequests;
+    } else if (selectedRequest && selectedRequest.numericId) {
+      // Single request approval from individual card
+      requestIds = [selectedRequest.numericId];
+      singleRequestId = selectedRequest.id; // Store the display ID for success message
+    }
+
+    if (requestIds.length === 0) return;
+
+    try {
+      // Use same API call for both single and bulk approval
+      const response = await service.actOnRequest(
+        requestIds,
+        approverUserId,
+        "Approved",
+        approvalComments
+      );
+
+      // Check response success based on your API structure
+      if (response.data.success) {
+        refresh();
+        setIsApprovalModalOpen(false);
+        setApprovalComments("");
+        setSelectedRequests([]);
+        
+        // Success message logic
+        const successMessage = requestIds.length === 1 
+          ? `Request ${singleRequestId || requestIds[0]} approved successfully!`
+          : `${requestIds.length} requests approved successfully!`;
+        
+        setActionSuccess({ 
+          show: true, 
+          type: "approved", 
+          requestId: requestIds.length === 1 ? (singleRequestId || requestIds[0]) : `${requestIds.length} requests` 
+        });
+        
+        toast.success(successMessage);
+      } else {
+        // Handle cases where API returns success: false
+        if (response.data.errors && response.data.errors.length > 0) {
+          toast.error(`Failed to approve request${requestIds.length > 1 ? 's' : ''}: ${response.data.errors.join(', ')}`);
+        } else {
+          toast.error("Failed to approve request" + (requestIds.length > 1 ? 's' : ''));
+        }
+      }
+    } catch (error) {
+      console.error("Approval error:", error);
+      
+      // Enhanced error handling
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        if (errorData.errors && errorData.errors.length > 0) {
+          toast.error(`Failed to approve request${requestIds.length > 1 ? 's' : ''}: ${errorData.errors.join(', ')}`);
+        } else if (errorData.message) {
+          toast.error(`Failed to approve request${requestIds.length > 1 ? 's' : ''}: ${errorData.message}`);
+        } else {
+          toast.error("Failed to approve request" + (requestIds.length > 1 ? 's' : ''));
+        }
+      } else {
+        toast.error("Failed to approve request" + (requestIds.length > 1 ? 's' : ''));
+      }
+    }
+  };
+
+  const confirmRejection = async () => {
+    // Get request IDs - handle both single request and multiple selected requests
+    let requestIds = [];
+    let singleRequestId = [];
+
+    if (selectedRequests.length > 0) {
+      // Multiple selected requests from bulk rejection
+      requestIds = selectedRequests;
+    } else if (selectedRequest && selectedRequest.numericId) {
+      // Single request rejection from individual card
+      requestIds = [selectedRequest.numericId];
+      singleRequestId = selectedRequest.id; // Store the display ID for success message
+    }
+
+    if (requestIds.length === 0 || !rejectionReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      // Use same API call for both single and bulk rejection
+      const response = await service.actOnRequest(
+        requestIds,
+        approverUserId,
+        "Rejected",
+        rejectionReason.trim()
+      );
+
+      // Check response success based on your API structure
+      if (response.data.success) {
+        refresh();
+        setIsRejectionModalOpen(false);
+        setRejectionReason("");
+        setSelectedRequests([]);
+        
+        // Success message logic
+        const successMessage = requestIds.length === 1 
+          ? `Request ${singleRequestId || requestIds[0]} rejected with reason provided.`
+          : `${requestIds.length} requests rejected with reason provided.`;
+        
+        setActionSuccess({ 
+          show: true, 
+          type: "rejected", 
+          requestId: requestIds.length === 1 ? (singleRequestId || requestIds[0]) : `${requestIds.length} requests` 
+        });
+        
+        toast.success(successMessage);
+      } else {
+        // Handle cases where API returns success: false
+        if (response.data.errors && response.data.errors.length > 0) {
+          toast.error(`Failed to reject request${requestIds.length > 1 ? 's' : ''}: ${response.data.errors.join(', ')}`);
+        } else {
+          toast.error("Failed to reject request" + (requestIds.length > 1 ? 's' : ''));
+        }
+      }
+    } catch (error) {
+      console.error("Rejection error:", error);
+      
+      // Enhanced error handling
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        if (errorData.errors && errorData.errors.length > 0) {
+          toast.error(`Failed to reject request${requestIds.length > 1 ? 's' : ''}: ${errorData.errors.join(', ')}`);
+        } else if (errorData.message) {
+          toast.error(`Failed to reject request${requestIds.length > 1 ? 's' : ''}: ${errorData.message}`);
+        } else {
+          toast.error("Failed to reject request" + (requestIds.length > 1 ? 's' : ''));
+        }
+      } else {
+        toast.error("Failed to reject request" + (requestIds.length > 1 ? 's' : ''));
+      }
+    }
+  };
+
+  const confirmGroupApproval = async () => {
+    if (!selectedGroupId) return;
+
+    try {
+      const response = await service.approveResourceRequest(
+        selectedGroupId,
+        groupApprovalComments,
+        approverUserId
+      );
+
+      if (response.data.success) {
+        refresh();
+        setIsGroupApprovalModalOpen(false);
+        setSelectedGroupId(null);
+        toast.success(`Group GRP-${selectedGroupId} approved successfully!`);
+        setActionSuccess({ show: true, type: "approved", requestId: `GRP-${selectedGroupId}` });
+      } else {
+        toast.error("Failed to approve group");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to approve group");
+    }
+  };
+
+  const confirmGroupRejection = async () => {
+    if (!selectedGroupId || !groupRejectionReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      const response = await service.rejectResourceRequest(
+        selectedGroupId,
+        groupRejectionReason.trim(),
+        approverUserId
+      );
+
+      if (response.data.success) {
+        refresh();
+        setIsGroupRejectionModalOpen(false);
+        setSelectedGroupId(null);
+        toast.success(`Group GRP-${selectedGroupId} rejected with reason provided.`);
+        setActionSuccess({ show: true, type: "rejected", requestId: `GRP-${selectedGroupId}` });
+      } else {
+        toast.error("Failed to reject group");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to reject group");
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Pending":
+      case "Submitted":
+      case "Draft":
+      case "Approved (Opportunity), Pending Resource":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "Approved":
+      case "HRApproved":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "Rejected":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "Low":
+        return "bg-green-100 text-green-700";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-700";
+      case "High":
+        return "bg-orange-100 text-orange-700";
+      case "Urgent":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getSharedResumeStatus = (resume) => {
+    return "Shared"; // Default status
+};
+
+  const getWorkModeIcon = (workMode) => {
+    switch (workMode) {
+      case "Remote":
+        return <Home className="w-4 h-4" />;
+      case "Hybrid":
+        return <Monitor className="w-4 h-4" />;
+      case "Onsite":
+        return <Building className="w-4 h-4" />;
+      default:
+        return <Briefcase className="w-4 h-4" />;
+    }
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection(field === "priority" ? "asc" : "desc");
+    }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Render Single Request Card (for non-grouped view)
+  const renderRequestCard = (request, index) => (
+    <motion.div
+      key={request.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+    >
+      <Card className={`bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+        selectedRequests.includes(request.numericId) ? 'ring-2 ring-blue-500' : ''
+      }`}>
+        <CardContent className="p-6" onClick={() => handleViewRequest(request)}>
+          <div className="flex items-start mb-4">
+            <input
+              type="checkbox"
+              checked={selectedRequests.includes(request.numericId)}
+              onChange={(e) => {
+                e.stopPropagation();
+                toggleSelection(request.numericId);
+              }}
+              className="mt-2 mr-3 w-6 h-5 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-800">{request.requestTitle}</h3>
+                <Badge className={`${getStatusColor(request.status)} border`}>
+                  {request.status.replace("_", " ")}
+                </Badge>
+                {request.status === "Approved (Opportunity), Pending Resource" && (
+                  <Badge className="bg-blue-100 text-blue-700 border-blue-200">Group Approved</Badge>
+                )}
+                <Badge className={getPriorityColor(request.priority)}>{request.priority}</Badge>
+                
+                {/* Show groupId and demandId badges */}
+                {request.groupId && (
+                  <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                    Opportunity
+                  </Badge>
+                )}
+                {request.demandId && (
+                  <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                    Demand
+                  </Badge>
+                )}
+              </div>
+              <p className="text-gray-600 mb-2">{request.description}</p>
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Target className="w-4 h-4" />
+                  {request.clientName}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Request ID</p>
+              <p className="font-mono font-bold text-blue-600">{request.requestId}</p>
+              <p className="text-xs text-gray-500">Submitted: {request.submittedDate}</p>
+              {request.groupId && (
+                <p className="text-xs text-gray-500">Group ID: {request.groupId}</p>
+              )}
+              {request.demandId && (
+                <p className="text-xs text-gray-500">Demand ID: {request.demandId}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                {getWorkModeIcon(request.workMode)}
+                <span>{request.workMode}</span>
+                <MapPin className="w-4 h-4" />
+                <span>{request.location}</span>
+              </div>
+              <span>Requested by: {request.requestedBy}</span>
+            </div>
+            {(type === "resource" ? request.status === "Submitted" : request.status === "Draft") && (
+              <div className="flex gap-3">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleApproveRequest(request);
+                  }}
+                  className="flex-1 bg-green-500 hover:bg-green-600"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRejectRequest(request);
+                  }}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  // Render Group Card for opportunity tab
+  const renderGroupCard = (group, index) => (
+    <motion.div
+      key={group.groupId}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+    >
+      <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+        <CardContent className="p-6" onClick={() => handleViewRequest(group)}>
+          <div className="flex items-start mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-800">{group.description}</h3>
+                <Badge className={`${getStatusColor(group.status)} border`}>{group.status}</Badge>
+                <Badge className={getPriorityColor(group.priority)}>{group.priority}</Badge>
+                <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                  Opportunity
+                </Badge>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {group.totalResources} resources
+                </span>
+                <span className="flex items-center gap-1">
+                  <Target className="w-4 h-4" />
+                  {group.clientName}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Group ID</p>
+              <p className="font-mono font-bold text-blue-600">GRP-{group.groupId}</p>
+              <p className="text-xs text-gray-500">Submitted: {group.submittedDate}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                {getWorkModeIcon(group.workMode)}
+                <span>{group.workMode}</span>
+                <MapPin className="w-4 h-4" />
+                <span>{group.location}</span>
+              </div>
+              <span>Requested by: {group.requestedBy}</span>
+            </div>
+            {group.status === "Draft" && (
+              <div className="flex gap-3">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGroupApprove(group.groupId);
+                  }}
+                  className="flex-1 bg-green-500 hover:bg-green-600"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGroupReject(group.groupId);
+                  }}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Search and Filter Controls */}
+      <div className="br-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="px-2 flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {type === "resource" ? "Requests" : "Opportunities"}
+          </h2>
+          
+          {/* Group Controls - Only show for resource tab with "all" filter */}
+          {type === "resource" && requestFilter === "all" && resourceGroupedRequests && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleAllGroups}
+                className="flex items-center gap-1"
+              >
+                {expandedAll ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    Collapse All
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    Expand All
+                  </>
+                )}
+              </Button>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                {Object.keys(resourceGroupedRequests.demand || {}).length} Demands
+              </Badge>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                {Object.keys(resourceGroupedRequests.opportunity || {}).length} Opportunities
+              </Badge>
+              <Badge variant="outline" className="bg-gray-100 text-gray-700">
+                {resourceGroupedRequests.single.length} Single
+              </Badge>
+            </div>
+          )}
+        </div>
+        <div className="px-2 py-1 flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
+          {/* Search Input */}
+          <SearchFilter
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={`Search by Id or Title`}
+          />
+          
+          {/* Filter Dropdown - Only show for resource requests */}
+          {type === "resource" && (
+            <div className="py-1 px-2 flex items-center gap-2">
+              <select
+                value={requestFilter}
+                onChange={(e) => {
+                  setRequestFilter(e.target.value);
+                  // Reset expanded groups when filter changes
+                  setExpandedGroups([]);
+                  setExpandedAll(false);
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="all">All Requests</option>
+                <option value="opportunity">Opportunity Requests</option>
+                <option value="demand">Demand Requests</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Search Results Info */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-700">
+            Showing {type === "opportunity" ? opportunityGroupedRequests.length : totalGroupedItems} result{type === "opportunity" ? (opportunityGroupedRequests.length !== 1 ? 's' : '') : (totalGroupedItems !== 1 ? 's' : '')} for "{searchQuery}"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="ml-2 text-blue-600 hover:text-blue-800"
+            >
+              Clear search
+            </Button>
+          </p>
+        </div>
+      )}
+
+      {/* Select All Checkbox - Only show for non-grouped view */}
+      {type === "resource" && requestFilter !== "all" && paginatedRequests.length > 0 && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selectedRequests.length > 0 && selectedRequests.length === paginatedRequests.filter(request => 
+              request.status === "Submitted"
+            ).length}
+            onChange={toggleAllSelection}
+            className="w-6 h-4 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
+          />
+          <Label className="text-sm text-black-600">Select all actionable requests</Label>
+        </div>
+      )}
+
+      {/* Bulk Actions Bar */}
+      {selectedRequests.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge className="bg-blue-500 text-white">
+                {selectedRequests.length} selected
+              </Badge>
+              <span className="text-sm text-blue-700">
+                {selectedRequests.length} request{selectedRequests.length !== 1 ? 's' : ''} selected for bulk action
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleBulkApprove}
+                className="bg-green-500 hover:bg-green-600"
+                size="sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve Selected
+              </Button>
+              <Button
+                onClick={handleBulkReject}
+                variant="destructive"
+                size="sm"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Reject Selected
+              </Button>
+              <Button
+                onClick={clearSelection}
+                variant="outline"
+                size="sm"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Pagination */}
+      {(type === "opportunity" ? opportunityGroupedRequests.length > 0 : totalGroupedItems > 0) && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={type === "opportunity" ? totalGroupPages : totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          totalItems={type === "opportunity" ? opportunityGroupedRequests.length : totalGroupedItems}
+        />
+      )}
+
+      {/* Requests List */}
+      <div className="space-y-4">
+        {type === "opportunity" ? (
+          paginatedGroupedRequests.length > 0 ? (
+            paginatedGroupedRequests.map((group, index) => renderGroupCard(group, index))
+          ) : (
+            <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+              <CardContent className="p-8 text-center">
+                <FileCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                  {searchQuery ? "No matching opportunities found" : "No Opportunity Requests Found"}
+                </h3>
+                <p className="text-gray-500">
+                  {searchQuery 
+                    ? "Try adjusting your search terms" 
+                    : "There are currently no opportunity requests to display."
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          )
+        ) : (
+          // Resource Requests
+          (() => {
+            if (shouldShowGroups && resourceGroupedRequests) {
+              // Render grouped view
+              if (paginatedItems.length === 0) {
+                return (
+                  <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+                    <CardContent className="p-8 text-center">
+                      <FileCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        {searchQuery ? "No matching requests found" : "No Requests Found"}
+                      </h3>
+                      <p className="text-gray-500">
+                        {searchQuery 
+                          ? "Try adjusting your search terms" 
+                          : "There are currently no resource requests to display."
+                        }
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-6">
+                  {/* Demand Groups */}
+                  {paginatedItems.filter(item => item.groupKey?.startsWith('demand-')).length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                        Demand-Based Requests
+                      </h3>
+                      {paginatedItems
+                        .filter(item => item.groupKey?.startsWith('demand-'))
+                        .map((group, index) => (
+                          <ResourceGroupCard
+                            key={group.groupKey}
+                            group={group}
+                            type="demand"
+                            isExpanded={expandedGroups.includes(group.groupKey)}
+                            onToggle={toggleGroup}
+                            selectedRequests={selectedRequests}
+                            toggleSelection={toggleSelection}
+                            handleViewRequest={handleViewRequest}
+                            handleApproveRequest={handleApproveRequest}
+                            handleRejectRequest={handleRejectRequest}
+                            getStatusColor={getStatusColor}
+                            getPriorityColor={getPriorityColor}
+                            getWorkModeIcon={getWorkModeIcon}
+                          />
+                        ))
+                      }
+                    </div>
+                  )}
+
+                  {/* Opportunity Groups */}
+                  {paginatedItems.filter(item => item.groupKey?.startsWith('group-')).length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                        Opportunity-Based Requests
+                      </h3>
+                      {paginatedItems
+                        .filter(item => item.groupKey?.startsWith('group-'))
+                        .map((group, index) => (
+                          <ResourceGroupCard
+                            key={group.groupKey}
+                            group={group}
+                            type="opportunity"
+                            isExpanded={expandedGroups.includes(group.groupKey)}
+                            onToggle={toggleGroup}
+                            selectedRequests={selectedRequests}
+                            toggleSelection={toggleSelection}
+                            handleViewRequest={handleViewRequest}
+                            handleApproveRequest={handleApproveRequest}
+                            handleRejectRequest={handleRejectRequest}
+                            getStatusColor={getStatusColor}
+                            getPriorityColor={getPriorityColor}
+                            getWorkModeIcon={getWorkModeIcon}
+                          />
+                        ))
+                      }
+                    </div>
+                  )}
+
+                  {/* Single Requests */}
+                  {paginatedItems.filter(item => item.groupKey?.startsWith('single-')).length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                        Individual Requests
+                      </h3>
+                      {paginatedItems
+                        .filter(item => item.groupKey?.startsWith('single-'))
+                        .map((request, index) => renderRequestCard(request, index))
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            } else {
+              // Render non-grouped view (for other filters)
+              return paginatedRequests.length > 0 ? (
+                paginatedRequests.map((request, index) => renderRequestCard(request, index))
+              ) : (
+                <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+                  <CardContent className="p-8 text-center">
+                    <FileCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                      {searchQuery 
+                        ? "No matching requests found" 
+                        : requestFilter === "all" 
+                        ? "No Requests Found" 
+                        : requestFilter === "opportunity" 
+                        ? "No Opportunity Requests Found"
+                        : requestFilter === "demand" 
+                        ? "No Demand Requests Found"
+                        : requestFilter === "approved"
+                        ? "No Approved Requests Found"
+                        : "No Rejected Requests Found"
+                      }
+                    </h3>
+                    <p className="text-gray-500">
+                      {searchQuery 
+                        ? "Try adjusting your search terms" 
+                        : requestFilter === "all" 
+                        ? "There are currently no resource requests to display." 
+                        : requestFilter === "opportunity" 
+                        ? "There are no resource requests linked to opportunities."
+                        : requestFilter === "demand" 
+                        ? "There are no resource requests linked to demands."
+                        : requestFilter === "approved"
+                        ? "There are no approved requests."
+                        : "There are no rejected requests."
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            }
+          })()
+        )}
+      </div>
+
+      {/* View Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedRequest?.requestTitle}</DialogTitle>
+            <DialogDescription>
+              Request ID: {selectedRequest?.requestId} | Status: {selectedRequest?.status}
+              {selectedRequest?.groupId && ` | Group ID: ${selectedRequest.groupId}`}
+              {selectedRequest?.demandId && ` | Demand ID: ${selectedRequest.demandId}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold mb-2">Project Details</h3>
+                <p className="text-gray-600 mb-2">{selectedRequest?.description}</p>
+                <div className="space-y-1 text-sm">
+                  <p><span className="font-medium">Client:</span> {selectedRequest?.clientName}</p>
+                  <p><span className="font-medium">Priority:</span> <Badge className={getPriorityColor(selectedRequest?.priority)}>{selectedRequest?.priority}</Badge></p>
+                  <p><span className="font-medium">Status:</span> <Badge className={getStatusColor(selectedRequest?.status)}>{selectedRequest?.status}</Badge></p>
+                  
+                  <p><span className="font-medium">Work Mode:</span> {selectedRequest?.workMode}</p>
+                  <p><span className="font-medium">Location:</span> {selectedRequest?.location}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Timeline</h3>
+                <div className="space-y-1 text-sm">
+                  <p><span className="font-medium">Submitted:</span> {selectedRequest?.submittedDate}</p>
+                  <p><span className="font-medium">Requested By:</span> {selectedRequest?.requestedBy}</p>
+                </div>
+              </div>
+            </div>
+            {selectedRequest?.hrComments && (
+              <div>
+                <h3 className="font-semibold mb-2">HR Comments</h3>
+                <p className="text-gray-600 bg-gray-50 p-3 rounded">{selectedRequest.hrComments}</p>
+              </div>
+            )}
+            {selectedRequest?.rejectionReason && (
+              <div>
+                <h3 className="font-semibold mb-2">Rejection Reason</h3>
+                <div className="bg-red-50 border border-red-200 p-3 rounded">
+                  <p className="text-red-700">{selectedRequest.rejectionReason}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unified Approval Modal */}
+      <Dialog open={isApprovalModalOpen} onOpenChange={(open) => {
+        setIsApprovalModalOpen(open);
+        if (!open) {
+          setApprovalComments("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              {selectedRequests.length > 0 
+                ? `Approve ${selectedRequests.length} Request${selectedRequests.length !== 1 ? 's' : ''}`
+                : `Approve Request - ${selectedRequest?.id}`
+              }
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRequests.length > 0 
+                ? `This will approve ${selectedRequests.length} selected request${selectedRequests.length !== 1 ? 's' : ''} and notify the project manager${selectedRequests.length !== 1 ? 's' : ''}.`
+                : `This will approve the ${type} request and notify the project manager.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="approvalComments">Comments (Optional)</Label>
+              <Textarea
+                id="approvalComments"
+                placeholder="Add any comments or notes about this approval..."
+                value={approvalComments}
+                onChange={(e) => setApprovalComments(e.target.value)}
+                className="min-h-[100px] focus-visible:ring-0"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmApproval}
+                className="flex-1 bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {selectedRequests.length > 0 
+                  ? `Approve ${selectedRequests.length} Request${selectedRequests.length !== 1 ? 's' : ''}`
+                  : 'Confirm Approval'
+                }
+              </Button>
+              <Button
+                onClick={() => setIsApprovalModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unified Rejection Modal */}
+      <Dialog open={isRejectionModalOpen} onOpenChange={(open) => {
+        setIsRejectionModalOpen(open);
+        if (!open) {
+          setRejectionReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              {selectedRequests.length > 0 
+                ? `Reject ${selectedRequests.length} Request${selectedRequests.length !== 1 ? 's' : ''}`
+                : `Reject Request - ${selectedRequest?.id}`
+              }
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRequests.length > 0 
+                ? `Please provide a reason for rejecting ${selectedRequests.length} selected request${selectedRequests.length !== 1 ? 's' : ''}.`
+                : `Please provide a reason for rejecting this ${type} request.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+              <Textarea
+                id="rejectionReason"
+                placeholder="Please explain why this request is being rejected..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+                required
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmRejection}
+                variant="destructive"
+                className="flex-1"
+                disabled={!rejectionReason.trim()}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                {selectedRequests.length > 0 
+                  ? `Reject ${selectedRequests.length} Request${selectedRequests.length !== 1 ? 's' : ''}`
+                  : 'Confirm Rejection'
+                }
+              </Button>
+              <Button
+                onClick={() => setIsRejectionModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Approval Modal */}
+      <Dialog open={isGroupApprovalModalOpen} onOpenChange={setIsGroupApprovalModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              Approve Group - GRP-{selectedGroupId}
+            </DialogTitle>
+            <DialogDescription>
+              This will approve the {type} request group and notify the project manager.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="groupApprovalComments">Comments (Optional)</Label>
+              <Textarea
+                id="groupApprovalComments"
+                placeholder="Add any comments or notes about this approval..."
+                value={groupApprovalComments}
+                onChange={(e) => setGroupApprovalComments(e.target.value)}
+                className="min-h-[100px] focus-visible:ring-0"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmGroupApproval}
+                className="flex-1 bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Confirm Approval
+              </Button>
+              <Button
+                onClick={() => setIsGroupApprovalModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Rejection Modal */}
+      <Dialog open={isGroupRejectionModalOpen} onOpenChange={setIsGroupRejectionModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              Reject Group - GRP-{selectedGroupId}
+            </DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this {type} request group.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="groupRejectionReason">Rejection Reason *</Label>
+              <Textarea
+                id="groupRejectionReason"
+                placeholder="Please explain why this group is being rejected..."
+                value={groupRejectionReason}
+                onChange={(e) => setGroupRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+                required
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmGroupRejection}
+                variant="destructive"
+                className="flex-1"
+                disabled={!groupRejectionReason.trim()}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Confirm Rejection
+              </Button>
+              <Button
+                onClick={() => setIsGroupRejectionModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Alert */}
+      <AlertDialog open={actionSuccess.show} onOpenChange={(open) => setActionSuccess({ ...actionSuccess, show: open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {actionSuccess.type === "approved" ? (
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-500" />
+              )}
+              {actionSuccess.requestId.includes("GRP") ? "Group" : "Request"} {actionSuccess.type === "approved" ? "Approved" : "Rejected"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {actionSuccess.requestId.includes("GRP") ? `Group ${actionSuccess.requestId}` : `Request ${actionSuccess.requestId}`} has been successfully {actionSuccess.type}.
+              The project manager has been notified of this decision.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setActionSuccess({ show: false, type: "", requestId: "" })}>
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+// DemandsTab Component with Pagination
+const DemandsTab = ({ demands, onEditDemand }) => {
+  const [selectedDemand, setSelectedDemand] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [sortField, setSortField] = useState("default");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const [isSkillMatcherOpen, setIsSkillMatcherOpen] = useState(false);
+  const [skillMatches, setSkillMatches] = useState(null);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+
+  const handleSkillMatcher = async (demand) => {
+    setIsLoadingMatches(true);
+    setIsSkillMatcherOpen(true);
+    setSelectedDemand(demand);
+    
+    try {
+      const response = await DemandService.getSkillMatches(demand.demandid);
+      if (response.data.success) {
+        setSkillMatches(response.data.result);
+      } else {
+        toast.error("Failed to fetch skill matches");
+        setSkillMatches(null);
+      }
+    } catch (error) {
+      console.error("Error fetching skill matches:", error);
+      toast.error("Error fetching skill matches");
+      setSkillMatches(null);
+    } finally {
+      setIsLoadingMatches(false);
+    }
+  };
+
+  const handleViewMatch = (match) => {
+    setSelectedMatch(match);
+  };
+
+  const getMatchScoreColor = (score) => {
+    if (score >= 70) return "bg-green-100 text-green-700 border-green-200";
+    if (score >= 50) return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    if (score >= 30) return "bg-orange-100 text-orange-700 border-orange-200";
+    return "bg-red-100 text-red-700 border-red-200";
+  };
+
+  const handleViewDemand = (demand) => {
+    setSelectedDemand(demand);
+    setIsViewModalOpen(true);
+  };
+
+  // Apply search filter to demands
+  const searchedDemands = useMemo(() => {
+    if (!searchQuery.trim()) return demands;
+
+    const query = searchQuery.toLowerCase().trim();
+    return demands.filter(demand => {
+      return (
+        `DM-${demand.demandid}`.toLowerCase().includes(query) ||
+        demand.demandTitle?.toLowerCase().includes(query) ||
+        demand.projectName?.toLowerCase().includes(query) ||
+        demand.accountName?.toLowerCase().includes(query) ||
+        demand.departmentName?.toLowerCase().includes(query) ||
+        demand.requesterName?.toLowerCase().includes(query) ||
+        demand.workLocPref?.toLowerCase().includes(query) ||
+        demand.overallStatus?.toLowerCase().includes(query) ||
+        demand.priority?.toLowerCase().includes(query) ||
+        (demand.skillName && demand.skillName.some(skill => 
+          skill.toLowerCase().includes(query)
+        ))
+      );
+    });
+  }, [demands, searchQuery]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Status colors mapping - UPDATED
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Open":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "InProgress":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "Completed":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "Rejected":
+        return "bg-red-100 text-red-700 border-red-200";
+      case "Hold":
+        return "bg-orange-100 text-orange-700 border-orange-200";
+      case "Closed":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "Low":
+        return "bg-green-100 text-green-700";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-700";
+      case "High":
+        return "bg-orange-100 text-orange-700";
+      case "Urgent":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const sortedDemands = useMemo(() => {
+    const sorted = [...searchedDemands];
+    if (sortField === "default") {
+      return sorted.sort((a, b) => b.demandid - a.demandid);
+    } else if (sortField === "priority") {
+      const priorityOrder = { Urgent: 1, High: 2, Medium: 3, Low: 4 };
+      return sorted.sort((a, b) => {
+        const priorityA = priorityOrder[a.priority] || 5;
+        const priorityB = priorityOrder[b.priority] || 5;
+        return sortDirection === "asc" ? priorityA - priorityB : priorityB - priorityA;
+      });
+    } else if (sortField === "createddt") {
+      return sorted.sort((a, b) =>
+        sortDirection === "asc"
+          ? new Date(a.createddt) - new Date(b.createddt)
+          : new Date(b.createddt) - new Date(a.createddt)
+      );
+    } else if (sortField === "demandTitle") {
+      return sorted.sort((a, b) =>
+        sortDirection === "asc"
+          ? a.demandTitle.localeCompare(b.demandTitle)
+          : b.demandTitle.localeCompare(a.demandTitle)
+      );
+    } else if (sortField === "overallStatus") {
+      const statusOrder = { 
+        "Open": 1, 
+        "InProgress": 2, 
+        "Hold": 3, 
+        "Rejected": 4, 
+        "Completed": 5, 
+        "Closed": 6 
+      };
+      return sorted.sort((a, b) => {
+        const statusA = statusOrder[a.overallStatus] || 7;
+        const statusB = statusOrder[b.overallStatus] || 7;
+        return sortDirection === "asc" ? statusA - statusB : statusB - statusA;
+      });
+    }
+    return sorted;
+  }, [searchedDemands, sortField, sortDirection]);
+
+  // Paginate the sorted demands
+  const paginatedDemands = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedDemands.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedDemands, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedDemands.length / itemsPerPage);
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  // Render Demand Card - Full width as before
+const renderDemandCard = (demand, index) => (
+  <motion.div
+    key={demand.demandid}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.3, delay: index * 0.05 }}
+  >
+    <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <CardContent className="p-6">
+        <div className="flex items-start mb-4" onClick={() => handleViewDemand(demand)}>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="text-xl font-bold text-gray-800">{demand.demandTitle}</h3>
+              <Badge className={`${getStatusColor(demand.overallStatus)} border`}>
+                {demand.overallStatus}
+              </Badge>
+              <Badge className={getPriorityColor(demand.priority)}>
+                {demand.priority}
+              </Badge>
+              <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                Demand
+              </Badge>
+              {/* Add Shared Resumes Badge */}
+              {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+                <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                  <Users className="w-3 h-3 mr-1" />
+                  {demand.sharedResumes.length} Shared
+                </Badge>
+              )}
+            </div>
+            <p className="text-gray-600 mb-2">{demand.projectName}</p>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                {demand.resourceRequestsCount} resources
+              </span>
+              <span className="flex items-center gap-1">
+                <Target className="w-4 h-4" />
+                {demand.accountName}
+              </span>
+              <span className="flex items-center gap-1">
+                <Building className="w-4 h-4" />
+                {demand.departmentName}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Demand ID</p>
+            <p className="font-mono font-bold text-blue-600">DM-{demand.demandid}</p>
+            
+            <p className="text-xs text-gray-500 mt-1">
+              Created: {new Date(demand.createddt).toLocaleDateString()}
+            </p>
+            <p className="text-xs text-gray-500">
+              Pending: {demand.pendingDays} days
+            </p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              <span>{demand.workLocPref}</span>
+              <span>•</span>
+              <span>{demand.locationType}</span>
+              <span>•</span>
+              <span>{demand.workMode}</span>
+            </div>
+            <span>Requested by: {demand.requesterName}</span>
+          </div>
+          
+          {demand.skillName && demand.skillName.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {demand.skillName.slice(0, 3).map((skill, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {skill}
+                </Badge>
+              ))}
+              {demand.skillName.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{demand.skillName.length - 3} more
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          {/* Shared Resumes Preview */}
+          {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-amber-100">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                  <Users className="w-3 h-3 mr-1" />
+                  {demand.sharedResumes.length} Resume{demand.sharedResumes.length !== 1 ? 's' : ''} Shared
+                </Badge>
+              </div>
+              <div className="text-xs text-amber-600">
+                {demand.sharedResumes.slice(0, 2).map((resume, idx) => (
+                  <div key={idx} className="truncate">
+                    • {resume.resourceName}
+                  </div>
+                ))}
+                {demand.sharedResumes.length > 2 && (
+                  <div className="text-amber-500">+{demand.sharedResumes.length - 2} more</div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Working Skill Matcher Button */}
+          <Button
+            onClick={() => handleSkillMatcher(demand)}
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 w-full mt-2"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Skill Matcher
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </motion.div>
+);
+
+  return (
+    <div className="space-y-6">
+      {/* Search and Sort Controls */}
+      <div className="px-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-gray-800">Demands</h2>
+        </div>
+        
+        <div className="py-1 flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
+          {/* Search Input */}
+          <SearchFilter
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by ID or Title"
+          />
+        </div>
+      </div>	  
+      
+      {/* Pagination */}
+      {sortedDemands.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          totalItems={sortedDemands.length}
+        />
+      )}
+
+      {/* Search Results Info */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-700">
+            Showing {sortedDemands.length} result{sortedDemands.length !== 1 ? 's' : ''} for "{searchQuery}"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="ml-2 text-blue-600 hover:text-blue-800"
+            >
+              Clear search
+            </Button>
+          </p>
+        </div>
+      )}
+
+      {/* Demands List - Full width cards */}
+      <div className="space-y-4">
+        {paginatedDemands.length > 0 ? (
+          paginatedDemands.map((demand, index) => renderDemandCard(demand, index))
+        ) : (
+          <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+            <CardContent className="p-8 text-center">
+              <FileCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                {searchQuery ? "No matching demands found" : "No Demands Found"}
+              </h3>
+              <p className="text-gray-500">
+                {searchQuery 
+                  ? "Try adjusting your search terms" 
+                  : "There are currently no demands to display."
+                }
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* View Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedDemand?.demandTitle}</DialogTitle>
+            <DialogDescription>
+              Demand ID: {selectedDemand?.demandid} | Status: <Badge className={getStatusColor(selectedDemand?.overallStatus)}>
+                {selectedDemand?.overallStatus}
+              </Badge>
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDemand && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Demand Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-medium text-gray-700">Project & Account</span>
+                      <p className="text-gray-600">{selectedDemand.projectName} - {selectedDemand.accountName}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Role:</span>
+                      <p className="text-gray-600">{selectedDemand.departmentName}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Description:</span>
+                      <p className="text-gray-600">{selectedDemand.description}</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Requirements</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-medium text-gray-700">Years of Experience:</span>
+                      <p className="text-gray-600">{selectedDemand.yearsofexp}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Role Duration:</span>
+                      <p className="text-gray-600">{selectedDemand.roleDuration}</p>
+                    </div>
+                    
+                    {/* Request IDs Section */}
+                    {selectedDemand.requestsSummary && selectedDemand.requestsSummary.length > 0 && (
+                      <div>
+                        <span className="font-medium text-gray-700">Request IDs:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {selectedDemand.requestsSummary.map((req) => (
+                            <Badge 
+                              key={req.requestId} 
+                              variant="outline" 
+                              className="font-mono text-blue-600 border-blue-200 bg-blue-50"
+                            >
+                              REQ-{req.requestId}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {selectedDemand.skillName && selectedDemand.skillName.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Required Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDemand.skillName.map((skill, idx) => (
+                      <Badge key={idx} variant="secondary" className="px-3 py-1">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Timeline</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Demand Open:</span>
+                      <span className="text-gray-600">{selectedDemand.demandOpenDt}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Target Fulfillment:</span>
+                      <span className="text-gray-600">{selectedDemand.fulfilmentDt || "Not specified"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Created:</span>
+                      <span className="text-gray-600">
+                        {new Date(selectedDemand.createddt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Pending Days:</span>
+                      <span className="text-gray-600">{selectedDemand.pendingDays} days</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Resource Status</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Target Headcount:</span>
+                      <span className="text-gray-600">{selectedDemand.resourceRequestsCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Submitted Profiles:</span>
+                      <span className="text-gray-600">{selectedDemand.submittedProfilesCount || 0}</span>
+                    </div>
+                    {selectedDemand.stageCounts && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-700">Approval Pending:</span>
+                          <span className="text-gray-600">{selectedDemand.stageCounts.approvalPending}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-700">Interview Scheduled:</span>
+                          <span className="text-gray-600">{selectedDemand.stageCounts.interviewScheduled}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium text-gray-700">Allocated:</span>
+                          <span className="text-gray-600">{selectedDemand.stageCounts.allocated}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                                  {selectedDemand?.sharedResumes && selectedDemand.sharedResumes.length > 0 && (
+  <div>
+    <h3 className="font-semibold mb-3 text-gray-800">Shared Resumes</h3>
+    <div className="bg-amber-50 border border-amber-200 rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-amber-200">
+          <thead className="bg-amber-100">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 uppercase tracking-wider">
+                Resource Name
+              </th>
+              {/* <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 uppercase tracking-wider">
+                Type
+              </th> */}
+              <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 uppercase tracking-wider">
+                Shared By
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-amber-700 uppercase tracking-wider">
+                Shared At
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-amber-100">
+            {selectedDemand.sharedResumes.map((resume, index) => (
+              <tr key={index} className="hover:bg-amber-50/50 transition-colors">
+                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
+                  {resume.resourceName}
+                </td>
+                {/* <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
+                  <Badge className="bg-blue-100 text-blue-700 text-xs">
+                    {resume.resourceType}
+                  </Badge>
+                </td> */}
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
+                  <a 
+                    href={`mailto:${resume.resourceEmail}`} 
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {resume.resourceEmail}
+                  </a>
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
+                  {resume.sharedBy || 'N/A'}
+                  {resume.sharedByEmail && (
+                    <div className="text-xs text-gray-500">{resume.sharedByEmail}</div>
+                  )}
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
+                  {new Date(resume.sharedAt).toLocaleDateString()} {new Date(resume.sharedAt).toLocaleTimeString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-4 py-2 bg-amber-100 text-xs text-amber-700 border-t border-amber-200">
+        Total {selectedDemand.sharedResumes.length} resume{selectedDemand.sharedResumes.length !== 1 ? 's' : ''} shared
+      </div>
+    </div>
+  </div>
+)}
+              </div>
+              
+              {/* Edit Button */}
+              <div className="flex justify-end pt-4 border-t border-gray-200">
+                <Button
+                  onClick={() => {
+                    onEditDemand(selectedDemand);
+                    setIsViewModalOpen(false);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Demand
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Skill Matcher Modal */}
+      <Dialog open={isSkillMatcherOpen} onOpenChange={setIsSkillMatcherOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              Skill Matcher - {selectedDemand?.demandTitle}
+            </DialogTitle>
+            <DialogDescription>
+              Demand ID: DM-{selectedDemand?.demandid} | 
+              Matched Employees: {skillMatches?.matchedEmployees || 0} / {skillMatches?.totalEmployees || 0}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingMatches ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                <p className="text-gray-600">Analyzing skills and finding matches...</p>
+              </div>
+            </div>
+          ) : skillMatches ? (
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{skillMatches.totalEmployees}</p>
+                  <p className="text-sm text-blue-700">Total Employees</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{skillMatches.matchedEmployees}</p>
+                  <p className="text-sm text-green-700">Matched Employees</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">
+                    {skillMatches.totalEmployees > 0 
+                      ? Math.round((skillMatches.matchedEmployees / skillMatches.totalEmployees) * 100) 
+                      : 0}%
+                  </p>
+                  <p className="text-sm text-purple-700">Match Rate</p>
+                </div>
+              </div>
+
+              {/* Matches List */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Top Matches</h3>
+                {skillMatches.matches && skillMatches.matches.length > 0 ? (
+                  skillMatches.matches
+                    .sort((a, b) => b.matchScore - a.matchScore)
+                    .map((match, index) => (
+                      <Card key={match.employeeId} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-semibold text-gray-800">
+                                  {match.firstName} {match.lastName}
+                                </h4>
+                                <Badge className={getMatchScoreColor(match.matchScore)}>
+                                  {match.matchScore}% Match
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {match.status}
+                                </Badge>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">Email:</span>
+                                  <span>{match.email}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">Experience:</span>
+                                  <span>{match.experienceYears} years</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">Location:</span>
+                                  <span>{match.location}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">Type:</span>
+                                  <span>{match.employmentType}</span>
+                                </div>
+                              </div>
+
+                              {match.matchingSkills && match.matchingSkills.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Matching Skills:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {match.matchingSkills.map((skill, idx) => (
+                                      <Badge key={idx} className="bg-blue-100 text-blue-700 text-xs">
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-sm font-medium text-gray-700 mb-1"> Analysis:</p>
+                                <p className="text-sm text-gray-600">{match.matchReasoning}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No matches found for this demand.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Failed to load skill matches.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Match Details Modal */}
+      <Dialog open={!!selectedMatch} onOpenChange={(open) => !open && setSelectedMatch(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Employee Details - {selectedMatch?.firstName} {selectedMatch?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedMatch && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium text-gray-700">Employee ID</p>
+                  <p className="text-gray-600">{selectedMatch.employeeId}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Match Score</p>
+                  <Badge className={getMatchScoreColor(selectedMatch.matchScore)}>
+                    {selectedMatch.matchScore}%
+                  </Badge>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Email</p>
+                  <p className="text-gray-600">{selectedMatch.email}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Location</p>
+                  <p className="text-gray-600">{selectedMatch.location}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Experience</p>
+                  <p className="text-gray-600">{selectedMatch.experienceYears} years</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Status</p>
+                  <p className="text-gray-600">{selectedMatch.status}</p>
+                </div>
+              </div>
+
+              {selectedMatch.matchingSkills && selectedMatch.matchingSkills.length > 0 && (
+                <div>
+                  <p className="font-medium text-gray-700 mb-2">Matching Skills</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedMatch.matchingSkills.map((skill, idx) => (
+                      <Badge key={idx} className="bg-green-100 text-green-700">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <p className="font-medium text-gray-700 mb-2"> Analysis</p>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">{selectedMatch.matchReasoning}</p>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-500">
+                <p>Scoring Source: {selectedMatch.scoringSource}</p>
+                <p>Resume Available: {selectedMatch.hasResume ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Main HRDashboard Component
+export default function HRDashboard() {
+  const [resourceRequests, setResourceRequests] = useState([]);
+  const [opportunityRequests, setOpportunityRequests] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [approverUserId, setApproverUserId] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const initialMessages = [
+    {
+      id: "initial",
+      from: "bot",
+      message: "Hello! I'm your HR Assistant. How can I help you today?",
+    },
+  ];
+  const [messages, setMessages] = useState(initialMessages);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const chatRef = useRef(null);
+  const [companies, setCompanies] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isAddDemandOpen, setIsAddDemandOpen] = useState(false);
+  const [demandForm, setDemandForm] = useState({
+    demandTitle: "",
+    projectName: "",
+    role: "",
+    demandOpenDt: null,
+    fulfilmentDt: null,
+    companyId: "",
+    accountId: "",
+    departmentId: "",
+    yearsOfExp: "",
+    roleDuration: "",
+    workLocPref: "",
+    priority: "Medium",
+    locationType: "Hybrid",
+    workMode: "FullTime",
+    skillIds: "",
+    resourceRequests: "",
+    description: "",
+     overallStatus: "", // NEW: Added status field with default "Open"
+  });
+  const [skills, setSkills] = useState([]);
+  const [skillInput, setSkillInput] = useState("");
+  const [filteredSkills, setFilteredSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [accountInput, setAccountInput] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [departmentInput, setDepartmentInput] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
+  const [demands, setDemands] = useState([]);
+  const [activeTab, setActiveTab] = useState("demands");
+  const [editingDemand, setEditingDemand] = useState(null);
+
+  const fetchDemands = async () => {
+    try {
+      const response = await DemandService.fetchDemandList();
+      if (response.data.success) {
+        setDemands(response.data.result || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch demands:", error);
+      toast.error("Failed to fetch demands");
+    }
+  };
+
+  const resetDemandForm = () => {
+    setDemandForm({
+      demandTitle: "",
+      projectName: "",
+      role: "",
+      demandOpenDt: null,
+      fulfilmentDt: null,
+      companyId: "",
+      accountId: "",
+      departmentId: "",
+      yearsOfExp: "",
+      roleDuration: "",
+      workLocPref: "",
+      priority: "Medium",
+      locationType: "Hybrid",
+      workMode: "FullTime",
+      skillIds: "",
+      resourceRequests: "",
+      description: "",
+      overallStatus: "" , // Reset to default
+    });
+    setSelectedSkills([]);
+    setSkillInput("");
+    setFilteredSkills(skills.slice(0, 15).map(s => s.skillName));
+    setDepartmentInput('');
+    setSelectedDepartment(null);
+    setSelectedAccount(null);
+    setAccountInput("");
+    setEditingDemand(null);
+  };
+
+  const handleCreateDemand = async () => {
+    if (!selectedAccount || !selectedDepartment) {
+      toast.error("Please select both account and department");
+      return;
+    }
+
+    const payload = {
+      companyId: parseInt(demandForm.companyId),
+      requesterUserId: approverUserId,
+      accountId: selectedAccount.accountId,
+      departmentId: selectedDepartment.departmentId,
+      projectName: demandForm.projectName,
+      demandTitle: demandForm.demandTitle,
+      demandOpenDt: demandForm.demandOpenDt
+        ? format(demandForm.demandOpenDt, "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd"),
+      fulfilmentDt: demandForm.fulfilmentDt
+        ? format(demandForm.fulfilmentDt, "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd"),
+      yearsofexp: demandForm.yearsOfExp,
+      skillIds: selectedSkills.map(s => s.id),
+      roleDuration: demandForm.roleDuration,
+      workLocPref: demandForm.workLocPref,
+      priority: demandForm.priority,
+      locationType: demandForm.locationType,
+      workMode: demandForm.workMode,
+      resourceRequests: parseInt(demandForm.resourceRequests) || 1,
+      description: demandForm.description,
+       overallStatus: demandForm.overallStatus, // NEW: Include status in payload
+    };
+
+    // Validation
+    if (!demandForm.demandTitle || !demandForm.resourceRequests) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (selectedSkills.length === 0) {
+      toast.error("Please add at least one skill");
+      return;
+    }
+
+    try {
+      const resp = await DemandService.create(payload);
+      if (resp.data.success) {
+  // Add the newly created demand to the demands state immediately
+  const newDemand = resp.data.result; // Assuming the API returns the created demand
+  if (newDemand) {
+    setDemands(prev => [...prev, newDemand]);
+  }
+  
+  toast.success("Demand created successfully!");
+  setIsAddDemandOpen(false);
+  resetDemandForm();
+  fetchRequests(); // This fetches resource/opportunity requests
+  // You can still call fetchDemands() if you want to ensure the list is fresh
+  // but the new demand is already added to state above
+  fetchDemands(); 
+} else {
+      // Handle API returned success: false
+      if (resp.data.errors && Array.isArray(resp.data.errors)) {
+        const errorMessage = resp.data.errors.join(", ");
+        toast.error(`Failed to create demand: ${errorMessage}`);
+      } else if (resp.data.message) {
+        toast.error(`Failed to create demand: ${resp.data.message}`);
+      } else {
+        toast.error("Failed to create demand");
+      }
+    }
+  } catch (error) {
+    console.error("Error creating demand:", error);
+    
+    // Handle axios error response
+    if (error.response && error.response.data) {
+      const errorData = error.response.data;
+      
+      if (errorData.errors && Array.isArray(errorData.errors)) {
+        // Format: {success: false, errors: ["error1", "error2"]}
+        const errorMessage = errorData.errors.join(", ");
+        toast.error(`Error creating demand: ${errorMessage}`);
+      } else if (errorData.message) {
+        // Alternative format: {success: false, message: "error message"}
+        toast.error(`Error creating demand: ${errorData.message}`);
+      } else if (errorData.error) {
+        // Another possible format: {error: "error message"}
+        toast.error(`Error creating demand: ${errorData.error}`);
+      } else {
+        toast.error("An error occurred while creating demand");
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      toast.error("Network error: Unable to connect to server");
+    } 
+  }
+};
+
+  const handleEditDemand = async (demand) => {
+  setEditingDemand(demand);
+  
+  // Load accounts first if modal is not open
+  if (!isAddDemandOpen) {
+    try {
+      const response = await DemandService.fetchClientList();
+      setAccounts(response);
+    } catch (error) {
+      toast.error("Failed to load accounts");
+    }
+  }
+
+  // Populate form with demand data - UPDATED with status
+  setDemandForm({
+    demandTitle: demand.demandTitle || "",
+    projectName: demand.projectName || "",
+    role: demand.departmentName || "",
+    demandOpenDt: demand.demandOpenDt ? new Date(demand.demandOpenDt) : null,
+    fulfilmentDt: demand.fulfilmentDt ? new Date(demand.fulfilmentDt) : null,
+    companyId: demand.companyId || "",
+    yearsOfExp: demand.yearsofexp || "",
+    roleDuration: demand.roleDuration || "",
+    workLocPref: demand.workLocPref || "",
+    priority: demand.priority || "Medium",
+    locationType: demand.locationType || "Hybrid",
+    workMode: demand.workMode || "FullTime",
+    skillIds: "",
+    resourceRequests: demand.resourceRequestsCount?.toString(),
+    description: demand.description || "",
+    overallStatus: demand.overallStatus, // NEW: Set status from demand
+  });
+
+  // Set selected skills if available
+  if (demand.skillName && Array.isArray(demand.skillName)) {
+    const skillObjects = demand.skillName.map(skillName => {
+      const existingSkill = skills.find(s => s.skillName === skillName);
+      return existingSkill ? { id: existingSkill.skillId, name: existingSkill.skillName } : { id: null, name: skillName };
+    });
+    setSelectedSkills(skillObjects);
+  }
+
+  // Set selected account - wait a bit for accounts to load if needed
+ setTimeout(() => {
+   if (demand.accountId) {
+     const account = accounts.find(acc => acc.accountId === demand.accountId);
+     if (account) {
+       setSelectedAccount(account);
+       setAccountInput(account.accountName);
+     } else {
+       // If account not found in current list, set the account name from demand data
+       setAccountInput(demand.accountName || "");
+     }
+   }
+ }, 100);
+
+  // Set selected department
+  if (demand.departmentId && departments.length > 0) {
+    const department = departments.find(dept => dept.departmentId === demand.departmentId);
+    if (department) {
+      setSelectedDepartment(department);
+      setDepartmentInput(department.departmentName);
+    }
+  }
+
+  setIsAddDemandOpen(true);
+};
+
+  const handleUpdateDemand = async () => {
+  if (!selectedAccount || !selectedDepartment) {
+    toast.error("Please select both account and department");
+    return;
+  }
+
+  const payload = {
+    companyId: parseInt(demandForm.companyId),
+    requesterUserId: approverUserId,
+    accountId: selectedAccount.accountId,
+    departmentId: selectedDepartment.departmentId,
+    projectName: demandForm.projectName,
+    demandTitle: demandForm.demandTitle,
+    demandOpenDt: demandForm.demandOpenDt
+      ? format(demandForm.demandOpenDt, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
+    fulfilmentDt: demandForm.fulfilmentDt
+      ? format(demandForm.fulfilmentDt, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
+    yearsofexp: demandForm.yearsOfExp,
+    skillIds: selectedSkills.map(s => s.id),
+    roleDuration: demandForm.roleDuration,
+    workLocPref: demandForm.workLocPref,
+    priority: demandForm.priority,
+    locationType: demandForm.locationType,
+    workMode: demandForm.workMode,
+    resourceRequests: parseInt(demandForm.resourceRequests) || 1,
+    description: demandForm.description,
+    status: demandForm.overallStatus, // NEW: Include updated status
+  };
+
+  // Validation
+  if (!demandForm.demandTitle || !demandForm.resourceRequests) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
+
+  if (selectedSkills.length === 0) {
+    toast.error("Please add at least one skill");
+    return;
+  }
+
+  try {
+    const resp = await DemandService.update(editingDemand.demandid, payload);
+    if (resp.data.success) {
+      toast.success("Demand updated successfully!");
+      setIsAddDemandOpen(false);
+      resetDemandForm();
+      fetchRequests(); // Refresh requests as well
+      fetchDemands();
+    } else {
+      // Handle API returned success: false
+      if (resp.data.errors && Array.isArray(resp.data.errors)) {
+        const errorMessage = resp.data.errors.join(", ");
+        toast.error(`Failed to update demand: ${errorMessage}`);
+      } else if (resp.data.message) {
+        toast.error(`Failed to update demand: ${resp.data.message}`);
+      } else {
+        toast.error("Failed to update demand");
+      }
+    }
+  } catch (error) {
+    console.error("Error updating demand:", error);
+    
+    // Handle axios error response
+    if (error.response && error.response.data) {
+      const errorData = error.response.data;
+      
+      if (errorData.errors && Array.isArray(errorData.errors)) {
+        // Format: {success: false, errors: ["error1", "error2"]}
+        const errorMessage = errorData.errors.join(", ");
+        toast.error(`Error updating demand: ${errorMessage}`);
+      } else if (errorData.message) {
+        // Alternative format: {success: false, message: "error message"}
+        toast.error(`Error updating demand: ${errorData.message}`);
+      } else if (errorData.error) {
+        // Another possible format: {error: "error message"}
+        toast.error(`Error updating demand: ${errorData.error}`);
+      } else {
+        toast.error("An error occurred while updating demand");
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      toast.error("Network error: Unable to connect to server");
+    }
+  }
+};
+
+  const handleSkillInputChange = (e) => {
+    const value = e.target.value;
+    setSkillInput(value);
+
+    if (value.trim()) {
+      const filtered = skills
+        .filter(s => s.skillName.toLowerCase().includes(value.toLowerCase()))
+        .map(s => s.skillName);
+      setFilteredSkills(filtered);
+    } else {
+      setFilteredSkills(skills.slice(0, 15).map(s => s.skillName));
+    }
+  };
+
+  const handleSuggestedSkillClick = (skillName) => {
+    addSkill(skillName);
+  };
+
+  const addSkill = async (skillName) => {
+    if (!skillName.trim()) return;
+
+    const trimmedName = skillName.trim();
+    const lowerName = trimmedName.toLowerCase();
+
+    // Check if skill already exists in master list
+    const existingSkill = skills.find(s => s.skillName.toLowerCase() === lowerName);
+
+    if (existingSkill) {
+      // Use existing skill ID
+      if (!selectedSkills.some(s => s.id === existingSkill.skillId)) {
+        setSelectedSkills([...selectedSkills, { id: existingSkill.skillId, name: existingSkill.skillName }]);
+      }
+    } else {
+      // Create new skill via API
+      try {
+        const response = await SkillService.createSkill(demandForm.companyId || 1, trimmedName);
+        if (response.data.success) {
+          const newSkill = response.data.result;
+          setSkills([...skills, newSkill]);
+          setFilteredSkills([...filteredSkills, newSkill.skillName]);
+          setSelectedSkills([...selectedSkills, { id: newSkill.skillId, name: newSkill.skillName }]);
+        }
+      } catch (error) {
+        console.error("Error creating skill:", error);
+        toast.error("Failed to create new skill");
+      }
+    }
+
+    setSkillInput("");
+  };
+
+  const removeSkill = (skillName) => {
+    setSelectedSkills(selectedSkills.filter(s => s.name !== skillName));
+  };
+
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('hrChatHistory');
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hrChatHistory', JSON.stringify(messages));
+  }, [messages]);
+
+  const clearChat = () => {
+    setMessages(initialMessages);
+  };
+
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [compRes, accRes, deptRes] = await Promise.all([
+          DemandService.fetchCompanies(),
+          DemandService.fetchClientList(),
+          DemandService.fetchDepartments(),
+        ]);
+
+        setCompanies(compRes.data.result || []);
+        setAccounts(accRes || []);
+        setDepartments(deptRes.data.result || []);
+      } catch (error) {
+        console.error("Failed to load dropdowns:", error);
+        toast.error("Failed to load dropdown options");
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
+
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const response = await SkillService.fetchSkillList();
+        const fetchedSkills = response.data.result;
+        setSkills(fetchedSkills.sort((a, b) => a.skillName.localeCompare(b.skillName)));
+        setFilteredSkills(fetchedSkills.slice(0, 15).map(s => s.skillName));
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to fetch skills");
+      }
+    };
+    fetchSkills();
+  }, []);
+
+  useEffect(() => {
+  if (isAddDemandOpen || editingDemand) {
+    const loadAccounts = async () => {
+      try {
+        const response = await DemandService.fetchClientList();
+        setAccounts(response);
+      } catch (error) {
+        toast.error("Failed to load accounts");
+      }
+    };
+    loadAccounts();
+  } else {
+    setAccountInput("");
+    setSelectedAccount(null);
+    setAccounts([]);
+  }
+}, [isAddDemandOpen, editingDemand]);
+
+  // Account Handlers
+  const handleAccountInputChange = (e) => {
+    setAccountInput(e.target.value);
+  };
+
+  const handleAddAccount = async () => {
+    const trimmed = accountInput.trim();
+    if (!trimmed || selectedAccount) return;
+
+    if (!demandForm.companyId) {
+      toast.error("Please select a Company first");
+      return;
+    }
+
+    setIsCreatingAccount(true);
+    try {
+      const payload = {
+        companyId: demandForm.companyId,
+        accountName: trimmed,
+        relationshipStartDate: format(new Date(), "yyyy-MM-dd"),
+      };
+
+      const response = await DemandService.createAccount(payload);
+      if (response.data.success) {
+        const newAccount = response.data.result;
+        setAccounts((prev) => [...prev, newAccount]);
+        setSelectedAccount(newAccount);
+        setAccountInput("");
+        toast.success(`Account "${newAccount.accountName}" created and selected!`);
+      
+    } else {
+      // Show backend error directly
+      if (response.data.errors && Array.isArray(response.data.errors) && response.data.errors.length > 0) {
+        toast.error(response.data.errors[0]);
+      } else if (response.data.message) {
+        toast.error(response.data.message);
+      } else {
+        toast.error("Failed to create account");
+      }
+    }
+  } catch (error) {
+    console.error("Error creating account:", error);
+    
+    // Show backend error directly
+    if (error.response && error.response.data) {
+      const errorData = error.response.data;
+      
+      if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        toast.error(errorData.errors[0]);
+      } else if (errorData.message) {
+        toast.error(errorData.message);
+      } else if (errorData.error) {
+        toast.error(errorData.error);
+      } else if (typeof errorData === 'string') {
+        toast.error(errorData);
+      }
+    }
+  } finally {
+    setIsCreatingAccount(false);
+  }
+};
+
+  const handleSelectAccount = (acc) => {
+    setSelectedAccount(acc);
+    setAccountInput("");
+  };
+
+  const removeAccount = () => {
+    setSelectedAccount(null);
+  };
+
+  const filteredDepartments = departments.filter((dept) =>
+    dept.departmentName.toLowerCase().includes(departmentInput.toLowerCase())
+  );
+
+  const filteredAccounts = accounts.filter((acc) =>
+    acc.accountName.toLowerCase().includes(accountInput.toLowerCase())
+  );
+
+  const fetchRequests = async () => {
+    try {
+      const resourceResponse = await ResourceRequestService.fetchRequestList();
+      const resourceData = resourceResponse.data.result;
+      const mappedResources = resourceData.map((req) => ({
+        numericId: req.requestId,
+        requestTitle:req.demandTitle || req.groupTitle || req.projectName ,
+        DemandTitle:req.demandTitle,
+        GroupTittle:req.groupTitle,
+        id: `${req.groupId ? "OPP" : "REQ"}-${String(req.requestId).padStart(3, "0")}`,
+        requestId: `REQ-${req.requestId}`,
+        groupId: req.groupId || null,
+        demandId: req.demandId || null,
+        projectName: req.projectName ?.trim() || "Unknown Project",
+        clientName: req.accountName || "Unknown Client",
+        numberOfResources: req.numberOfResources || 0,
+        primarySkills: req.primarySkills || [],
+        secondarySkills: req.secondarySkills || [],
+        experienceRange: req.experienceRange ? `${req.experienceRange} years` : "Not Specified",
+        projectStartDate: "",
+        projectEndDate: "",
+        projectDuration: "",
+        priority: req.priority || "Medium",
+        workMode: req.workMode === "FullTime" ? "Onsite" : req.workMode || "Not Specified",
+        locationType: req.locationType || "Not Specified",
+        estimatedCostTotal: req.estimatedCostTotal ? `$${req.estimatedCostTotal}` : "Not Allocated",
+        status: req.status,
+        submittedDate: req.submittedDate || new Date().toISOString().split("T")[0],
+        description: req.description || "",
+        location: req.location || "Not Specified",
+        requestedBy: req.requesterName || "Unknown",
+        hrComments: req.remarks || "",
+        approvedDate: req.status === "Approved" ? req.submittedDate : "",
+        rejectionReason: req.rejectionReason || "",
+        interviewScheduled: false,
+        interviewStatus: "Not_Scheduled",
+      }));
+
+      const opportunityResponse = await OpportunityService.fetchResourceRequestGroups();
+      const opportunityData = opportunityResponse.data.result;
+      const mappedOpportunities = opportunityData.map((group) => ({
+        numericId: group.groupId,
+        id: `GRP-${String(group.groupId).padStart(3, "0")}`,
+        requestId: `GRP-${String(group.groupId).padStart(3, "0")}`,
+        groupId: group.groupId,
+        projectName: group.projectDetails.projectName?.trim() || "Unknown Project",
+        clientName: group.companyName || "Unknown Client",
+        numberOfResources: group.totalRequested || 0,
+        primarySkills: [],
+        secondarySkills: [],
+        experienceRange: "Not Specified",
+        projectStartDate: "",
+        projectEndDate: "",
+        projectDuration: "",
+        priority: "Medium",
+        workMode: group.workMode === "FullTime" ? "Onsite" : group.workMode || "Not Specified",
+        locationType: "Not Specified",
+        estimatedCostTotal: "Not Alloted",
+        status: group.status,
+        submittedDate: group.createdAt.split("T")[0] || new Date().toISOString().split("T")[0],
+        description: group.title || "",
+        location: group.location,
+        requestedBy: group.createdByName || "Unknown",
+        hrComments: "",
+        approvedDate: group.status === "HRApproved" ? group.createdAt.split("T")[0] : "",
+        rejectionReason: "",
+        interviewScheduled: false,
+        interviewStatus: "Not_Scheduled",
+      }));
+
+      setResourceRequests(mappedResources);
+      setOpportunityRequests(mappedOpportunities);
+    } catch (error) {
+      console.error("Failed to fetch requests:", error);
+      toast.error("Failed to fetch requests");
+    }
+  };
+
+  useEffect(() => {
+    async function init() {
+      setIsInitialLoading(true);
+      try {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          toast.error("No user ID found. Please log in again.");
+          return;
+        }
+        setApproverUserId(userId);
+        await Promise.all([fetchRequests(), fetchDemands()]);
+      } catch (error) {
+        console.error("Failed to initialize dashboard:", error);
+        toast.error("Failed to initialize dashboard");
+      } finally {
+        setIsInitialLoading(false);
+      }
+    }
+
+    init();
+  }, []);
+
+  const handleChatSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = {
+      id: Date.now().toString(),
+      from: "user",
+      message: input,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+
+    try {
+      const response = await ChatService.ask(input);
+      const botMessageContent = response.response || 'Sorry, I didn\'t get that.';
+      const botMessage = {
+        id: (Date.now() + 1).toString(),
+        from: "bot",
+        message: botMessageContent,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        from: "bot",
+        message: 'Sorry, Server is down. Please try again.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      if (chatRef.current) {
+        chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }
+    }
+  };
+  
+  // Department Handlers
+  const handleDepartmentInputChange = (e) => setDepartmentInput(e.target.value);
+
+  const handleSelectDepartment = (dept) => {
+    setSelectedDepartment(dept);
+    setDemandForm(prev => ({ ...prev, departmentId: dept.departmentId }));
+    setDepartmentInput('');
+  };
+
+  const removeDepartment = () => {
+    setSelectedDepartment(null);
+    setDemandForm(prev => ({ ...prev, departmentId: null }));
+  };
+
+  const handleAddDepartment = async () => {
+    if (!departmentInput.trim() || !demandForm.companyId) return;
+
+    setIsCreatingDepartment(true);
+    try {
+      const payload = {
+        companyId: demandForm.companyId,
+        departmentName: departmentInput.trim(),
+      };
+
+      const response = await DemandService.createDepartment(payload);
+
+      if (response.data.success) {
+        const newDepartment = response.data.result;
+        setDepartments((prev) => [...prev, newDepartment]);
+        handleSelectDepartment(newDepartment);
+        toast.success("New department created successfully!");
+        setDepartmentInput('');
+    } else {
+      // Show backend error directly
+      const errorMsg = response.data.errors?.[0] || response.data.message;
+      if (errorMsg) toast.error(errorMsg);
+    }
+  } catch (error) {
+    console.error("Failed to create department:", error);
+    
+    // Show backend error directly
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      const errorMsg = errorData.errors?.[0] || errorData.message || errorData.error || 
+                      (typeof errorData === 'string' ? errorData : null);
+      if (errorMsg) toast.error(errorMsg);
+    }
+  } finally {
+    setIsCreatingDepartment(false);
+  }
+};
+
+  const renderMessageContent = (message) => {
+    if (typeof message === 'string') {
+      return <p className="whitespace-pre-wrap">{message}</p>;
+    } else if (Array.isArray(message)) {
+      if (message.length === 0) return <p>No data available.</p>;
+      const headers = Object.keys(message[0]);
+      return (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {headers.map((header) => (
+                  <th key={header} className="px-4 py-2 text-left text-sm font-medium text-gray-700 capitalize border-b">
+                    {header.replace(/_/g, ' ')}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {message.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  {headers.map((header) => (
+                    <td key={header} className="px-4 py-2 text-sm text-gray-600 border-b">
+                      {item[header] || '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    } else {
+      return <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(message, null, 2)}</pre>;
+    }
+  };
+
+  if (isInitialLoading || !approverUserId) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading HR Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6 relative">
+      {/* Chat Bot */}
+      <AnimatePresence>
+        {isChatOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.95 }}
+            transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+            className="fixed bottom-24 right-4 w-96 bg-white rounded-2xl shadow-2xl z-50 border border-gray-100 overflow-hidden"
+          >
+            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-800">HR AI Assistant</h3>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  onClick={clearChat}
+                  className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full p-1 transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsChatOpen(false)}
+                  className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full p-1 transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="bg-white/95 backdrop-blur-sm">
+              <div className="flex flex-col h-[400px]">
+                <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex items-start gap-3 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {msg.from === 'bot' && (
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-5 h-5 text-blue-600" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] p-4 rounded-2xl shadow-sm transition-all duration-200 ${
+                          msg.from === 'user'
+                            ? 'bg-blue-500 text-white rounded-br-none'
+                            : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                        }`}
+                      >
+                        {renderMessageContent(msg.message)}
+                      </div>
+                      {msg.from === 'user' && (
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-indigo-600" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="max-w-[80%] p-4 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm flex items-center gap-2">
+                        <Loader className="w-5 h-5 animate-spin text-blue-600" />
+                        <span className="text-sm">Processing...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <form onSubmit={handleChatSubmit} className="p-3 border-t border-gray-100 bg-white flex gap-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="flex-1 p-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
+                    placeholder="Ask me anything..."
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 flex items-center justify-center transition-colors disabled:opacity-50"
+                  >
+                    <Send className="w-7 h-7" strokeWidth={3} />
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-8"
+      >
+        <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 shadow-lg">
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
+          >
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <UserCheck className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-3">HR Manager Dashboard</h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Review and approve resource and opportunity requests from project managers
+            </p>
+          </motion.div>
+          <div className="flex gap-4 justify-center">
+            <Button
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg"
+            >
+              <Bot className="w-5 h-5 mr-2" />
+              AI Assistant
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingDemand(null);
+                setIsAddDemandOpen(true);
+              }}
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Demand
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Statistics Cards */}
+      <StatisticsCards 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        resourceRequests={resourceRequests}
+        opportunityRequests={opportunityRequests}
+        demands={demands}
+      />
+
+      {/* Tabs Section */}
+      <Tabs defaultValue="demands" className="space-y-6" onValueChange={setActiveTab}>
+        <TabsList className="flex bg-gray-100 rounded-lg p-1 gap-1 w-full max-w-md mx-auto">
+          <TabsTrigger
+            value="resource"
+            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
+          >
+            Requests
+          </TabsTrigger>
+          <TabsTrigger
+            value="demands"
+            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
+          >
+            Demands
+          </TabsTrigger>
+          <TabsTrigger
+            value="opportunity"
+            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
+          >
+            Opportunities
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="resource">
+          <RequestTab
+            type="resource"
+            service={ResourceRequestService}
+            approverUserId={approverUserId}
+            requests={resourceRequests}
+            refresh={fetchRequests}
+          />
+        </TabsContent>
+        
+        <TabsContent value="opportunity">
+          <RequestTab
+            type="opportunity"
+            service={OpportunityService}
+            approverUserId={approverUserId}
+            requests={opportunityRequests}
+            refresh={fetchRequests}
+          />
+        </TabsContent>
+        
+        <TabsContent value="demands">
+          <DemandsTab demands={demands} onEditDemand={handleEditDemand} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Create/Edit Demand Modal */}
+      <Dialog open={isAddDemandOpen} onOpenChange={(open) => {
+        setIsAddDemandOpen(open);
+        if (!open) resetDemandForm();
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-gray-200 bg-white z-10">
+            <DialogTitle className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Plus className="w-8 h-8 text-emerald-600 bg-emerald-100 p-1 rounded-full" />
+              {editingDemand ? `Edit Demand - ${editingDemand.demandTitle}` : 'Create New Demand'}
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  setIsAddDemandOpen(false);
+                  resetDemandForm();
+                }}
+                className="ml-auto px-4 rounded-xl border-gray-300 hover:border-gray-400 -mr-2"
+              >
+                <XCircle/>
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-8 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              editingDemand ? handleUpdateDemand() : handleCreateDemand(); 
+            }} className="space-y-8">
+              {/* Basic Information */}
+              <section className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-blue-600" />
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="demandTitle" className="flex items-center gap-1">
+                      Demand Title <span className="text-red-500">*</span>
+                    </Label>
+                    <input
+                      id="demandTitle"
+                      type="text"
+                      placeholder="Enter demand title"
+                      value={demandForm.demandTitle}
+                      onChange={(e) => setDemandForm({ ...demandForm, demandTitle: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="projectName" className="flex items-center gap-1">
+                      Project Name
+                    </Label>
+                    <input
+                      id="projectName"
+                      type="text"
+                      placeholder="Enter project name"
+                      value={demandForm.projectName}
+                      onChange={(e) => setDemandForm({ ...demandForm, projectName: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                      
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="demandOpenDt">Demand Open Date</Label>
+                    <DatePicker
+                      selected={demandForm.demandOpenDt}
+                      onChange={(d) => setDemandForm({ ...demandForm, demandOpenDt: d })}
+                      dateFormat="dd MMM yyyy"
+                      placeholderText="dd-mm-yyyy"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fulfilmentDt">Target Fulfilment Date</Label>
+                    <DatePicker
+                      selected={demandForm.fulfilmentDt}
+                      onChange={(d) => setDemandForm({ ...demandForm, fulfilmentDt: d })}
+                      dateFormat="dd MMM yyyy"
+                      placeholderText="dd-mm-yyyy"
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priority" className="flex items-center gap-1">
+                      Priority
+                    </Label>
+                    <select
+                      id="priority"
+                      value={demandForm.priority}
+                      onChange={(e) => setDemandForm({ ...demandForm, priority: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="resourceRequests" className="flex items-center gap-1">
+                      Number of Resources <span className="text-red-500">*</span>
+                    </Label>
+                    <input
+                      id="resourceRequests"
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 3"
+                      value={demandForm.resourceRequests}
+                      onChange={(e) => setDemandForm({ ...demandForm, resourceRequests: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Status Field - Only show when editing */}
+                  {editingDemand && (
+                    <div className="space-y-2">
+                      <Label htmlFor="overallStatus" className="flex items-center gap-1">
+                        Status <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="overallStatus"
+                        value={demandForm.overallStatus}
+                        onChange={(e) => setDemandForm({ ...demandForm, overallStatus: e.target.value })}
+                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                        required
+                      >
+                        <option value="Closed">Closed</option>
+                        <option value="Hold">Hold</option>
+                        <option value="Open">Open</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Client & Role Details */}
+              <section className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-purple-600" />
+                  Client & Role Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyId">Company <span className="text-red-500">*</span></Label>
+                    <select
+                      id="companyId"
+                      value={demandForm.companyId || ""}
+                      onChange={(e) => setDemandForm({ ...demandForm, companyId: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    >
+                      <option value="">Select Company</option>
+                      {companies.map((comp) => (
+                        <option key={comp.companyId} value={comp.companyId}>
+                          {comp.companyName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="accountInput">Account <span className="text-red-500">*</span></Label>
+                    
+                    <div className="flex gap-2">
+                      <Input
+                        id="accountInput"
+                        type="text"
+                        placeholder="Search or type account"
+                        value={accountInput}
+                        onChange={handleAccountInputChange}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddAccount();
+                          }
+                        }}
+                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                        required
+                      />
+                      <Button 
+                        type="button" 
+                        onClick={() => {
+                          if (selectedAccount) return;
+                          handleAddAccount();
+                        }}
+                        disabled={isCreatingAccount || !accountInput.trim() || !demandForm.companyId || selectedAccount}
+                        className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50"
+                      >
+                        {isCreatingAccount ? <Loader className="w-4 h-4 animate-spin" /> : "Add"}
+                      </Button>
+                    </div>
+
+                    {selectedAccount && accountInput.trim() && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        Please remove the selected account to add a new one
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedAccount && (
+                        <Badge
+                          className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full flex items-center gap-1"
+                        >
+                          {selectedAccount.accountName}
+                          <button
+                            onClick={removeAccount}
+                            className="ml-1 text-indigo-700 hover:text-red-500 transition-colors"
+                            type="button"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      )}
+                    </div>
+
+                    {accountInput.trim() && !selectedAccount && (
+                      <>
+                        <div className="text-xs text-gray-500 mt-2">Suggested accounts:</div>
+                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                          {filteredAccounts.length > 0 ? (
+                            filteredAccounts.map((acc) => (
+                              <Badge 
+                                key={acc.accountId} 
+                                variant="outline" 
+                                className="cursor-pointer hover:bg-indigo-50 text-xs transition-colors"
+                                onClick={() => handleSelectAccount(acc)}
+                              >
+                                {acc.accountName}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No matches. Press "Add" to create.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="departmentInput">Role<span className="text-red-500">*</span></Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="departmentInput"
+                        type="text"
+                        placeholder="Search or type role"
+                        value={departmentInput}
+                        onChange={handleDepartmentInputChange}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddDepartment();
+                          }
+                        }}
+                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                      />
+                      <Button 
+                        type="button" 
+                        onClick={() => {
+                          if (selectedDepartment) {
+                            return;
+                          }
+                          handleAddDepartment();
+                        }}
+                        disabled={isCreatingDepartment || !departmentInput.trim() || !demandForm.companyId || selectedDepartment}
+                        className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50"
+                      >
+                        {isCreatingDepartment ? <Loader className="w-4 h-4 animate-spin" /> : "Add"}
+                      </Button>
+                    </div>
+
+                    {/* Validation Error Message */}
+                    {selectedDepartment && departmentInput.trim() && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        Please remove the selected role to add a new one
+                      </p>
+                    )}
+
+                    {/* Selected Department */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedDepartment && (
+                        <Badge
+                          className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full flex items-center gap-1"
+                        >
+                          {selectedDepartment.departmentName}
+                          <button
+                            onClick={removeDepartment}
+                            className="ml-1 text-indigo-700 hover:text-red-500 transition-colors"
+                            type="button"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Suggested Departments */}
+                    {departmentInput.trim() && !selectedDepartment && (
+                      <>
+                        <div className="text-xs text-gray-500 mt-2">Suggested departments:</div>
+                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                          {filteredDepartments.length > 0 ? (
+                            filteredDepartments.map((dept) => (
+                              <Badge 
+                                key={dept.departmentId} 
+                                variant="outline" 
+                                className="cursor-pointer hover:bg-indigo-50 text-xs transition-colors"
+                                onClick={() => handleSelectDepartment(dept)}
+                              >
+                                {dept.departmentName}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No matches. Press "Add" to create.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="yearsOfExp">Years of Experience</Label>
+                    <input id="yearsOfExp" type="text" placeholder="e.g., 3-5" value={demandForm.yearsOfExp}
+                      onChange={(e) => setDemandForm({ ...demandForm, yearsOfExp: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="roleDuration">Role Duration(e.g.,6 months)</Label>
+                    <input id="roleDuration" type="text" placeholder="e.g., 6 months" value={demandForm.roleDuration}
+                      onChange={(e) => setDemandForm({ ...demandForm, roleDuration: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="workLocPref">Work Location Preference</Label>
+                    <input id="workLocPref" type="text" placeholder="e.g., Chennai" value={demandForm.workLocPref}
+                      onChange={(e) => setDemandForm({ ...demandForm, workLocPref: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="locationType">Location Type</Label>
+                    <select id="locationType" value={demandForm.locationType}
+                      onChange={(e) => setDemandForm({ ...demandForm, locationType: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all">
+                      <option value="Onsite">Onsite</option>
+                      <option value="Remote">Remote</option>
+                      <option value="Hybrid">Hybrid</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="workMode">Work Mode</Label>
+                    <select id="workMode" value={demandForm.workMode}
+                      onChange={(e) => setDemandForm({ ...demandForm, workMode: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all">
+                      <option value="FullTime">FullTime</option>
+                      <option value="PartTime">PartTime</option>
+                      <option value="Contract">Contract</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              {/* Skills */}
+              <section className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-indigo-600" />
+                  Skills
+                </h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="skills">Add Skills (Required/Nice to have)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="skills"
+                      type="text"
+                      placeholder="e.g., React, Python"
+                      value={skillInput}
+                      onChange={handleSkillInputChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addSkill(skillInput);
+                        }
+                      }}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={() => addSkill(skillInput)}
+                      className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedSkills.map((skill, index) => (
+                      <Badge
+                        key={index}
+                        className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-full flex items-center gap-1"
+                      >
+                        {skill.name}
+                        <button
+                          onClick={() => removeSkill(skill.name)}
+                          className="ml-1 text-indigo-700 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">Suggested skills:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {filteredSkills.map((skill) => (
+                      <Badge 
+                        key={skill} 
+                        variant="outline" 
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSuggestedSkillClick(skill)}
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                {/* Description Field */}
+                <div className="col-span-full space-y-2">
+                  <Label htmlFor="description" className="flex items-center gap-1">
+                    Description
+                  </Label>
+                  <div className="relative">
+                    <Textarea
+                      id="description"
+                      placeholder="Enter demand description, requirements, or additional notes..."
+                      value={demandForm.description}
+                      onChange={(e) => {
+                        // Limit to 500 words
+                        const words = e.target.value.split(/\s+/);
+                        if (words.length <= 500 || e.target.value.length < demandForm.description.length) {
+                          setDemandForm({ ...demandForm, description: e.target.value });
+                        }
+                      }}
+                      className="min-h-[120px] resize-vertical focus:ring-2 focus:ring-emerald-500 transition-all pr-20"
+                    />
+                    <div className={`absolute bottom-3 right-3 text-xs ${
+                      demandForm.description.split(/\s+/).filter(word => word.length > 0).length >= 450 
+                        ? 'text-orange-500 font-medium' 
+                        : 'text-gray-400'
+                    }`}>
+                      {demandForm.description.split(/\s+/).filter(word => word.length > 0).length}/500 words
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </form>
+          </div>
+
+          <div className="flex gap-4 justify-end p-6 border-t border-gray-200 bg-gray-50/80 rounded-b-2xl">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setIsAddDemandOpen(false);
+                resetDemandForm();
+              }}
+              className="px-8 rounded-xl border-gray-300 hover:border-gray-400"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={editingDemand ? handleUpdateDemand : handleCreateDemand}
+              disabled={!demandForm.demandTitle  || !demandForm.resourceRequests || !selectedAccount || !selectedDepartment}
+              size="lg"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              {editingDemand ? 'Update Demand' : 'Create Demand'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
