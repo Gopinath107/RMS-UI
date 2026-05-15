@@ -32,6 +32,7 @@ import ProjectManagerResourceAllocation from './components/ProjectManagerResourc
 import ClientsManagement from './components/ClientsManagement.jsx';
 import ClientList from './components/ClientList.jsx';
 import ProjectsManagement from './components/ProjectsManagement.jsx';
+import ProjectFormPage from './components/ProjectFormPage.jsx';
 import ProjectPortfolio from './components/ProjectPortfolio.jsx';
 import ReportsAnalytics from './components/ReportsAnalytics.jsx';
 import Notifications from './components/Notifications.jsx';
@@ -55,7 +56,7 @@ import Sidebar from './components/Sidebar.jsx';
 import { Toaster } from './components/ui/sonner.jsx';
 import { getDashboardPath } from './config/routes.js';
 
-// ─── Role-specific theme colours ────────────────────────────────────────────
+// â”€â”€â”€ Role-specific theme colours â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROLE_THEMES = {
   'project-manager': {
     gradient: 'from-green-50/40 via-emerald-50/20 to-teal-100/30',
@@ -110,7 +111,7 @@ const ROLE_TITLES = {
   'interview-panel': 'Interview Panel',
 };
 
-// ─── Placeholder for stub pages ─────────────────────────────────────────────
+// â”€â”€â”€ Placeholder for stub pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Placeholder = ({ title, color = 'text-gray-600' }) => (
   <div className="p-6">
     <h1 className={`text-2xl font-bold ${color}`}>{title}</h1>
@@ -118,7 +119,7 @@ const Placeholder = ({ title, color = 'text-gray-600' }) => (
   </div>
 );
 
-// ─── Authenticated App Shell ─────────────────────────────────────────────────
+// â”€â”€â”€ Authenticated App Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AppShell({ userRole, onLogout }) {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const theme = ROLE_THEMES[userRole] || DEFAULT_THEME;
@@ -183,7 +184,7 @@ function AppShell({ userRole, onLogout }) {
             {/* Page content rendered by nested Routes */}
             <div className="px-2 sm:px-4 lg:px-6 py-4 w-full overflow-x-clip">
               <Routes>
-                {/* ── HR ── */}
+                {/* â”€â”€ HR â”€â”€ */}
                 <Route path="/hr" element={<ProtectedRoute allowedRoles={['hr']}><HRDashboard /></ProtectedRoute>} />
                 <Route path="/hr/resources" element={<ProtectedRoute allowedRoles={['hr']}><ResourceManagement /></ProtectedRoute>} />
                 <Route path="/hr/resources/add" element={<ProtectedRoute allowedRoles={['hr']}><AddResourcePage /></ProtectedRoute>} />
@@ -191,26 +192,28 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/hr/interview-hub" element={<ProtectedRoute allowedRoles={['hr']}><InterviewHub /></ProtectedRoute>} />
                 <Route path="/hr/clients" element={<ProtectedRoute allowedRoles={['hr']}><ClientList /></ProtectedRoute>} />
                 <Route path="/hr/projects" element={<ProtectedRoute allowedRoles={['hr']}><ProjectsManagement /></ProtectedRoute>} />
+                <Route path="/hr/projects/add" element={<ProtectedRoute allowedRoles={['hr']}><ProjectFormPage /></ProtectedRoute>} />
                 <Route path="/hr/notifications" element={<ProtectedRoute allowedRoles={['hr']}><Notifications /></ProtectedRoute>} />
 
-                {/* ── Project Manager ── */}
+                {/* â”€â”€ Project Manager â”€â”€ */}
                 <Route path="/pm" element={<ProtectedRoute allowedRoles={['project-manager']}><ProjectManagerDashboard /></ProtectedRoute>} />
                 <Route path="/pm/projects" element={<ProtectedRoute allowedRoles={['project-manager']}><ProjectsManagement /></ProtectedRoute>} />
+                <Route path="/pm/projects/add" element={<ProtectedRoute allowedRoles={['project-manager']}><ProjectFormPage /></ProtectedRoute>} />
                 <Route path="/pm/resource-requests" element={<ProtectedRoute allowedRoles={['project-manager']}><RequestResource /></ProtectedRoute>} />
                 <Route path="/pm/interview-hub" element={<ProtectedRoute allowedRoles={['project-manager']}><InterviewHub /></ProtectedRoute>} />
                 <Route path="/pm/clients" element={<ProtectedRoute allowedRoles={['project-manager']}><ClientList /></ProtectedRoute>} />
                 <Route path="/pm/resource-allocation" element={<ProtectedRoute allowedRoles={['project-manager']}><ProjectManagerResourceAllocation /></ProtectedRoute>} />
 
-                {/* ── PMO ── */}
+                {/* â”€â”€ PMO â”€â”€ */}
                 <Route path="/pmo" element={<ProtectedRoute allowedRoles={['pmo']}><PMODashboard /></ProtectedRoute>} />
                 <Route path="/pmo/resource-requests" element={<ProtectedRoute allowedRoles={['pmo']}><RequestResource /></ProtectedRoute>} />
                 <Route path="/pmo/interview-hub" element={<ProtectedRoute allowedRoles={['pmo']}><InterviewHub /></ProtectedRoute>} />
 
-                {/* ── System Admin ── */}
+                {/* â”€â”€ System Admin â”€â”€ */}
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['system-admin']}><UserManagement /></ProtectedRoute>} />
                 <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={['system-admin']}><Placeholder title="System Settings" color="text-red-600" /></ProtectedRoute>} />
 
-                {/* ── Portfolio Manager ── */}
+                {/* â”€â”€ Portfolio Manager â”€â”€ */}
                 <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioManagerDashboard /></ProtectedRoute>} />
                 <Route path="/portfolio/projects" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ProjectPortfolio /></ProtectedRoute>} />
                 <Route path="/portfolio/clients" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ClientList /></ProtectedRoute>} />
@@ -219,15 +222,15 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/portfolio/financial-overview" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Financial Overview" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/resource-strategy" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Resource Strategy" color="text-orange-600" /></ProtectedRoute>} />
 
-                {/* ── Sales Manager ── */}
+                {/* â”€â”€ Sales Manager â”€â”€ */}
                 <Route path="/sales" element={<ProtectedRoute allowedRoles={['sales-manager']}><OpportunityRequests /></ProtectedRoute>} />
                 <Route path="/sales/pipeline" element={<ProtectedRoute allowedRoles={['sales-manager']}><Placeholder title="Sales Pipeline" color="text-yellow-600" /></ProtectedRoute>} />
 
-                {/* ── Interview Panel ── */}
+                {/* â”€â”€ Interview Panel â”€â”€ */}
                 <Route path="/panel" element={<ProtectedRoute allowedRoles={['interview-panel']}><InterviewPanelDashboard /></ProtectedRoute>} />
                 <Route path="/panel/interview-hub" element={<ProtectedRoute allowedRoles={['interview-panel']}><InterviewHub /></ProtectedRoute>} />
 
-                {/* ── Fallback inside shell → redirect to role dashboard ── */}
+                {/* â”€â”€ Fallback inside shell â†’ redirect to role dashboard â”€â”€ */}
                 <Route path="*" element={<Navigate to={getDashboardPath(userRole)} replace />} />
               </Routes>
             </div>
@@ -238,7 +241,7 @@ function AppShell({ userRole, onLogout }) {
   );
 }
 
-// ─── Root App ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Root App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AppContent() {
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
   const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth());
@@ -310,7 +313,7 @@ function AppContent() {
         {/* 404 */}
         <Route path="/404" element={<NotFound />} />
 
-        {/* Authenticated shell — handles all role-prefixed routes */}
+        {/* Authenticated shell â€” handles all role-prefixed routes */}
         <Route
           path="/*"
           element={
