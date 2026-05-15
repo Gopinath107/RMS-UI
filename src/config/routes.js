@@ -3,7 +3,7 @@
  * Single source of truth for paths, roles, and dashboard redirects.
  */
 
-// Role → their root dashboard path
+// Role â†’ their root dashboard path
 export const ROLE_DASHBOARDS = {
   'hr': '/hr',
   'project-manager': '/pm',
@@ -19,37 +19,39 @@ export const ROLE_DASHBOARDS = {
  * allowedRoles: which roles may access this route (empty = public)
  */
 export const APP_ROUTES = [
-  // ── Public ──────────────────────────────────────────────────────
+  // â”€â”€ Public â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/login',           public: true },
   { path: '/forgot-password', public: true },
 
-  // ── HR ──────────────────────────────────────────────────────────
+  // â”€â”€ HR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/hr',                   allowedRoles: ['hr'] },
   { path: '/hr/resources',         allowedRoles: ['hr'] },
   { path: '/hr/interviews',        allowedRoles: ['hr'] },
   { path: '/hr/interview-hub',     allowedRoles: ['hr'] },
   { path: '/hr/clients',           allowedRoles: ['hr'] },
   { path: '/hr/projects',          allowedRoles: ['hr'] },
+  { path: '/hr/projects/add',      allowedRoles: ['hr'] },
   { path: '/hr/notifications',     allowedRoles: ['hr'] },
 
-  // ── Project Manager ─────────────────────────────────────────────
+  // â”€â”€ Project Manager â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/pm',                     allowedRoles: ['project-manager'] },
   { path: '/pm/projects',            allowedRoles: ['project-manager'] },
+  { path: '/pm/projects/add',        allowedRoles: ['project-manager'] },
   { path: '/pm/resource-requests',   allowedRoles: ['project-manager'] },
   { path: '/pm/interview-hub',       allowedRoles: ['project-manager'] },
   { path: '/pm/clients',             allowedRoles: ['project-manager'] },
   { path: '/pm/resource-allocation', allowedRoles: ['project-manager'] },
 
-  // ── PMO ─────────────────────────────────────────────────────────
+  // â”€â”€ PMO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/pmo',                    allowedRoles: ['pmo'] },
   { path: '/pmo/resource-requests',  allowedRoles: ['pmo'] },
   { path: '/pmo/interview-hub',      allowedRoles: ['pmo'] },
 
-  // ── System Admin ────────────────────────────────────────────────
+  // â”€â”€ System Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/admin',                  allowedRoles: ['system-admin'] },
   { path: '/admin/system-settings',  allowedRoles: ['system-admin'] },
 
-  // ── Portfolio Manager ────────────────────────────────────────────
+  // â”€â”€ Portfolio Manager â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/portfolio',                    allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/projects',           allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/clients',            allowedRoles: ['portfolio-manager'] },
@@ -58,11 +60,11 @@ export const APP_ROUTES = [
   { path: '/portfolio/financial-overview', allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/resource-strategy',  allowedRoles: ['portfolio-manager'] },
 
-  // ── Sales Manager ────────────────────────────────────────────────
+  // â”€â”€ Sales Manager â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/sales',          allowedRoles: ['sales-manager'] },
   { path: '/sales/pipeline', allowedRoles: ['sales-manager'] },
 
-  // ── Interview Panel ──────────────────────────────────────────────
+  // â”€â”€ Interview Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { path: '/panel',              allowedRoles: ['interview-panel'] },
   { path: '/panel/interview-hub', allowedRoles: ['interview-panel'] },
 ];
