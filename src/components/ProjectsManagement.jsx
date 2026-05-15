@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -26,90 +27,46 @@ import {
   Edit,
   Trash2,
   Plus,
-  X,
 } from "lucide-react";
-import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
 
 import { ProjectService } from "../services/ProjectmanagementService";
-import { ClientService } from "../services/clientListService";
 import { SkillService } from "../services/SkillsService";
 import ReusableDataView, { DataViewToolbar } from "./common/ReusableDataView.jsx";
 import { useDataViewControls } from "./common/useDataViewControls.js";
-
-const staticSkillOptions = [
-  "React","JavaScript","Node.js","TypeScript","Python","Java","Google Cloud Platform","AWS","Azure","Docker","Kubernetes","DevOps",
-  "Veeva CRM",
-  "Veeva Vault",
-  "Salesforce Admin",
-  "Salesforce Developer",
-  "Salesforce - sales cloud health cloud service cloud data cloud",
-  "SFMC",
-  "Mulesoft",
-  "Commerce cloud",
-];
+import {
+  getProjectsBaseRoute,
+  STATIC_PROJECT_SKILL_OPTIONS,
+} from "./ProjectFormPage.helpers.js";
 
 const ProjectsManagement = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const baseRoute = useMemo(() => getProjectsBaseRoute(location.pathname), [location.pathname]);
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [error, setError] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
   const [selectedDetails, setSelectedDetails] = useState(null);
-  const [clients, setClients] = useState([]);
   const [skillsList, setSkillsList] = useState([]);
-  const [filteredSkills, setFilteredSkills] = useState([]);
-  const [skillInput, setSkillInput] = useState("");
-
-  const [newProject, setNewProject] = useState({
-    name: "",
-    accountName: "",
-    accountId: null,
-    startDate: "",
-    endDate: "",
-    status: "Planned",
-    description: "",
-    priority: "Medium",
-    budget: "",
-    companyId: 1,
-    managerUserId: null,
-    selectedSkills: [],
-  });
 
   useEffect(() => {
     const loadData = async () => {
-      await fetchClients();
       await fetchSkills();
       await fetchProjects();
     };
     loadData();
   }, []);
 
-  const fetchClients = async () => {
-    try {
-      const res = await ClientService.fetchClientList();
-      if (res && Array.isArray(res)) {
-        setClients(res);
-      } else {
-        setClients([]);
-        setError("No clients found.");
-      }
-    } catch (err) {
-      console.error("Fetch clients error:", err);
-      setError("Failed to fetch clients. Please check API connection.");
-    }
-  };
-
   const fetchSkills = async () => {
     try {
       const response = await SkillService.fetchSkillList();
       const fetchedSkills = response.data.result;
       const fetchedNames = new Set(fetchedSkills.map(s => s.skillName.toLowerCase()));
-      const uniqueStatic = staticSkillOptions
+      const uniqueStatic = STATIC_PROJECT_SKILL_OPTIONS
         .filter(name => !fetchedNames.has(name.toLowerCase()))
         .map((name, index) => ({
           skillId: - (index + 1),
@@ -117,15 +74,13 @@ const ProjectsManagement = () => {
         }));
       const combinedSkills = [...uniqueStatic, ...fetchedSkills].sort((a, b) => a.skillName.localeCompare(b.skillName));
       setSkillsList(combinedSkills);
-      setFilteredSkills(combinedSkills.slice(0, 30).map(s => s.skillName));
     } catch (error) {
       console.error("Error fetching skills:", error);
-      const staticSkills = staticSkillOptions.map((name, index) => ({
+      const staticSkills = STATIC_PROJECT_SKILL_OPTIONS.map((name, index) => ({
         skillId: - (index + 1),
         skillName: name
       })).sort((a, b) => a.skillName.localeCompare(b.skillName));
       setSkillsList(staticSkills);
-      setFilteredSkills(staticSkills.slice(0, 30).map(s => s.skillName));
       toast.error("Failed to fetch skills, using static skills");
     }
   };
@@ -182,231 +137,18 @@ const ProjectsManagement = () => {
     setFilteredProjects(filtered);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewProject((prev) => ({ ...prev, [name]: value }));
-  };
+  const openAddProject = useCallback(() => {
+    navigate(`${baseRoute}/add`);
+  }, [baseRoute, navigate]);
 
-  const addCustomSkill = async () => {
-    const skillName = skillInput.trim();
-    if (!skillName) {
-      toast.error("Please enter a valid skill name.");
-      return;
-    }
-
-    const lower = skillName.toLowerCase();
-    const existingSkill = skillsList.find(s => s.skillName.toLowerCase() === lower);
-
-    if (existingSkill && existingSkill.skillId > 0) {
-      if (!newProject.selectedSkills.some(s => s.id === existingSkill.skillId)) {
-        setNewProject(prev => ({
-          ...prev,
-          selectedSkills: [...prev.selectedSkills, { id: existingSkill.skillId, name: existingSkill.skillName }]
-        }));
-      }
-      setSkillInput("");
-      toast.success("Skill added!");
-      return;
-    }
-
-    try {
-      const response = await SkillService.createSkill(1, skillName);
-      console.log("Create Skill Response:", response.data);
-      if (response.data.success) {
-        const newSkill = response.data.result;
-        setSkillsList(prev => {
-          const filtered = prev.filter(s => s.skillName.toLowerCase() !== lower);
-          return [...filtered, newSkill].sort((a, b) => a.skillName.localeCompare(b.skillName));
-        });
-        if (!newProject.selectedSkills.some(s => s.id === newSkill.skillId)) {
-          setNewProject(prev => ({
-            ...prev,
-            selectedSkills: [...prev.selectedSkills, { id: newSkill.skillId, name: newSkill.skillName }]
-          }));
-        }
-        setSkillInput("");
-        toast.success("Custom skill added successfully!");
-      } else {
-        toast.error(`Failed to add skill: ${response.data.message || "Unknown error"}`);
-      }
-    } catch (error) {
-      console.error("Error adding custom skill:", error.response?.data || error.message);
-      toast.error("Failed to add custom skill. Check console for details.");
-    }
-  };
-
-    // const handleSkillRemove = (skillId) => {
-    //   setNewProject(prev => ({
-    //     ...prev,
-    //     setSelectedSkills: selectedSkills.filter(s => s.name !== skillName)
-    //     // setSelectedSkills(selectedSkills.filter(s => s.name !== skillName));
-    //   }));
-    // };
-
-const removeSkill = (skillName) => {
-  console.log('Removing skill:', skillName);
-  setNewProject(prev => ({
-    ...prev,
-    selectedSkills: prev.selectedSkills.filter(s => s.name !== skillName)
-  }));
-};
-
-
-  const selectSkillForInput = (skill) => {
-    setSkillInput(skill);
-  };
-
-  const handleEditProject = (project) => {
-    setSelectedProject(project);
-    const client = clients.find((c) => c.accountId === project.accountId);
-    setNewProject({
-      name: project.projectName || "",
-      accountName: client ? client.accountName : project.accountName || "",
-      accountId: project.accountId || null,
-      startDate: project.startDate || "",
-      endDate: project.endDate || "",
-      status: project.status || "Planned",
-      description: project.description || "",
-      priority: project.priority || "Medium",
-      budget: project.budget ? project.budget.toString() : "",
-      companyId: project.companyId || 1,
-      managerUserId: project.managerUserId || null,
-      selectedSkills: project.skills.map(skill =>
-        typeof skill === 'object' ? { id: skill.skillId, name: skill.skillName } :
-          skillsList.find(s => s.skillId === skill || s.skillName === skill) || { id: null, name: skill }
-      ).filter(s => s.name && s.id),
+  const handleEditProject = useCallback((project) => {
+    navigate(`${baseRoute}/add`, {
+      state: {
+        isEditMode: true,
+        projectData: project,
+      },
     });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmitProject = async (e) => {
-    e.preventDefault();
-    console.log("Form submitted");
-    try {
-      const requiredFields = {
-        name: "Project Name",
-        accountId: "Client (Account)",
-        startDate: "Start Date",
-        endDate: "End Date",
-      };
-
-      for (const [key, label] of Object.entries(requiredFields)) {
-        if (!newProject[key]) {
-          Swal.fire({
-            icon: "warning",
-            title: "Missing Input Field!",
-            text: `${label} is required!`,
-            timer: 1500,
-            showConfirmButton: false,
-          });
-          return;
-        }
-      }
-
-      if (new Date(newProject.endDate) < new Date(newProject.startDate)) {
-        Swal.fire({
-          icon: "warning",
-          title: "Invalid Date Range!",
-          text: "End date cannot be earlier than start date!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
-
-      const payload = {
-        companyId: newProject.companyId,
-        accountId: newProject.accountId,
-        projectName: newProject.name,
-        description: newProject.description,
-        startDate: newProject.startDate,
-        endDate: newProject.endDate,
-        budget: parseFloat(newProject.budget || 0),
-        revenueAmount: 0,
-        priority: newProject.priority,
-        status: newProject.status,
-        skillIds: newProject.selectedSkills.map(s => s.id).filter(id => id > 0),
-        managerUserId: newProject.managerUserId,
-      };
-
-      console.log("Payload:", payload);
-
-      let result;
-      if (selectedProject && selectedProject.projectId) {
-        result = await ProjectService.updateProject(
-          selectedProject.projectId,
-          payload.companyId,
-          payload.accountId,
-          payload.managerUserId,
-          payload.projectName,
-          payload.description,
-          payload.startDate,
-          payload.endDate,
-          payload.budget,
-          payload.revenueAmount,
-          payload.priority,
-          payload.status,
-          payload.skillIds
-        );
-      } else {
-        result = await ProjectService.createProject(
-          payload.companyId,
-          payload.accountId,
-          payload.managerUserId,
-          payload.projectName,
-          payload.description,
-          payload.startDate,
-          payload.endDate,
-          payload.budget,
-          payload.revenueAmount,
-          payload.priority,
-          payload.status,
-          payload.skillIds
-        );
-      }
-
-      if (result && (result.data.success === true || result.status === 200)) {
-        await fetchProjects();
-        setIsModalOpen(false);
-        setSelectedProject(null);
-        setNewProject({
-          name: "",
-          accountName: "",
-          accountId: null,
-          startDate: "",
-          endDate: "",
-          status: "Planned",
-          description: "",
-          priority: "Medium",
-          budget: "",
-          companyId: 1,
-          managerUserId: null,
-          selectedSkills: [],
-        });
-        setSkillInput("");
-        Swal.fire({
-          icon: "success",
-          title: selectedProject ? "Project Updated!" : "Project Created!",
-          text: `The project has been successfully ${selectedProject ? "updated" : "added"}.`,
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: result?.data?.message || "Failed to submit project. Check console for details.",
-        });
-      }
-    } catch (error) {
-      console.error("Project submission error:", error.response?.data || error.message);
-      Swal.fire({
-        icon: "error",
-        title: "Network/Server Error",
-        text: "Failed to submit project. Check console & API.",
-      });
-    }
-  };
+  }, [baseRoute, navigate]);
 
   const handleDeleteProject = async (projectId) => {
     const result = await Swal.fire({
@@ -514,7 +256,7 @@ const removeSkill = (skillName) => {
         </div>
       ),
     },
-  ], [skillsList]);
+  ], [handleEditProject, skillsList]);
 
   const dvControls = useDataViewControls("projects", projectColumns, "card");
 
@@ -548,25 +290,7 @@ const removeSkill = (skillName) => {
         <div className="flex items-center gap-2 flex-wrap">
           <DataViewToolbar controls={dvControls} />
           <Button
-            onClick={() => {
-              setSelectedProject(null);
-              setNewProject({
-                name: "",
-                accountName: "",
-                accountId: null,
-                startDate: "",
-                endDate: "",
-                status: "Planned",
-                description: "",
-                priority: "Medium",
-                budget: "",
-                companyId: 1,
-                managerUserId: null,
-                selectedSkills: [],
-              });
-              setSkillInput("");
-              setIsModalOpen(true);
-            }}
+            onClick={openAddProject}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -703,257 +427,6 @@ const removeSkill = (skillName) => {
           <p className="text-gray-500 col-span-3">{error || "No projects found"}</p>
         )}
       </div>}
-
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-lg sm:max-w-4xl max-h-[90vh] overflow-y-auto p-8 bg-white rounded-2xl shadow-2xl border border-gray-200">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-2xl font-bold text-gray-800">
-              {selectedProject ? "Edit Project" : "Create New Project"}
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 mt-2">
-              {selectedProject ? "Update the project details below." : "Fill in the details to create a new project."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmitProject} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">Project Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Enter project name"
-                  value={newProject.name}
-                  onChange={handleInputChange}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="accountId" className="text-sm font-medium text-gray-700">Client *</Label>
-                <Select
-                  name="accountId"
-                  value={newProject.accountId ? newProject.accountId.toString() : ""}
-                  onValueChange={(value) => {
-                    const id = value ? parseInt(value) : null;
-                    const client = clients.find((c) => c.accountId === id);
-                    setNewProject((prev) => ({
-                      ...prev,
-                      accountId: id,
-                      accountName: client ? client.accountName : prev.accountName,
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Select Client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.accountId} value={client.accountId.toString()}>
-                        {client.accountName}
-                      </SelectItem>
-                    ))}
-                    {selectedProject && newProject.accountId && !clients.find((c) => c.accountId === newProject.accountId) && (
-                      <SelectItem value={newProject.accountId.toString()}>
-                        {newProject.accountName || "Unknown Client"}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="startDate" className="text-sm font-medium text-gray-700">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  value={newProject.startDate}
-                  onChange={handleInputChange}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate" className="text-sm font-medium text-gray-700">End Date *</Label>
-                <Input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  value={newProject.endDate}
-                  onChange={handleInputChange}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="budget" className="text-sm font-medium text-gray-700">Budget *</Label>
-                <Input
-                  id="budget"
-                  name="budget"
-                  type="number"
-                  placeholder="Enter budget"
-                  value={newProject.budget}
-                  onChange={handleInputChange}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priority" className="text-sm font-medium text-gray-700">Priority</Label>
-                <Select
-                  name="priority"
-                  value={newProject.priority}
-                  onValueChange={(value) =>
-                    setNewProject((prev) => ({ ...prev, priority: value }))
-                  }
-                >
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue placeholder="Select Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
-              <Input
-                id="description"
-                name="description"
-                placeholder="Enter description"
-                value={newProject.description}
-                onChange={handleInputChange}
-                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Skills *</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {filteredSkills.map(skill => (
-                  <Button
-                    type="button" // Add this to prevent form submission
-                    key={skill}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => selectSkillForInput(skill)}
-                    className="text-xs"
-                  >
-                    {skill}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  placeholder="Enter custom skill"
-                  className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                />
-                <Button
-                  type="button" // Add this to prevent form submission
-                  onClick={addCustomSkill}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-1" /> Add
-                </Button>
-              </div>
-{newProject.selectedSkills.length > 0 && (
-  <div className="flex flex-wrap gap-2">
-    {newProject.selectedSkills.map((skill) => (
-<Badge
-  key={skill.id}
-  variant="default"
-  className="flex items-center gap-1 bg-blue-100 text-blue-700"
->
-  {skill.name}
-  <button
-    type="button"
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      removeSkill(skill.name);
-    }}
-    className="ml-1 focus:outline-none"
-  >
-    <X className="h-3 w-3" />
-  </button>
-</Badge>
-    ))}
-  </div>
-)}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status" className="text-sm font-medium text-gray-700">Status</Label>
-              <Select
-                name="status"
-                value={newProject.status}
-                onValueChange={(value) =>
-                  setNewProject((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Planned">Planned</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="On Hold">On Hold</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-4 pt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setSelectedProject(null);
-                  setNewProject({
-                    name: "",
-                    accountName: "",
-                    accountId: null,
-                    startDate: "",
-                    endDate: "",
-                    status: "Planned",
-                    description: "",
-                    priority: "Medium",
-                    budget: "",
-                    companyId: 1,
-                    managerUserId: null,
-                    selectedSkills: [],
-                  });
-                  setSkillInput("");
-                }}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {selectedProject ? "Update Project" : "Create Project"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-8 bg-white rounded-2xl shadow-2xl border border-gray-200">
