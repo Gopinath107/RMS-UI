@@ -13,7 +13,7 @@
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, RotateCcw } from "lucide-react";
 import { TableHead } from "../ui/table.jsx";
 
 function SortIcon({ columnId, sortState }) {
@@ -60,30 +60,27 @@ export function DraggableTableHead({
       ref={setNodeRef}
       style={style}
       className={[
-        "select-none whitespace-nowrap bg-inherit",
+        "select-none whitespace-nowrap bg-inherit cursor-grab active:cursor-grabbing",
         isDragging ? "opacity-60 shadow-lg ring-2 ring-blue-300 rounded" : "",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
+      title="Drag to reorder"
+      {...attributes}
+      {...listeners}
     >
       <div className="flex items-center gap-1 group">
-        {/* Drag handle */}
-        <span
-          className="cursor-grab active:cursor-grabbing shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors"
-          title="Drag to reorder"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </span>
-
         {/* Label / children — clicking here triggers sort */}
         <span
           className={[
             "flex items-center gap-1 min-w-0",
             sortable ? "cursor-pointer hover:text-blue-700" : "",
           ].join(" ")}
+          onPointerDown={(e) => {
+            // Let the drag events handle the pointer down, but we also want click to work.
+            // Dnd-kit's PointerSensor with distance constraint handles this gracefully.
+          }}
           onClick={() => sortable && onSort?.(sortKey || id)}
         >
           <span className="truncate font-bold">{label ?? children}</span>
@@ -97,34 +94,21 @@ export function DraggableTableHead({
 }
 
 /**
- * ColumnOrderResetButton — small "Reset Layout" button for use in toolbars.
+ * ColumnOrderResetButton — small icon-only button to reset layout.
  */
 export function ColumnOrderResetButton({ onReset, className = "" }) {
   return (
     <button
       type="button"
       onClick={onReset}
-      title="Reset column order"
+      title="Reset Columns"
       className={[
-        "inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5",
-        "text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition-colors",
+        "inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-2",
+        "text-gray-500 shadow-sm hover:bg-gray-50 hover:text-gray-700 transition-colors",
         className,
       ].join(" ")}
     >
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </svg>
-      Reset Columns
+      <RotateCcw className="h-4 w-4" />
     </button>
   );
 }
