@@ -19,6 +19,8 @@ import {
   normalizeParsedResumeData,
   sanitizeDocumentsForDraft,
 } from './AddResourcePage.helpers.js';
+import { useAutoSave } from '../hooks/useAutoSave.js';
+import { AutoSaveBadge } from './ui/AutoSaveBadge.jsx';
 
 
 // ── Static data ───────────────────────────────────────────────────────────────
@@ -1228,11 +1230,214 @@ export default function AddResourcePage() {
 
   const draftKey = getResourceDraftKey(resourceType);
 
+  // ── Auto Save ──────────────────────────────────────────────────────────────
+  /**
+   * Builds a minimal FormData payload suitable for auto-save.
+   * Only appends non-empty values to avoid overwriting existing data with blanks.
+   */
+  const buildAutoSavePayload = useCallback((draftId) => {
+    const payload = new FormData();
+    const fd = formData;
+
+    // Identify the resource we are saving
+    if (isEditMode) {
+      // Edit mode — use the actual resource ID
+      if (resourceType === 'internal') {
+        if (!fd.employeeId) return null;
+        payload.append('employeeId', String(fd.employeeId));
+      } else {
+        if (!fd.employeeId) return null;
+        payload.append('candidateId', String(fd.employeeId));
+      }
+    } else if (draftId) {
+      // Create mode — subsequent auto-saves update the draft
+      if (resourceType === 'internal') {
+        payload.append('employeeId', String(draftId));
+      } else {
+        payload.append('candidateId', String(draftId));
+      }
+    }
+    // else: first create — no ID yet
+
+    // Company / Department
+    if (fd.companyId) payload.append('companyId', String(fd.companyId));
+    else if (companies[0]?.companyId) payload.append('companyId', String(companies[0].companyId));
+    if (resourceType === 'internal' && fd.departmentId) payload.append('departmentId', String(fd.departmentId));
+
+    // Core identity
+    if (fd.firstName?.trim()) payload.append('firstName', fd.firstName.trim());
+    if (fd.middleName) payload.append('middleName', fd.middleName);
+    if (fd.lastName?.trim()) payload.append('lastName', fd.lastName.trim());
+    if (fd.email?.trim()) payload.append('email', fd.email.trim());
+    if (fd.phoneNumber) payload.append('phoneNumber', fd.phoneNumber);
+    if (fd.primaryContactNo) payload.append('primaryContactNo', fd.primaryContactNo);
+    if (fd.primaryCountryCode) payload.append('primaryCountryCode', fd.primaryCountryCode);
+    if (fd.secondaryContactNo) payload.append('secondaryContactNo', fd.secondaryContactNo);
+    if (fd.secondaryCountryCode) payload.append('secondaryCountryCode', fd.secondaryCountryCode);
+    if (fd.personalEmailId) payload.append('personalEmailId', fd.personalEmailId);
+    if (fd.dateOfBirth) payload.append('dateOfBirth', fd.dateOfBirth);
+    if (fd.gender) payload.append('gender', fd.gender);
+
+    // Identity & Citizenship
+    if (fd.countryOfCitizenship) payload.append('countryOfCitizenship', fd.countryOfCitizenship);
+    if (fd.documentType) payload.append('documentType', fd.documentType);
+    if (fd.documentNumber) payload.append('documentNumber', fd.documentNumber);
+    if (fd.visa) payload.append('visa', fd.visa);
+    if (fd.visaType) payload.append('visaType', fd.visaType);
+    if (fd.securityClearance) payload.append('securityClearance', fd.securityClearance);
+
+    // Address
+    if (fd.country) payload.append('country', fd.country);
+    if (fd.state) payload.append('state', fd.state);
+    if (fd.city) payload.append('city', fd.city);
+    if (fd.zipCode) payload.append('zipCode', fd.zipCode);
+    if (fd.street) payload.append('street', fd.street);
+
+    // Availability
+    if (fd.availabilityToJoin) payload.append('availabilityToJoin', fd.availabilityToJoin);
+    if (fd.interviewAvailability) payload.append('interviewAvailability', fd.interviewAvailability);
+
+    // Professional
+    if (fd.currentJobTitle) payload.append('currentJobTitle', fd.currentJobTitle);
+    if (fd.mostRecentEmployer) payload.append('mostRecentEmployer', fd.mostRecentEmployer);
+    if (fd.totalExperience !== '' && fd.totalExperience !== undefined) payload.append('totalExperience', Number(fd.totalExperience));
+    if (fd.experienceYears !== '' && fd.experienceYears !== undefined) payload.append('experienceYears', Number(fd.experienceYears));
+    if (fd.employmentType) payload.append('employmentType', fd.employmentType);
+    if (fd.relocate) payload.append('relocate', fd.relocate);
+    if (fd.location) payload.append('location', fd.location);
+    if (fd.joiningDate) payload.append('joiningDate', fd.joiningDate);
+    if (fd.status) payload.append('status', fd.status);
+
+    // Qualifications
+    if (fd.highestQualification) payload.append('highestQualification', fd.highestQualification);
+    if (fd.universityName) payload.append('universityName', fd.universityName);
+    if (fd.dateOfQualification) payload.append('dateOfQualification', fd.dateOfQualification);
+    if (fd.degrees) payload.append('degrees', fd.degrees);
+    if (fd.specialization) payload.append('specialization', fd.specialization);
+    if (fd.yearOfPassing) payload.append('yearOfPassing', fd.yearOfPassing);
+    if (fd.usaDegree) payload.append('usaDegree', fd.usaDegree);
+
+    // Compensation
+    if (fd.currency) payload.append('currency', fd.currency);
+    if (fd.frequency) payload.append('frequency', fd.frequency);
+    if (fd.sourcingRate !== '' && fd.sourcingRate !== undefined) payload.append('sourcingRate', Number(fd.sourcingRate));
+    if (fd.costRatePerHour !== '' && fd.costRatePerHour !== undefined) payload.append('costRatePerHour', Number(fd.costRatePerHour));
+    if (fd.capacityHoursPerWeek !== '' && fd.capacityHoursPerWeek !== undefined) payload.append('capacityHoursPerWeek', Number(fd.capacityHoursPerWeek));
+
+    // External-specific
+    if (resourceType === 'external') {
+      if (fd.currentCompany) payload.append('currentCompany', fd.currentCompany);
+      if (fd.currentCtc) payload.append('currentCtc', Number(fd.currentCtc));
+      if (fd.expectedCtc) payload.append('expectedCtc', Number(fd.expectedCtc));
+      if (fd.noticePeriod) payload.append('noticePeriod', fd.noticePeriod);
+      if (fd.preferredLocation) payload.append('preferredLocation', fd.preferredLocation);
+      if (fd.comments) payload.append('comments', fd.comments);
+      if (fd.vendorName) payload.append('vendorName', fd.vendorName);
+      if (fd.vendorContact) payload.append('vendorContact', fd.vendorContact);
+    }
+
+    // Skills
+    if (Array.isArray(fd.primarySkills) && fd.primarySkills.length > 0)
+      payload.append('primarySkills', JSON.stringify(fd.primarySkills));
+    if (Array.isArray(fd.secondarySkills) && fd.secondarySkills.length > 0)
+      payload.append('secondarySkills', JSON.stringify(fd.secondarySkills));
+    if (Array.isArray(socialLinks) && socialLinks.length > 0)
+      payload.append('socialLinks', JSON.stringify(socialLinks));
+    selectedSkills.forEach((s) => {
+      if (s.skillId > 0) payload.append('skillIds', String(s.skillId));
+    });
+
+    // Summaries
+    if (fd.profileSummary) payload.append('profileSummary', fd.profileSummary);
+    if (fd.trainingSummary) payload.append('trainingSummary', fd.trainingSummary);
+    if (fd.certificationSummary) payload.append('certificationSummary', fd.certificationSummary);
+    if (fd.resumeSummary) payload.append('resumeSummary', fd.resumeSummary);
+    if (fd.suggestedKeywords) payload.append('suggestedKeywords', fd.suggestedKeywords);
+    if (fd.currentAccountId) payload.append('currentAccountId', String(fd.currentAccountId));
+
+    return payload;
+  }, [formData, socialLinks, selectedSkills, isEditMode, resourceType, companies]);
+
+  /**
+   * Called by useAutoSave hook.  Receives current draftId (null on first create).
+   * Returns { id } on success.
+   */
+  const handleAutoSave = useCallback(async (draftId) => {
+    const payload = buildAutoSavePayload(draftId);
+    if (!payload) return null;
+
+    const isFirstCreate = !isEditMode && !draftId;
+    const isUpdate = isEditMode || Boolean(draftId);
+
+    try {
+      if (isUpdate) {
+        // Update existing resource / draft
+        if (resourceType === 'internal') {
+          await EmployeeService.updateEmployee(payload);
+          return { id: isEditMode ? formData.employeeId : draftId };
+        } else {
+          await CandidateService.updateCandidate(payload);
+          return { id: isEditMode ? formData.employeeId : draftId };
+        }
+      } else {
+        // First auto-save in create mode → create a draft
+        if (resourceType === 'internal') {
+          const companyId = formData.companyId || companies[0]?.companyId || 1;
+          const departmentId = formData.departmentId || 1;
+          payload.append('companyId', String(companyId));
+          payload.append('departmentId', String(departmentId));
+          // Defaults so backend accepts the record
+          if (!formData.joiningDate) payload.append('joiningDate', new Date().toISOString().split('T')[0]);
+          payload.append('experienceYears', String(Number(formData.experienceYears) || 0));
+          payload.append('location', formData.location || '');
+          payload.append('employmentType', formData.employmentType || 'Regular');
+          payload.append('status', formData.status || 'Bench');
+          const res = await EmployeeService.createEmployee(payload);
+          if (res?.data?.success) {
+            const createdId = res.data.result?.employeeId || res.data.result?.id;
+            if (createdId) return { id: createdId };
+          }
+        } else {
+          const companyId = formData.companyId || companies[0]?.companyId || 1;
+          payload.append('companyId', String(companyId));
+          if (!formData.joiningDate) payload.append('joiningDate', new Date().toISOString().split('T')[0]);
+          payload.append('experienceYears', String(Number(formData.experienceYears) || 0));
+          payload.append('location', formData.location || '');
+          payload.append('status', 'notAvailable');
+          const res = await CandidateService.createCandidate(payload);
+          if (res?.data?.success) {
+            const createdId = res.data.result?.candidateId || res.data.result?.id;
+            if (createdId) return { id: createdId };
+          }
+        }
+      }
+    } catch (err) {
+      // Do NOT show toast — silently fail, the badge shows the error
+      console.warn('[AutoSave] API error:', err?.response?.data || err.message);
+      throw err;
+    }
+    return null;
+  }, [buildAutoSavePayload, isEditMode, resourceType, formData, companies]);
+
+  const { autoSaveStatus, clearDraftId } = useAutoSave({
+    formData,
+    socialLinks,
+    selectedSkills,
+    resourceType,
+    isEditMode,
+    existingId: editResource?.id ?? null,
+    draftStorageKey: draftKey,
+    isFormVisible: step === 'form',
+    onAutoSave: handleAutoSave,
+  });
+
   const clearDraft = useCallback(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(getResourceDraftKey(resourceType));
     }
-  }, [resourceType]);
+    // Also clear auto-save draft reference to prevent stale IDs
+    clearDraftId();
+  }, [resourceType, clearDraftId]);
 
   const handleClose = () => {
     clearDraft();
@@ -2286,13 +2491,20 @@ export default function AddResourcePage() {
           </section>
 
           <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4">
-            <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-3">
-              <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
-              <Button type="button" onClick={onSubmit} className="w-full sm:w-auto flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white">
-                {isEditMode
-                  ? (resourceType === 'internal' ? 'Update Internal Resource' : 'Update External Resource')
-                  : (resourceType === 'internal' ? 'Save Internal Resource' : 'Save External Resource')}
-              </Button>
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between gap-3">
+              {/* Auto-save status */}
+              <div className="flex items-center">
+                <AutoSaveBadge status={autoSaveStatus} />
+              </div>
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
+                <Button type="button" onClick={onSubmit} className="w-full sm:w-auto flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white">
+                  {isEditMode
+                    ? (resourceType === 'internal' ? 'Update Internal Resource' : 'Update External Resource')
+                    : (resourceType === 'internal' ? 'Save Internal Resource' : 'Save External Resource')}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
