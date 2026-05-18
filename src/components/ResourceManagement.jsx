@@ -5083,6 +5083,7 @@ export default function ResourceManagement() {
             {/* Share Dialog - Updated with highlight for already shared items */}
             <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
                 <DialogContent
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                     className=" w-full  max-w-3xl mx-4 sm:mx-8 md:mx-auto max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-lg ">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle className="text-lg font-semibold">
@@ -5091,7 +5092,7 @@ export default function ResourceManagement() {
                     </DialogHeader>
 
                     <div className="px-6 py-2">
-                        <Select value={selectedType || 'demand'} defaultValue="demand" onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
+                        <Select value={selectedType || 'demand'} onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
@@ -5249,6 +5250,7 @@ export default function ResourceManagement() {
             {/* Reject Dialog - Updated with highlight for already shared/rejected items */}
             <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                 <DialogContent
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                     className="
             w-full 
             max-w-3xl           
@@ -5269,7 +5271,7 @@ export default function ResourceManagement() {
                     </DialogHeader>
 
                     <div className="px-6 py-2">
-                        <Select value={selectedType || 'demand'} defaultValue="demand" onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
+                        <Select value={selectedType || 'demand'} onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
