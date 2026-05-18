@@ -233,7 +233,7 @@ function Select({
 
   return (
     <SelectContext.Provider value={contextValue}>
-      <div ref={rootRef} data-slot="select" className={cn("relative w-full", open ? "z-[100]" : "z-auto", className)} {...props}>
+      <div ref={rootRef} data-slot="select" className={cn("relative w-full", className)} style={{ zIndex: open ? 100 : 'auto' }} {...props}>
         {children}
       </div>
     </SelectContext.Provider>
@@ -327,7 +327,7 @@ function SelectContent({ className }) {
     <div
       data-slot="select-content"
       className={cn(
-        "absolute left-0 top-full z-[200] mt-1 w-full min-w-[8rem] max-h-60 overflow-y-auto rounded-md border bg-white p-1 text-popover-foreground shadow-lg",
+        "absolute left-0 top-full mt-1 w-full min-w-[8rem] max-h-[280px] overflow-y-auto overflow-x-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-lg z-[200]",
         className,
       )}
     >
