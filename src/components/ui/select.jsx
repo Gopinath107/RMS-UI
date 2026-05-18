@@ -71,6 +71,7 @@ function Select({
   createLabel,
   clearable = false,
   maxVisibleOptions = MAX_VISIBLE_OPTIONS,
+  className,
   ...props
 }) {
   const rootRef = React.useRef(null);
@@ -232,7 +233,7 @@ function Select({
 
   return (
     <SelectContext.Provider value={contextValue}>
-      <div ref={rootRef} data-slot="select" className="relative w-full" {...props}>
+      <div ref={rootRef} data-slot="select" className={cn("relative w-full", className)} {...props}>
         {children}
       </div>
     </SelectContext.Provider>
