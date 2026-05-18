@@ -450,6 +450,12 @@ const ResourceTable = ({
         resetColumns,
     } = useDraggableColumns(tableKey, defaultCols);
 
+    useEffect(() => {
+        const handleReset = () => resetColumns();
+        window.addEventListener('reset-resource-cols', handleReset);
+        return () => window.removeEventListener('reset-resource-cols', handleReset);
+    }, [resetColumns]);
+
     const RESOURCE_COL_LABELS = {
         name: 'Name',
         role: 'Role',
@@ -473,10 +479,6 @@ const ResourceTable = ({
         >
             <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-lg">
                 <div className="relative">
-                    {/* Reset columns button */}
-                    <div className="flex justify-end px-3 pt-2 pb-0">
-                        <ColumnOrderResetButton onReset={resetColumns} />
-                    </div>
                     <DndContext sensors={colSensors} collisionDetection={closestCenter} onDragEnd={handleColDragEnd}>
                     <Table className="responsive-table" containerClassName="max-h-[480px] overflow-auto scrollbar-thin scrollbar-track-purple-100 scrollbar-thumb-purple-300 hover:scrollbar-thumb-purple-400">
                         <TableHeader className="sticky top-0 z-10">
@@ -3650,6 +3652,7 @@ export default function ResourceManagement() {
                                 </Select>
                             </div>
                             <div className="ml-auto flex items-center gap-4">
+                                <ColumnOrderResetButton onReset={() => window.dispatchEvent(new CustomEvent('reset-resource-cols'))} />
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-white-700">Rows per page:</span>
                                     <Select
@@ -5088,7 +5091,7 @@ export default function ResourceManagement() {
                     </DialogHeader>
 
                     <div className="px-6 py-2">
-                        <Select value={selectedType} onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
+                        <Select value={selectedType || 'demand'} defaultValue="demand" onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
@@ -5266,7 +5269,7 @@ export default function ResourceManagement() {
                     </DialogHeader>
 
                     <div className="px-6 py-2">
-                        <Select value={selectedType} onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
+                        <Select value={selectedType || 'demand'} defaultValue="demand" onValueChange={(v) => { setSelectedType(v); setSelectedItems([]); }}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
