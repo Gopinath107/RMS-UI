@@ -863,94 +863,90 @@ const ProjectsManagement = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Card className="border border-gray-200">
-                <CardHeader className="pb-3 border-b border-gray-100">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
-                    <Briefcase className="w-4 h-4 text-blue-500" /> Project Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client</p>
-                    <p className="text-gray-800 mt-0.5">{selectedDetails?.accountName || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</p>
-                    <p className="text-gray-800 mt-0.5">{selectedDetails?.status || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
-                    <p className="text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
-                    <p className="text-gray-800 mt-0.5">${selectedDetails?.budget?.toLocaleString() || "N/A"}</p>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch auto-rows-fr">
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Briefcase className="w-4 h-4 text-blue-500" /> Project Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.accountName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.status || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
+                  <p className="text-gray-800 mt-0.5">${selectedDetails?.budget?.toLocaleString() || "N/A"}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card className="border border-gray-200">
-                <CardHeader className="pb-3 border-b border-gray-100">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
-                    <Calendar className="w-4 h-4 text-blue-500" /> Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Start Date</p>
-                    <p className="text-gray-800 mt-0.5">{selectedDetails?.startDate || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">End Date</p>
-                    <p className="text-gray-800 mt-0.5">{selectedDetails?.endDate || "N/A"}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Calendar className="w-4 h-4 text-blue-500" /> Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Start Date</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.startDate || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">End Date</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.endDate || "N/A"}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Card className="border border-gray-200">
-                <CardHeader className="pb-3 border-b border-gray-100">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
-                    <FileText className="w-4 h-4 text-blue-500" /> Description
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {selectedDetails?.description || "No description provided."}
-                  </p>
-                </CardContent>
-              </Card>
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <FileText className="w-4 h-4 text-blue-500" /> Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {selectedDetails?.description || "No description provided."}
+                </p>
+              </CardContent>
+            </Card>
 
-              <Card className="border border-gray-200">
-                <CardHeader className="pb-3 border-b border-gray-100">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
-                    <Activity className="w-4 h-4 text-blue-500" /> Required Skills
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
-                      selectedDetails.skills.map((skill) => {
-                        const skillName =
-                          typeof skill === "object"
-                            ? skill.name
-                            : skillsList.find(s => s.skillId === skill || s.skillName === skill)?.skillName || skill;
-                        return (
-                          <Badge key={skill.id || skill} className="bg-blue-100 text-blue-700">
-                            {skillName}
-                          </Badge>
-                        );
-                      })
-                    ) : (
-                      <p className="text-gray-500 text-sm">No skills assigned</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Activity className="w-4 h-4 text-blue-500" /> Required Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="flex flex-wrap gap-2">
+                  {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
+                    selectedDetails.skills.map((skill) => {
+                      const skillName =
+                        typeof skill === "object"
+                          ? skill.name
+                          : skillsList.find(s => s.skillId === skill || s.skillName === skill)?.skillName || skill;
+                      return (
+                        <Badge key={skill.id || skill} className="bg-blue-100 text-blue-700">
+                          {skillName}
+                        </Badge>
+                      );
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm">No skills assigned</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </DialogContent>
       </Dialog>
