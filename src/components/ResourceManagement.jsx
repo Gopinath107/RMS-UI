@@ -2385,10 +2385,12 @@ export default function ResourceManagement() {
             return;
         }
 
-        // Pre-fill candidate from row context, leave Demand and Request empty for user to select
+        const autoSelectDemandId = sharedDemands.length === 1 ? sharedDemands[0].demandId?.toString() : '';
+
+        // Pre-fill candidate from row context
         setInterviewFormData({
             id: '',
-            demandId: '',       // Must start empty — user selects demand
+            demandId: autoSelectDemandId,
             requestId: '',      // Auto-fills once demand is selected
             candidateId: resource.id.toString(),  // Locked from row context
             candidateName: resource.name,         // For display
@@ -2398,7 +2400,29 @@ export default function ResourceManagement() {
             interviewType: 'demand'
         });
 
-        setDemandResourceRequests([]);
+        if (autoSelectDemandId) {
+            InterviewService.getResourceRequestsByDemand(autoSelectDemandId)
+                .then(requests => {
+                    setDemandResourceRequests(requests || []);
+                    setInterviewFormData((prev) => {
+                        const matchingReq = (requests || []).find(r =>
+                            r.employeeId?.toString() === prev.candidateId?.toString() ||
+                            r.candidateId?.toString() === prev.candidateId?.toString()
+                        );
+                        return {
+                            ...prev,
+                            requestId: matchingReq ? matchingReq.requestId.toString() : ''
+                        };
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching demand requests", error);
+                    toast.error('Failed to load resource requests for auto-selected demand');
+                });
+        } else {
+            setDemandResourceRequests([]);
+        }
+
         setIsScheduleDialogOpen(true);
     };
 
@@ -4516,7 +4540,10 @@ export default function ResourceManagement() {
 
             {/* Schedule Interview Dialog */}
             <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-                <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                <DialogContent 
+                    className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                     {/* Header */}
                     <DialogHeader className="p-6 pb-4 border-b">
                         <DialogTitle>
