@@ -233,7 +233,7 @@ function Select({
 
   return (
     <SelectContext.Provider value={contextValue}>
-      <div ref={rootRef} data-slot="select" className={cn("relative w-full", className)} {...props}>
+      <div ref={rootRef} data-slot="select" className={cn("relative w-full", open ? "z-[100]" : "z-auto", className)} {...props}>
         {children}
       </div>
     </SelectContext.Provider>
