@@ -1,5 +1,9 @@
 // src/components/InterviewsManagement.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDraggableColumns } from './common/useDraggableColumns.js';
+import { DraggableTableHead, ColumnOrderResetButton } from './common/DraggableTableHead.jsx';
 import {
   Card,
   CardContent,
@@ -61,7 +65,29 @@ import { DemandService } from '../services/DemandService.js';
 import { Checkbox } from './ui/checkbox.jsx';
 import Swal from 'sweetalert2';
 
+// ── Interview table column definitions ──────────────────────────────────────
+const INTERVIEW_DEFAULT_COLUMNS = ['type', 'date', 'candidate', 'levels', 'overall', 'resources', 'onboard', 'actions'];
+
+const INTERVIEW_COLUMN_LABELS = {
+  type: 'Request Type',
+  date: 'Created At',
+  candidate: 'Candidate',
+  levels: 'Interview Levels',
+  overall: 'Overall Status',
+  resources: 'Resources',
+  onboard: 'Onboard Status',
+  actions: 'Actions',
+};
+
 const InterviewsManagement = ({ setCurrentPage }) => {
+  // ── Drag-to-reorder column state ──
+  const {
+    columnOrder: interviewColOrder,
+    sensors: interviewSensors,
+    handleDragEnd: handleInterviewColDragEnd,
+    resetColumns: resetInterviewCols,
+  } = useDraggableColumns('interviews', INTERVIEW_DEFAULT_COLUMNS);
+
   const [interviews, setInterviews] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -1262,171 +1288,156 @@ const InterviewsManagement = ({ setCurrentPage }) => {
             </div>
           </div>
 
+          {/* ---------- Column Reorder Hint ---------- */}
+          <div className="flex items-center justify-end mb-2">
+            <ColumnOrderResetButton onReset={resetInterviewCols} />
+          </div>
+
           {/* ---------- Table ---------- */}
           {paginated.length > 0 ? (
             <div className="relative">
               <div className="max-h-[400px] overflow-y-auto scrollbar-thin">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Request Type</TableHead>
-                      <TableHead>Created at</TableHead>
-                      <TableHead>Candidate</TableHead>
-                      <TableHead>Interview levels</TableHead>
-                      <TableHead>Overall Status</TableHead>
-                      <TableHead>Resources</TableHead> {/* Changed from dropdown to display only */}
-                      <TableHead>Onboard Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginated.map((i) => (
-                      <TableRow key={i.id}>
-                        {/* Interview Type Column */}
-                        <TableCell>
-                          <Badge className={
-                            i.interviewType === 'OPP'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-indigo-100 text-indigo-800'
-                          }>
-                            {i.interviewType}
-                          </Badge>
-                        </TableCell>
-
-                        {/* Created By Column */}
-                        <TableCell>
-                          <div>
-                            {i.submittedDate && (
-                              <p className="text-sm text-gray-500">
-                                {new Date(i.submittedDate).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div>
-                            <div className="flex items-center">
-                              <User className="mr-2 h-4 w-4 text-gray-500" />
-                              {i.candidateName}
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {i.candidateEmail}
-                            </p>
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="space-y-1 ">
-                            {i.interviewLevels.map((level) => {
-                              const currentStatus = i.levelStatus[level] || 'Pending';
-                              const currentResult = i.levelResults[level] || 'Pending';
-
-                              return (
-                                <div key={level} className="flex items-center gap-2">
-                                  <span className="text-xs font-medium w-6">{level}</span>
-
-                                  {/* For DR interviews: Show dropdown for status update */}
-                                  {i.interviewType === 'DR' && (currentStatus === 'Scheduled' || currentResult === 'Pending') ? (
+                <DndContext
+                  sensors={interviewSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleInterviewColDragEnd}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <SortableContext
+                          items={interviewColOrder}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          {interviewColOrder.map((colId) => (
+                            <DraggableTableHead
+                              key={colId}
+                              id={colId}
+                              label={INTERVIEW_COLUMN_LABELS[colId]}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((i) => (
+                        <TableRow key={i.id}>
+                          {interviewColOrder.map((colId) => {
+                            switch (colId) {
+                              case 'type':
+                                return (
+                                  <TableCell key={colId}>
+                                    <Badge className={
+                                      i.interviewType === 'OPP'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : 'bg-indigo-100 text-indigo-800'
+                                    }>
+                                      {i.interviewType}
+                                    </Badge>
+                                  </TableCell>
+                                );
+                              case 'date':
+                                return (
+                                  <TableCell key={colId}>
+                                    {i.submittedDate && (
+                                      <p className="text-sm text-gray-500">
+                                        {new Date(i.submittedDate).toLocaleDateString()}
+                                      </p>
+                                    )}
+                                  </TableCell>
+                                );
+                              case 'candidate':
+                                return (
+                                  <TableCell key={colId}>
+                                    <div>
+                                      <div className="flex items-center">
+                                        <User className="mr-2 h-4 w-4 text-gray-500" />
+                                        {i.candidateName}
+                                      </div>
+                                      <p className="text-sm text-gray-500">{i.candidateEmail}</p>
+                                    </div>
+                                  </TableCell>
+                                );
+                              case 'levels':
+                                return (
+                                  <TableCell key={colId}>
+                                    <div className="space-y-1">
+                                      {i.interviewLevels.map((level) => {
+                                        const currentStatus = i.levelStatus[level] || 'Pending';
+                                        const currentResult = i.levelResults[level] || 'Pending';
+                                        return (
+                                          <div key={level} className="flex items-center gap-2">
+                                            <span className="text-xs font-medium w-6">{level}</span>
+                                            {i.interviewType === 'DR' && (currentStatus === 'Scheduled' || currentResult === 'Pending') ? (
+                                              <Select value={currentResult} onValueChange={(val) => openLevelStatusModal(i, level, val)}>
+                                                <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Update" /></SelectTrigger>
+                                                <SelectContent>
+                                                  {interviewStatusOptions.map((opt) => (
+                                                    <SelectItem key={opt.code} value={opt.code} className="text-xs">{opt.label || opt.code}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <Badge className={getStatusBadgeColor(currentResult)}>{currentResult}</Badge>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </TableCell>
+                                );
+                              case 'overall':
+                                return (
+                                  <TableCell key={colId}>
+                                    <Badge className={getLevelBadgeColor(i.overallStatus)}>{i.overallStatus}</Badge>
+                                  </TableCell>
+                                );
+                              case 'resources':
+                                return (
+                                  <TableCell key={colId}>
+                                    <Badge className={getResourceTypeBadgeColor(i.resourceType || 'internal')}>
+                                      {i.resourceType === 'internal' ? 'Internal' : i.resourceType === 'external' ? 'External' : 'Unknown'}
+                                    </Badge>
+                                  </TableCell>
+                                );
+                              case 'onboard':
+                                return (
+                                  <TableCell key={colId}>
                                     <Select
-                                      value={currentResult}
-                                      onValueChange={(val) => openLevelStatusModal(i, level, val)}
+                                      value={i.onboardingStatus}
+                                      onValueChange={(val) => handleOnboardingStatusChange(i.id, val)}
+                                      disabled={i.overallStatus && i.overallStatus.toLowerCase().includes('rejected')}
                                     >
-                                      <SelectTrigger className="h-7 w-28 text-xs">
-                                        <SelectValue placeholder="Update" />
+                                      <SelectTrigger className="w-[180px] border-gray-300 focus:ring-blue-500">
+                                        <SelectValue placeholder="Select status" />
                                       </SelectTrigger>
-                                      <SelectContent>
-                                        {interviewStatusOptions.map((opt) => (
-                                          <SelectItem key={opt.code} value={opt.code} className="text-xs">
-                                            {opt.label || opt.code}
-                                          </SelectItem>
+                                      <SelectContent className="max-h-40 overflow-y-auto">
+                                        {onboardingStatuses.map((s) => (
+                                          <SelectItem key={s.code} value={s.label}>{s.label}</SelectItem>
                                         ))}
                                       </SelectContent>
                                     </Select>
-                                  ) : (
-                                    /* For OPP interviews OR completed DR interviews: Show badge only */
-                                    <Badge className={getStatusBadgeColor(currentResult)}>
-                                      {currentResult}
-                                    </Badge>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </TableCell>
-
-                        {/* Overall Status Column */}
-                        <TableCell>
-                          <Badge className={getLevelBadgeColor(i.overallStatus)}>
-                            {i.overallStatus}
-                          </Badge>
-                        </TableCell>
-
-                        {/* Resources Column - CHANGED: Display badge instead of dropdown */}
-                        <TableCell>
-                          <Badge className={getResourceTypeBadgeColor(i.resourceType || 'internal')}>
-                            {i.resourceType === 'internal' ? 'Internal' :
-                              i.resourceType === 'external' ? 'External' : 'Unknown'}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell>
-                          <Select
-                            value={i.onboardingStatus}
-                            onValueChange={(val) =>
-                              handleOnboardingStatusChange(i.id, val)
+                                  </TableCell>
+                                );
+                              case 'actions':
+                                return (
+                                  <TableCell key={colId}>
+                                    <div className="flex space-x-2">
+                                      <Button variant="ghost" size="sm" onClick={() => handleViewInterview(i)} className="text-blue-600 hover:text-blue-700"><FileText className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="sm" onClick={() => handleEditInterview(i)} className="text-yellow-600 hover:text-yellow-700"><Pencil className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(i)} className="text-red-600 hover:text-red-700"><Trash className="h-4 w-4" /></Button>
+                                    </div>
+                                  </TableCell>
+                                );
+                              default:
+                                return <TableCell key={colId} />;
                             }
-                            disabled={i.overallStatus && i.overallStatus.toLowerCase().includes('rejected')}
-                          >
-                            <SelectTrigger className="w-[180px] border-gray-300 focus:ring-blue-500">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-40 overflow-y-auto">
-                              {onboardingStatuses.map((s) => (
-                                <SelectItem
-                                  key={s.code}
-                                  value={s.label}
-                                >
-                                  {s.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewInterview(i)}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditInterview(i)}
-                              className="text-yellow-600 hover:text-yellow-700"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteClick(i)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </DndContext>
               </div>
 
               {/* ---------- Pagination ---------- */}

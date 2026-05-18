@@ -1,4 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDraggableColumns } from "./common/useDraggableColumns.js";
+import { DraggableTableHead, ColumnOrderResetButton } from "./common/DraggableTableHead.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -433,7 +437,33 @@ const ResourceTable = ({
     const endIndex = startIndex + itemsPerPage;
     const paginatedResources = filteredResources.slice(startIndex, endIndex);
 
+    // ── Drag-to-reorder columns ───────────────────────────────────────────
+    const internalDefaultCols = ['name', 'role', 'skills', 'status', 'client', 'projectType', 'experience', 'resumeActions', 'actions'];
+    const externalDefaultCols = ['name', 'skills', 'status', 'experience', 'resumeActions', 'actions'];
+    const defaultCols = resourceType === 'internal' ? internalDefaultCols : externalDefaultCols;
+    const tableKey = resourceType === 'internal' ? 'resources-internal' : 'resources-external';
 
+    const {
+        columnOrder,
+        sensors: colSensors,
+        handleDragEnd: handleColDragEnd,
+        resetColumns,
+    } = useDraggableColumns(tableKey, defaultCols);
+
+    const RESOURCE_COL_LABELS = {
+        name: 'Name',
+        role: 'Role',
+        skills: 'Skills',
+        status: 'Status',
+        client: 'Client',
+        projectType: 'Project Type',
+        experience: 'Experience',
+        resumeActions: 'Resume Actions',
+        actions: 'Actions',
+    };
+
+    // Only show cols relevant to current resource type
+    const visibleCols = columnOrder.filter(c => defaultCols.includes(c));
 
     return (
         <motion.div
@@ -443,170 +473,119 @@ const ResourceTable = ({
         >
             <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-lg">
                 <div className="relative">
+                    {/* Reset columns button */}
+                    <div className="flex justify-end px-3 pt-2 pb-0">
+                        <ColumnOrderResetButton onReset={resetColumns} />
+                    </div>
+                    <DndContext sensors={colSensors} collisionDetection={closestCenter} onDragEnd={handleColDragEnd}>
                     <Table className="responsive-table" containerClassName="max-h-[480px] overflow-auto scrollbar-thin scrollbar-track-purple-100 scrollbar-thumb-purple-300 hover:scrollbar-thumb-purple-400">
                         <TableHeader className="sticky top-0 z-10">
                             <TableRow className="bg-gradient-to-r from-purple-200/80 via-blue-300/70 to-indigo-300/80 border-b-2 border-purple-300 shadow-sm">
-                                <TableHead
-                                    className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4"
-                                    onClick={() => onSort("name")}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-700 font-bold">Name</span>
-                                        {getSortIcon("name")}
-                                    </div>
-                                </TableHead>
-                                {resourceType === "internal" && (
-                                    <TableHead
-                                        className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4"
-                                        onClick={() => onSort("role")}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-slate-700 font-bold">Role</span>
-                                            {getSortIcon("role")}
-                                        </div>
-                                    </TableHead>
-                                )}
-                                <TableHead className="text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4">
-                                    <span className="text-slate-700 font-bold">Skills</span>
-                                </TableHead>
-                                <TableHead
-                                    className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4"
-                                    onClick={() => onSort("status")}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-700 font-bold">Status</span>
-                                        {getSortIcon("status")}
-                                    </div>
-                                </TableHead>
-                                {resourceType === "internal" && (
-                                    <TableHead
-                                        className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4"
-                                        onClick={() => onSort("client")}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-slate-700 font-bold">Client</span>
-                                            {getSortIcon("client")}
-                                        </div>
-                                    </TableHead>
-                                )}
-
-                                {resourceType === "internal" && (
-                                    <TableHead
-                                        className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4 w-[80px] min-w-[80px]"
-                                        onClick={() => onSort("projectType")}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-slate-700 font-bold">Project Type</span>
-                                            {getSortIcon("projectType")}
-                                        </div>
-                                    </TableHead>
-                                )}
-                                <TableHead
-                                    className="cursor-pointer hover:bg-purple-200/60 transition-all duration-200 text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4 w-[58px] min-w-[58px]"
-                                    onClick={() => onSort("experience")}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-700 font-bold">Experience</span>
-                                        {getSortIcon("experience")}
-                                    </div>
-                                </TableHead>
-                                <TableHead className="text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4 w-[205px] min-w-[205px]">
-                                    <span className="text-slate-700 font-bold">Resume Actions</span>
-                                </TableHead>
-                                <TableHead className="text-slate-800 font-extrabold text-[15px] py-4 w-[160px]">
-                                    <span className="text-slate-700 font-bold">Actions</span>
-                                </TableHead>
+                                <SortableContext items={visibleCols} strategy={horizontalListSortingStrategy}>
+                                    {visibleCols.map((colId) => (
+                                        <DraggableTableHead
+                                            key={colId}
+                                            id={colId}
+                                            label={RESOURCE_COL_LABELS[colId]}
+                                            className="text-slate-800 font-extrabold text-[15px] border-r border-purple-300/50 py-4"
+                                            sortable={['name','role','status','client','projectType','experience'].includes(colId)}
+                                            sortKey={colId}
+                                            sortState={{ key: sortField, direction: sortOrder }}
+                                            onSort={onSort}
+                                        />
+                                    ))}
+                                </SortableContext>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {paginatedResources.map((resource) => {
                                 const isExpanded = expandedRows.has(resource.id);
                                 const canSchedule = resource.status === "Bench" && resource.resumeStatus === "shared";
+                                const skills = (Array.isArray(resource.primarySkills) && resource.primarySkills.length > 0)
+                                    ? resource.primarySkills
+                                    : (Array.isArray(resource.skills) ? resource.skills : []);
                                 return (
                                     <React.Fragment key={resource.id}>
                                         <TableRow
                                             className="hover:bg-purple-50/50 cursor-pointer transition-all duration-200 border-b border-purple-100"
                                             onClick={() => onRowToggle(resource.id)}
                                         >
-                                            <TableCell className="py-4">
-                                                <div className="flex items-center gap-3">
-                                                    {/* <img
-                                                        src={resource.photo}
-                                                        alt={resource.name}
-                                                        className="w-10 h-10 rounded-full object-cover"
-                                                    /> */}
-                                                    <div>
-                                                        <p className="font-medium">{resource.name}</p>
-                                                        <p className="text-xs text-gray-500">{resource.email}</p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            {resourceType === "internal" && (
-                                                <TableCell className="py-4 font-medium">{resource.role}</TableCell>)}
-                                            <TableCell className="py-4">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {((Array.isArray(resource.primarySkills) && resource.primarySkills.length > 0)
-                                                        ? resource.primarySkills
-                                                        : (Array.isArray(resource.skills) ? resource.skills : [])
-                                                    ).slice(0, 3).map((skill, idx) => (
-                                                        <Badge key={idx} variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
-                                                            {skill}
-                                                        </Badge>
-                                                    ))}
-                                                    {(((Array.isArray(resource.primarySkills) && resource.primarySkills.length > 0)
-                                                        ? resource.primarySkills
-                                                        : (Array.isArray(resource.skills) ? resource.skills : [])
-                                                    ).length > 3) && (
-                                                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
-                                                                +{((Array.isArray(resource.primarySkills) && resource.primarySkills.length > 0)
-                                                                    ? resource.primarySkills
-                                                                    : (Array.isArray(resource.skills) ? resource.skills : [])
-                                                                ).length - 3} more
-                                                            </Badge>
-                                                        )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="py-4">
-                                                <Badge className={getStatusColor(resource.status)}>
-                                                    {resource.status}
-                                                </Badge>
-                                            </TableCell>
-                                            {resourceType === "internal" && (
-                                                <TableCell className="py-4">{resource.currentClient || resource.client || "N/A"}</TableCell>
-                                            )}
-
-                                            {resourceType === "internal" && (
-                                                <TableCell className="py-4 w-[80px] min-w-[80px]">{resource.projectType || "Regular"}</TableCell>
-                                            )}
-                                            <TableCell className="py-4 w-[58px] min-w-[58px]">{resource.experience}</TableCell>
-
-                                            <TableCell className="w-[205px] min-w-[205px]" onClick={(e) => e.stopPropagation()}>
-                                                <ResumeToggleSwitch
-                                                    status={resource.resumeStatus}
-                                                    onShare={() => onResumeShare(resource.id)}
-                                                    onReject={() => onResumeReject(resource.id)}
-                                                    onPending={() => onResumePending(resource.id)}
-                                                    disabled={isResumeToggleLocked(resource)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="py-4 w-[160px]">
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (resource.resumeStatus !== "shared") {
-                                                                toast.error("Please share the resume first to schedule an interview.");
-                                                                return;
-                                                            }
-                                                            onScheduleInterview(resource);
-                                                        }}
-                                                        className={`bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-[11px] px-2 py-1 whitespace-nowrap ${resource.resumeStatus !== "shared" ? "opacity-50 cursor-not-allowed" : ""
-                                                            }`}
-                                                    >
-                                                        Schedule
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                                            {visibleCols.map((colId) => {
+                                                switch (colId) {
+                                                    case 'name':
+                                                        return (
+                                                            <TableCell key={colId} className="py-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div>
+                                                                        <p className="font-medium">{resource.name}</p>
+                                                                        <p className="text-xs text-gray-500">{resource.email}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </TableCell>
+                                                        );
+                                                    case 'role':
+                                                        return <TableCell key={colId} className="py-4 font-medium">{resource.role}</TableCell>;
+                                                    case 'skills':
+                                                        return (
+                                                            <TableCell key={colId} className="py-4">
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {skills.slice(0, 3).map((skill, idx) => (
+                                                                        <Badge key={idx} variant="secondary" className="bg-purple-100 text-purple-700 text-xs">{skill}</Badge>
+                                                                    ))}
+                                                                    {skills.length > 3 && (
+                                                                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">+{skills.length - 3} more</Badge>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        );
+                                                    case 'status':
+                                                        return (
+                                                            <TableCell key={colId} className="py-4">
+                                                                <Badge className={getStatusColor(resource.status)}>{resource.status}</Badge>
+                                                            </TableCell>
+                                                        );
+                                                    case 'client':
+                                                        return <TableCell key={colId} className="py-4">{resource.currentClient || resource.client || "N/A"}</TableCell>;
+                                                    case 'projectType':
+                                                        return <TableCell key={colId} className="py-4 w-[80px] min-w-[80px]">{resource.projectType || "Regular"}</TableCell>;
+                                                    case 'experience':
+                                                        return <TableCell key={colId} className="py-4 w-[58px] min-w-[58px]">{resource.experience}</TableCell>;
+                                                    case 'resumeActions':
+                                                        return (
+                                                            <TableCell key={colId} className="w-[205px] min-w-[205px]" onClick={(e) => e.stopPropagation()}>
+                                                                <ResumeToggleSwitch
+                                                                    status={resource.resumeStatus}
+                                                                    onShare={() => onResumeShare(resource.id)}
+                                                                    onReject={() => onResumeReject(resource.id)}
+                                                                    onPending={() => onResumePending(resource.id)}
+                                                                    disabled={isResumeToggleLocked(resource)}
+                                                                />
+                                                            </TableCell>
+                                                        );
+                                                    case 'actions':
+                                                        return (
+                                                            <TableCell key={colId} className="py-4 w-[160px]">
+                                                                <div className="flex gap-2">
+                                                                    <Button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (resource.resumeStatus !== "shared") {
+                                                                                toast.error("Please share the resume first to schedule an interview.");
+                                                                                return;
+                                                                            }
+                                                                            onScheduleInterview(resource);
+                                                                        }}
+                                                                        className={`bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-[11px] px-2 py-1 whitespace-nowrap ${resource.resumeStatus !== "shared" ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                                    >
+                                                                        Schedule
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        );
+                                                    default:
+                                                        return <TableCell key={colId} />;
+                                                }
+                                            })}
                                         </TableRow>
                                         {isExpanded && (
                                             <TableRow>
@@ -1015,6 +994,7 @@ const ResourceTable = ({
                             })}
                         </TableBody>
                     </Table>
+                    </DndContext>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-b-lg">
