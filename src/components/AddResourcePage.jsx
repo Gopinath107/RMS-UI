@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog.js
 import { Input } from './ui/input.jsx';
 import { Label } from './ui/label.jsx';
 import { Button } from './ui/button.jsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select.jsx';
+import { SearchableSelect } from './ui/select.jsx';
 import { Textarea } from './ui/textarea.jsx';
 import { ArrowLeft, User, Mail, Phone, Upload, Download, FileText, Maximize2, Plus, Trash2, X, Eye } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import { EmployeeService } from '../services/EmployeeManagementService.js';
 import { CandidateService } from '../services/CandidateService.js';
 import { ClientService } from '../services/clientListService.js';
+import { DepartmentService } from '../services/DepartmentService.js';
 import ResumeUploadStep from './ResumeUploadStep.jsx';
 import {
   getResourceDraftKey,
@@ -52,6 +53,9 @@ const FORM_SECTIONS = [
 const af = (autoFilledFields, key) =>
   autoFilledFields?.[key] ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-300' : '';
 
+const normalizeOptionName = (value) =>
+  String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
 function F({ label, required, children, col2 }) {
   return (
     <div className={col2 ? 'add-resource-field add-resource-field-wide' : 'add-resource-field'}>
@@ -81,69 +85,24 @@ function SectionHeader({ title }) {
   );
 }
 
-function SearchableSelect({ value, onValueChange, options, placeholder, className }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-
-  const displayValue = useMemo(() => {
-    const selected = options.find(o => String(o.value) == String(value || ''));
-    return selected ? selected.label : '';
-  }, [value, options]);
-
-  const filtered = useMemo(() => {
-    if (!search) return options;
-    return options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
-  }, [search, options]);
-
-  return (
-    <div className="relative">
-      <div
-        className={`add-resource-select-control flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm cursor-pointer transition-colors hover:border-gray-300 ${className}`}
-        onClick={() => setOpen(!open)}
-      >
-        <span className={displayValue ? "text-gray-900 truncate" : "text-gray-500"}>
-          {displayValue || placeholder}
-        </span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </div>
-      {open && (
-        <div className="absolute z-50 w-full mt-1 rounded-md border bg-white shadow-lg">
-          <div className="p-2 border-b">
-            <input
-              autoFocus
-              className="w-full h-8 px-2 text-sm outline-none border-none bg-transparent"
-              placeholder="Search..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="max-h-60 overflow-auto p-1">
-            {filtered.length === 0 ? (
-              <div className="py-2 px-2 text-sm text-gray-500 text-center">No results found.</div>
-            ) : (
-              filtered.map(opt => (
-                <div
-                  key={opt.value}
-                  className="px-2 py-1.5 text-sm rounded-sm hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    onValueChange(opt.value);
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  {opt.label}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Profile Tab ───────────────────────────────────────────────────────────────
-const ProfileTab = React.memo(({ formData, set, aff, resourceType, companies, departments, clients }) => {
+const ProfileTab = React.memo(({
+  formData,
+  set,
+  aff,
+  resourceType,
+  companies,
+  departments,
+  clients,
+  isLoadingDepartments,
+  isLoadingClients,
+  departmentLoadError,
+  clientLoadError,
+  isCreatingDepartment,
+  isCreatingClient,
+  onCreateDepartment,
+  onCreateClient,
+}) => {
   const v = (k) => formData?.[k] ?? '';
 
   return (
@@ -166,6 +125,11 @@ const ProfileTab = React.memo(({ formData, set, aff, resourceType, companies, de
               onValueChange={val => set('departmentId', Number(val))}
               options={departments.map(d => ({ value: d.departmentId, label: d.departmentName }))}
               placeholder="Select department"
+              loading={isLoadingDepartments}
+              error={departmentLoadError}
+              allowCreate
+              creating={isCreatingDepartment}
+              onCreate={onCreateDepartment}
             />
           </F>
         )}
@@ -183,6 +147,12 @@ const ProfileTab = React.memo(({ formData, set, aff, resourceType, companies, de
               label: c.accountName || c.name || 'Unknown Client'
             }))}
             placeholder="Select client"
+            loading={isLoadingClients}
+            error={clientLoadError}
+            allowCreate
+            creating={isCreatingClient}
+            onCreate={onCreateClient}
+            clearable
           />
         </F>
       </Section>
@@ -935,6 +905,12 @@ export default function AddResourcePage() {
   const [companies, setCompanies] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [clients, setClients] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [departmentLoadError, setDepartmentLoadError] = useState('');
+  const [clientLoadError, setClientLoadError] = useState('');
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
 
   useEffect(() => {
     const loadCompanies = async () => {
@@ -949,6 +925,8 @@ export default function AddResourcePage() {
     };
 
     const loadDepartments = async () => {
+      setIsLoadingDepartments(true);
+      setDepartmentLoadError('');
       try {
         const response = await EmployeeService.fetchDepartments();
         if (response.data.success) {
@@ -956,15 +934,23 @@ export default function AddResourcePage() {
         }
       } catch (error) {
         console.error("Failed to load departments:", error);
+        setDepartmentLoadError('Unable to load options');
+      } finally {
+        setIsLoadingDepartments(false);
       }
     };
 
     const loadClients = async () => {
+      setIsLoadingClients(true);
+      setClientLoadError('');
       try {
         const data = await ClientService.fetchClientList();
         setClients(data || []);
       } catch (error) {
         console.error("Failed to load clients:", error);
+        setClientLoadError('Unable to load options');
+      } finally {
+        setIsLoadingClients(false);
       }
     };
 
@@ -972,6 +958,114 @@ export default function AddResourcePage() {
     loadDepartments();
     loadClients();
   }, []);
+
+  const createDepartmentOption = useCallback(async (departmentName) => {
+    const trimmed = departmentName.trim().replace(/\s+/g, ' ');
+    const existing = departments.find((dept) => normalizeOptionName(dept.departmentName) === normalizeOptionName(trimmed));
+    if (existing) return { value: String(existing.departmentId), label: existing.departmentName };
+
+    const companyId = Number(formData.companyId || companies[0]?.companyId || 1);
+    if (!companyId) {
+      toast.error('Please select a company before creating a department.');
+      return null;
+    }
+
+    setIsCreatingDepartment(true);
+    try {
+      const response = await DepartmentService.createDepartment(companyId, trimmed);
+      const created = response?.data?.result || response?.data || {};
+      let nextDepartment = {
+        companyId,
+        departmentId: created.departmentId || created.id,
+        departmentName: created.departmentName || trimmed,
+      };
+
+      const refreshed = await DepartmentService.fetchDepartmentList();
+      const refreshedDepartments = refreshed?.data?.result || refreshed?.data || [];
+      if (Array.isArray(refreshedDepartments) && refreshedDepartments.length > 0) {
+        setDepartments(refreshedDepartments);
+        nextDepartment = refreshedDepartments.find((dept) =>
+          normalizeOptionName(dept.departmentName) === normalizeOptionName(trimmed)
+        ) || nextDepartment;
+      } else if (nextDepartment.departmentId) {
+        setDepartments((prev) => [...prev, nextDepartment]);
+      }
+
+      if (!nextDepartment.departmentId) {
+        toast.error('Unable to create value');
+        return null;
+      }
+
+      toast.success(`Department "${nextDepartment.departmentName}" created.`);
+      return { value: String(nextDepartment.departmentId), label: nextDepartment.departmentName };
+    } catch (error) {
+      console.error('Failed to create department:', error);
+      const duplicate = departments.find((dept) => normalizeOptionName(dept.departmentName) === normalizeOptionName(trimmed));
+      if (duplicate) {
+        toast.info(`Department "${duplicate.departmentName}" already exists.`);
+        return { value: String(duplicate.departmentId), label: duplicate.departmentName };
+      }
+      toast.error('Unable to create value');
+      return null;
+    } finally {
+      setIsCreatingDepartment(false);
+    }
+  }, [companies, departments, formData.companyId]);
+
+  const createClientOption = useCallback(async (clientName) => {
+    const trimmed = clientName.trim().replace(/\s+/g, ' ');
+    const existing = clients.find((client) =>
+      normalizeOptionName(client.accountName || client.name) === normalizeOptionName(trimmed)
+    );
+    if (existing) return { value: String(existing.accountId || existing.id), label: existing.accountName || existing.name };
+
+    const companyId = Number(formData.companyId || companies[0]?.companyId || 1);
+    if (!companyId) {
+      toast.error('Please select a company before creating a client.');
+      return null;
+    }
+
+    setIsCreatingClient(true);
+    try {
+      await ClientService.createClient(
+        companyId,
+        trimmed,
+        '',
+        '',
+        '',
+        new Date().toISOString().split('T')[0],
+        'Active',
+      );
+
+      const refreshedClients = await ClientService.fetchClientList();
+      const safeClients = Array.isArray(refreshedClients) ? refreshedClients : [];
+      setClients(safeClients);
+      const created = safeClients.find((client) =>
+        normalizeOptionName(client.accountName || client.name) === normalizeOptionName(trimmed)
+      );
+
+      if (!created) {
+        toast.error('Unable to create value');
+        return null;
+      }
+
+      toast.success(`Client "${created.accountName || created.name}" created.`);
+      return { value: String(created.accountId || created.id), label: created.accountName || created.name };
+    } catch (error) {
+      console.error('Failed to create client:', error);
+      const duplicate = clients.find((client) =>
+        normalizeOptionName(client.accountName || client.name) === normalizeOptionName(trimmed)
+      );
+      if (duplicate) {
+        toast.info(`Client "${duplicate.accountName || duplicate.name}" already exists.`);
+        return { value: String(duplicate.accountId || duplicate.id), label: duplicate.accountName || duplicate.name };
+      }
+      toast.error('Unable to create value');
+      return null;
+    } finally {
+      setIsCreatingClient(false);
+    }
+  }, [clients, companies, formData.companyId]);
 
   useEffect(() => {
     if (!isEditMode || !editResource?.id) return;
@@ -2044,6 +2138,14 @@ export default function AddResourcePage() {
               companies={companies}
               departments={departments}
               clients={clients}
+              isLoadingDepartments={isLoadingDepartments}
+              isLoadingClients={isLoadingClients}
+              departmentLoadError={departmentLoadError}
+              clientLoadError={clientLoadError}
+              isCreatingDepartment={isCreatingDepartment}
+              isCreatingClient={isCreatingClient}
+              onCreateDepartment={createDepartmentOption}
+              onCreateClient={createClientOption}
             />
           </section>
 
