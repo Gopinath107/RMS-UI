@@ -464,8 +464,7 @@ export default function LoginPage({ onLogin }) {
                       <SelectValue>
                         <div className="flex items-center gap-2">
                           <currentRoleConfig.icon className="w-4 h-4" />
-                          <span>{currentRoleConfig.title}</span>
-                          {/* <span className="text-xs text-gray-500 ml-auto">ID: {currentRoleConfig.roleId}</span> */}
+                          <span>{currentRoleConfig.id}</span>
                         </div>
                       </SelectValue>
                     </SelectTrigger>
@@ -474,13 +473,7 @@ export default function LoginPage({ onLogin }) {
                         <SelectItem key={role.id} value={role.id} className="py-2">
                           <div className="flex items-center gap-2">
                             <role.icon className="w-4 h-4" />
-                            <div className="text-left flex-1">
-                              <div className="font-medium">{role.title}</div>
-                              <div className="text-xs text-gray-500">{role.subtitle}</div>
-                            </div>
-                            {/* <div className="text-xs text-gray-400 ml-2">
-                ID: {role.roleId}
-              </div> */}
+                            <span className="font-medium">{role.id}</span>
                           </div>
                         </SelectItem>
                       ))}
