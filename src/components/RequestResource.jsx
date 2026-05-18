@@ -65,6 +65,8 @@ const RequestResource = ({ setCurrentPage }) => {
     skills: [],
   });
 
+  const [errors, setErrors] = useState({});
+
   // Available options
   const skillOptions = [
     "AIML", "React", "Angular", "Vue.js", "JavaScript", "TypeScript", "Node.js",
@@ -141,19 +143,40 @@ const RequestResource = ({ setCurrentPage }) => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    if (!formData.projectName || !formData.projectName.trim()) {
+      newErrors.projectName = "Project name is required";
+      isValid = false;
+    }
+    if (!formData.location || !formData.location.trim()) {
+      newErrors.location = "Location is required";
+      isValid = false;
+    }
+    if (!formData.numberOfResources) {
+      newErrors.numberOfResources = "Number of resources is required";
+      isValid = false;
+    }
+    if (formData.skills.length === 0) {
+      newErrors.skills = "Please add at least one skill";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    if (!isValid) {
+      toast.error("Please correct the highlighted errors before submitting");
+    }
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.projectName || !formData.location || !formData.numberOfResources) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+    if (!validateForm()) return;
 
-    if (formData.skills.length === 0) {
-      toast.error("Please add at least one skill");
-      return;
-    }
+
 
     const requestData = {
       ...formData,
@@ -190,16 +213,9 @@ const RequestResource = ({ setCurrentPage }) => {
   const handleSubmitNew = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.projectName || !formData.location || !formData.numberOfResources) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+    if (!validateForm()) return;
 
-    if (formData.skills.length === 0) {
-      toast.error("Please add at least one skill");
-      return;
-    }
+
 
     const requestData = {
       ...formData,
@@ -562,8 +578,9 @@ const RequestResource = ({ setCurrentPage }) => {
                     setFormData({ ...formData, projectName: e.target.value })
                   }
                   placeholder="Enter project name"
-                  required
+                  aria-invalid={!!errors.projectName}
                 />
+                {errors.projectName && <p className="text-xs text-red-500 mt-1">{errors.projectName}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reqId">Request ID *</Label>
@@ -591,8 +608,9 @@ const RequestResource = ({ setCurrentPage }) => {
                     setFormData({ ...formData, numberOfResources: e.target.value })
                   }
                   placeholder="Enter number of resources"
-                  required
+                  aria-invalid={!!errors.numberOfResources}
                 />
+                {errors.numberOfResources && <p className="text-xs text-red-500 mt-1">{errors.numberOfResources}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="locationType">Location Type *</Label>
@@ -646,8 +664,9 @@ const RequestResource = ({ setCurrentPage }) => {
                     setFormData({ ...formData, location: e.target.value })
                   }
                   placeholder="Enter location"
-                  required
+                  aria-invalid={!!errors.location}
                 />
+                {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
               </div>
             </div>
 
@@ -737,6 +756,7 @@ const RequestResource = ({ setCurrentPage }) => {
                       ))}
                   </SelectContent>
                 </Select>
+                {errors.skills && <p className="text-xs text-red-500 mt-1">{errors.skills}</p>}
               </div>
             </div>
 

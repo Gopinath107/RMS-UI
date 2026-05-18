@@ -37,7 +37,6 @@ export default function ClientsManagement({ setCurrentPage }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Add Client Form State
   const [newClient, setNewClient] = useState({
     name: '',
     industry: '',
@@ -49,6 +48,8 @@ export default function ClientsManagement({ setCurrentPage }) {
     projects: '',
     assignedResources: ''
   });
+
+  const [errors, setErrors] = useState({});
 
   const fetchClients = async () => {
     try {
@@ -106,9 +107,22 @@ export default function ClientsManagement({ setCurrentPage }) {
     setIsModalOpen(true);
   };
 
+  const validateClientForm = () => {
+    const newErrors = {};
+    let isValid = true;
+    if (!newClient.name || !newClient.name.trim()) { newErrors.name = 'Company Name is required'; isValid = false; }
+    if (!newClient.industry || !newClient.industry.trim()) { newErrors.industry = 'Industry is required'; isValid = false; }
+    if (!newClient.email || !newClient.email.trim()) { newErrors.email = 'Email is required'; isValid = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newClient.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
+    if (!newClient.contactPerson || !newClient.contactPerson.trim()) { newErrors.contactPerson = 'Contact Person is required'; isValid = false; }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleAddClient = async () => {
-    if (!newClient.name || !newClient.industry || !newClient.email || !newClient.contactPerson) {
-      toast.error('Please fill in all required fields (Name, Industry, Email, Contact Person)');
+    if (!validateClientForm()) {
+      toast.error('Please fix the highlighted errors');
       return;
     }
 
@@ -438,7 +452,9 @@ export default function ClientsManagement({ setCurrentPage }) {
                   value={newClient.name}
                   onChange={(e) => setNewClient(prev => ({ ...prev, name: e.target.value }))}
                   className="bg-white/80 backdrop-blur-sm"
+                  aria-invalid={!!errors.name}
                 />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               {/* Industry */}
@@ -461,6 +477,7 @@ export default function ClientsManagement({ setCurrentPage }) {
                     <SelectItem value="Entertainment">Entertainment</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.industry && <p className="text-xs text-red-500 mt-1">{errors.industry}</p>}
               </div>
 
               {/* Email */}
@@ -473,7 +490,9 @@ export default function ClientsManagement({ setCurrentPage }) {
                   value={newClient.email}
                   onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
                   className="bg-white/80 backdrop-blur-sm"
+                  aria-invalid={!!errors.email}
                 />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
 
               {/* Phone */}
@@ -497,7 +516,9 @@ export default function ClientsManagement({ setCurrentPage }) {
                   value={newClient.contactPerson}
                   onChange={(e) => setNewClient(prev => ({ ...prev, contactPerson: e.target.value }))}
                   className="bg-white/80 backdrop-blur-sm"
+                  aria-invalid={!!errors.contactPerson}
                 />
+                {errors.contactPerson && <p className="text-xs text-red-500 mt-1">{errors.contactPerson}</p>}
               </div>
 
               {/* Website */}

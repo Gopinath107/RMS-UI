@@ -327,7 +327,7 @@ function SelectContent({ className }) {
     <div
       data-slot="select-content"
       className={cn(
-        "absolute left-0 top-full mt-1 w-full min-w-[8rem] max-h-[280px] overflow-y-auto overflow-x-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-lg z-[200]",
+        "absolute left-0 top-full mt-1 w-full min-w-[8rem] max-h-[220px] overflow-y-auto overflow-x-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-xl z-[9999] scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400",
         className,
       )}
     >
@@ -416,6 +416,7 @@ function SearchableSelect({
   createLabel,
   clearable,
   maxVisibleOptions,
+  validationError,
 }) {
   return (
     <Select
@@ -432,7 +433,7 @@ function SearchableSelect({
       maxVisibleOptions={maxVisibleOptions}
       className={className}
     >
-      <SelectTrigger className={triggerClassName}>
+      <SelectTrigger className={triggerClassName} aria-invalid={!!validationError}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className={contentClassName}>

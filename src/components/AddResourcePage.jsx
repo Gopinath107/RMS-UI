@@ -56,13 +56,14 @@ const af = (autoFilledFields, key) =>
 const normalizeOptionName = (value) =>
   String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-function F({ label, required, children, col2 }) {
+function F({ label, required, children, col2, error }) {
   return (
     <div className={col2 ? 'add-resource-field add-resource-field-wide' : 'add-resource-field'}>
       <Label className="add-resource-label text-sm font-medium text-gray-700 mb-2 block">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
       {children}
+      {error && <p className="text-xs text-red-500 mt-1.5">{error}</p>}
     </div>
   );
 }
@@ -102,6 +103,7 @@ const ProfileTab = React.memo(({
   isCreatingClient,
   onCreateDepartment,
   onCreateClient,
+  errors,
 }) => {
   const v = (k) => formData?.[k] ?? '';
 
@@ -110,16 +112,17 @@ const ProfileTab = React.memo(({
 
       {/* Resource assignment */}
       <Section title="Resource Assignment">
-        <F label="Company" required>
+        <F label="Company" required error={errors?.companyId}>
           <SearchableSelect
             value={v('companyId')}
             onValueChange={val => set('companyId', Number(val))}
             options={companies.map(c => ({ value: c.companyId, label: c.companyName }))}
             placeholder="Select company"
+            validationError={errors?.companyId}
           />
         </F>
         {resourceType === 'internal' && (
-          <F label="Department" required>
+          <F label="Department" required error={errors?.departmentId}>
             <SearchableSelect
               value={v('departmentId')}
               onValueChange={val => set('departmentId', Number(val))}
@@ -127,6 +130,7 @@ const ProfileTab = React.memo(({
               placeholder="Select department"
               loading={isLoadingDepartments}
               error={departmentLoadError}
+              validationError={errors?.departmentId}
               allowCreate
               creating={isCreatingDepartment}
               onCreate={onCreateDepartment}
@@ -159,8 +163,8 @@ const ProfileTab = React.memo(({
 
       {/* Name */}
       <Section title="Name">
-        <F label="First Name" required>
-          <Input value={v('firstName')} onChange={e => set('firstName', e.target.value)} className={af(aff, 'firstName')} placeholder="First name" />
+        <F label="First Name" required error={errors?.firstName}>
+          <Input value={v('firstName')} onChange={e => set('firstName', e.target.value)} className={af(aff, 'firstName')} placeholder="First name" aria-invalid={!!errors?.firstName} />
         </F>
         <F label="Middle Name">
           <Input value={v('middleName')} onChange={e => set('middleName', e.target.value)} className={af(aff, 'middleName')} placeholder="Middle name" />
@@ -174,11 +178,11 @@ const ProfileTab = React.memo(({
       <div className="add-resource-section space-y-4">
         <h3 className="add-resource-section-title text-base font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Contact</h3>
         <div className="add-resource-section-grid grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-          <F label="Work Email" required>
-            <Input type="email" value={v('email')} onChange={e => set('email', e.target.value)} className={af(aff, 'email')} placeholder="work@example.com" />
+          <F label="Work Email" required error={errors?.email}>
+            <Input type="email" value={v('email')} onChange={e => set('email', e.target.value)} className={af(aff, 'email')} placeholder="work@example.com" aria-invalid={!!errors?.email} />
           </F>
-          <F label="Personal Email">
-            <Input type="email" value={v('personalEmailId')} onChange={e => set('personalEmailId', e.target.value)} className={af(aff, 'personalEmailId')} placeholder="personal@example.com" />
+          <F label="Personal Email" error={errors?.personalEmailId}>
+            <Input type="email" value={v('personalEmailId')} onChange={e => set('personalEmailId', e.target.value)} className={af(aff, 'personalEmailId')} placeholder="personal@example.com" aria-invalid={!!errors?.personalEmailId} />
           </F>
           {/* Primary phone */}
           <div>
@@ -191,8 +195,9 @@ const ProfileTab = React.memo(({
                 placeholder="+code"
                 className="w-32 shrink-0"
               />
-              <Input value={v('primaryContactNo')} onChange={e => set('primaryContactNo', e.target.value)} className={`flex-1 ${af(aff, 'primaryContactNo')}`} placeholder="Phone number" />
+              <Input value={v('primaryContactNo')} onChange={e => set('primaryContactNo', e.target.value)} className={`flex-1 ${af(aff, 'primaryContactNo')}`} placeholder="Phone number" aria-invalid={!!errors?.primaryContactNo} />
             </div>
+            {errors?.primaryContactNo && <p className="text-xs text-red-500 mt-1.5">{errors.primaryContactNo}</p>}
           </div>
           {/* Secondary phone */}
           <div>
@@ -225,13 +230,14 @@ const ProfileTab = React.memo(({
 
       {/* Identity */}
       <Section title="Identity & Citizenship">
-        <F label="Country of Citizenship" required>
+        <F label="Country of Citizenship" required error={errors?.countryOfCitizenship}>
           <SearchableSelect
             value={v('countryOfCitizenship')}
             onValueChange={val => set('countryOfCitizenship', val)}
             options={COUNTRIES.map(c => ({ value: c, label: c }))}
             placeholder="Select country"
             className={af(aff, 'countryOfCitizenship')}
+            validationError={errors?.countryOfCitizenship}
           />
         </F>
         <F label="Document Type">
@@ -245,17 +251,18 @@ const ProfileTab = React.memo(({
         <F label="Document Number">
           <Input value={v('documentNumber')} onChange={e => set('documentNumber', e.target.value)} placeholder="Document number" />
         </F>
-        <F label="Visa" required>
+        <F label="Visa" required error={errors?.visa}>
           <SearchableSelect
             value={v('visa')}
             onValueChange={val => set('visa', val)}
             options={[{ value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }]}
             placeholder="Visa required?"
+            validationError={errors?.visa}
           />
         </F>
         {v('visa') === 'Yes' && (
-          <F label="Visa Type" required>
-            <Input value={v('visaType')} onChange={e => set('visaType', e.target.value)} placeholder="e.g. H1B, L1, Student" />
+          <F label="Visa Type" required error={errors?.visaType}>
+            <Input value={v('visaType')} onChange={e => set('visaType', e.target.value)} placeholder="e.g. H1B, L1, Student" aria-invalid={!!errors?.visaType} />
           </F>
         )}
         <F label="Security Clearance">
@@ -283,8 +290,8 @@ const ProfileTab = React.memo(({
           <F label="City">
             <Input value={v('city')} onChange={e => set('city', e.target.value)} className={af(aff, 'city')} placeholder="City" />
           </F>
-          <F label="Zip / Postal Code" required>
-            <Input value={v('zipCode')} onChange={e => set('zipCode', e.target.value)} placeholder="Zip code" />
+          <F label="Zip / Postal Code" required error={errors?.zipCode}>
+            <Input value={v('zipCode')} onChange={e => set('zipCode', e.target.value)} placeholder="Zip code" aria-invalid={!!errors?.zipCode} />
           </F>
           <F label="Street Address" col2>
             <Input value={v('street')} onChange={e => set('street', e.target.value)} placeholder="Street address (optional)" />
@@ -296,12 +303,13 @@ const ProfileTab = React.memo(({
       <div>
         <h3 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">Availability</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-          <F label="Availability to Join" required>
+          <F label="Availability to Join" required error={errors?.availabilityToJoin}>
             <SearchableSelect
               value={v('availabilityToJoin')}
               onValueChange={val => set('availabilityToJoin', val)}
               options={AVAILABILITY.map(a => ({ value: a, label: a }))}
               placeholder="Select availability"
+              validationError={errors?.availabilityToJoin}
             />
           </F>
           <F label="Interview Availability">
@@ -315,7 +323,7 @@ const ProfileTab = React.memo(({
 });
 
 // ── Professional Tab ──────────────────────────────────────────────────────────
-const ProfessionalTab = React.memo(({ formData, set, aff, resourceType }) => {
+const ProfessionalTab = React.memo(({ formData, set, aff, resourceType, errors }) => {
   const v = k => formData?.[k] ?? '';
   return (
     <div className="space-y-6">
@@ -345,53 +353,57 @@ const ProfessionalTab = React.memo(({ formData, set, aff, resourceType }) => {
       </Section>
 
       <Section title="Work Details">
-        <F label="Current Job Title" required>
-          <Input value={v('currentJobTitle')} onChange={e => set('currentJobTitle', e.target.value)} className={af(aff, 'currentJobTitle')} placeholder="e.g. Senior Developer" />
+        <F label="Current Job Title" required error={errors?.currentJobTitle}>
+          <Input value={v('currentJobTitle')} onChange={e => set('currentJobTitle', e.target.value)} className={af(aff, 'currentJobTitle')} placeholder="e.g. Senior Developer" aria-invalid={!!errors?.currentJobTitle} />
         </F>
-        <F label="Most Recent Employer" required>
-          <Input value={v('mostRecentEmployer')} onChange={e => set('mostRecentEmployer', e.target.value)} className={af(aff, 'mostRecentEmployer')} placeholder="Company name" />
+        <F label="Most Recent Employer" required error={errors?.mostRecentEmployer}>
+          <Input value={v('mostRecentEmployer')} onChange={e => set('mostRecentEmployer', e.target.value)} className={af(aff, 'mostRecentEmployer')} placeholder="Company name" aria-invalid={!!errors?.mostRecentEmployer} />
         </F>
-        <F label="Total Experience (Years)" required>
-          <Input type="number" min="0" max="50" value={v('totalExperience')} onChange={e => set('totalExperience', e.target.value)} className={af(aff, 'totalExperience')} placeholder="e.g. 5" />
+        <F label="Total Experience (Years)" required error={errors?.totalExperience}>
+          <Input type="number" min="0" max="50" value={v('totalExperience')} onChange={e => set('totalExperience', e.target.value)} className={af(aff, 'totalExperience')} placeholder="e.g. 5" aria-invalid={!!errors?.totalExperience} />
         </F>
-        <F label="Employment Type" required>
+        <F label="Employment Type" required error={errors?.employmentType}>
           <SearchableSelect
             value={v('employmentType')}
             onValueChange={val => set('employmentType', val)}
             options={EMP_TYPES.map(t => ({ value: t, label: t }))}
             placeholder="Select type"
             className={af(aff, 'employmentType')}
+            validationError={errors?.employmentType}
           />
         </F>
-        <F label="Relocate" required>
+        <F label="Relocate" required error={errors?.relocate}>
           <SearchableSelect
             value={v('relocate')}
             onValueChange={val => set('relocate', val)}
             options={[{ value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }]}
             placeholder="Willing to relocate?"
+            validationError={errors?.relocate}
           />
         </F>
       </Section>
 
       <Section title="Compensation">
-        <F label="Currency" required>
+        <F label="Currency" required error={errors?.currency}>
           <SearchableSelect
             value={v('currency')}
             onValueChange={val => set('currency', val)}
             options={CURRENCIES.map(c => ({ value: c, label: c }))}
             placeholder="Currency"
+            validationError={errors?.currency}
           />
         </F>
-        <F label="Frequency" required>
+        <F label="Frequency" required error={errors?.frequency}>
           <SearchableSelect
             value={v('frequency')}
             onValueChange={val => set('frequency', val)}
             options={FREQUENCIES.map(f => ({ value: f, label: f }))}
             placeholder="Frequency"
+            validationError={errors?.frequency}
           />
         </F>
-        <F label="Sourcing Rate" required>
-          <Input type="number" min="0" value={v('sourcingRate')} onChange={e => set('sourcingRate', e.target.value)} placeholder="Rate amount" />
+        <F label="Sourcing Rate" required error={errors?.sourcingRate}>
+          <Input type="number" min="0" value={v('sourcingRate')} onChange={e => set('sourcingRate', e.target.value)} placeholder="Rate amount" aria-invalid={!!errors?.sourcingRate} />
         </F>
       </Section>
 
@@ -883,6 +895,7 @@ export default function AddResourcePage() {
   const [resourceType, setResourceType] = useState(restoredDraft?.resourceType || initialType);
   const [step, setStep] = useState(isEditMode ? 'form' : (restoredDraft?.formData ? 'form' : 'upload')); // 'upload' | 'form'
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const [formData, setFormData] = useState(() => ({
     ...(initialType === 'internal' ? EMPTY_INTERNAL : EMPTY_EXTERNAL),
@@ -1264,16 +1277,81 @@ export default function AddResourcePage() {
     }
   };
 
-  const handleAddResource = async () => {
-    if (
-      !formData.companyId ||
-      !formData.firstName ||
-      !formData.email ||
-      !formData.departmentId
-    ) {
-      toast.error("Please fill in all required fields (Company, First Name, Email, Department)");
-      return;
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // First Name
+    if (!formData.firstName || !formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+      isValid = false;
     }
+
+    // Email
+    if (!formData.email || !formData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = "Invalid email format";
+      isValid = false;
+    }
+
+    // Phone Primary
+    if (formData.primaryContactNo) {
+      const cleaned = formData.primaryContactNo.replace(/\s/g, '');
+      if (!/^\d+$/.test(cleaned)) {
+        newErrors.primaryContactNo = "Phone number must contain only digits";
+        isValid = false;
+      } else if (formData.primaryCountryCode === '+91' && cleaned.length !== 10) {
+        newErrors.primaryContactNo = "Indian phone numbers must be exactly 10 digits";
+        isValid = false;
+      }
+    }
+
+    // Personal Email
+    if (formData.personalEmailId && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.personalEmailId.trim())) {
+      newErrors.personalEmailId = "Invalid email format";
+      isValid = false;
+    }
+
+    // Specific to internal
+    if (resourceType === 'internal') {
+      if (!formData.companyId) {
+        newErrors.companyId = "Company is required";
+        isValid = false;
+      }
+      if (!formData.departmentId) {
+        newErrors.departmentId = "Department is required";
+        isValid = false;
+      }
+    }
+
+    // Additional validations
+    if (!formData.countryOfCitizenship) { newErrors.countryOfCitizenship = "Required"; isValid = false; }
+    if (!formData.visa) { newErrors.visa = "Required"; isValid = false; }
+    else if (formData.visa === 'Yes' && (!formData.visaType || !formData.visaType.trim())) { newErrors.visaType = "Required"; isValid = false; }
+    if (!formData.zipCode || !formData.zipCode.trim()) { newErrors.zipCode = "Required"; isValid = false; }
+    if (!formData.availabilityToJoin) { newErrors.availabilityToJoin = "Required"; isValid = false; }
+    if (!formData.currentJobTitle || !formData.currentJobTitle.trim()) { newErrors.currentJobTitle = "Required"; isValid = false; }
+    if (!formData.mostRecentEmployer || !formData.mostRecentEmployer.trim()) { newErrors.mostRecentEmployer = "Required"; isValid = false; }
+    if (formData.totalExperience === undefined || formData.totalExperience === null || formData.totalExperience === '') { newErrors.totalExperience = "Required"; isValid = false; }
+    if (!formData.employmentType) { newErrors.employmentType = "Required"; isValid = false; }
+    if (!formData.relocate) { newErrors.relocate = "Required"; isValid = false; }
+    if (!formData.currency) { newErrors.currency = "Required"; isValid = false; }
+    if (!formData.frequency) { newErrors.frequency = "Required"; isValid = false; }
+    if (formData.sourcingRate === undefined || formData.sourcingRate === null || formData.sourcingRate === '') { newErrors.sourcingRate = "Required"; isValid = false; }
+
+    setErrors(newErrors);
+    
+    if (!isValid) {
+      toast.error("Please correct the highlighted errors before submitting");
+    }
+    
+    return isValid;
+  };
+
+  const handleAddResource = async () => {
+    if (!validateForm()) return;
     const payload = new FormData();
     payload.append("companyId", formData.companyId.toString());
     payload.append("firstName", formData.firstName.trim());
@@ -1408,10 +1486,7 @@ export default function AddResourcePage() {
 
   // Handle Add External Resource
   const handleAddExternalResource = async () => {
-    if (!formData.firstName || !formData.email) {
-      toast.error("Please fill in all required fields (First Name, Email)");
-      return;
-    }
+    if (!validateForm()) return;
 
     const payload = new FormData();
 
@@ -2146,6 +2221,7 @@ export default function AddResourcePage() {
               isCreatingClient={isCreatingClient}
               onCreateDepartment={createDepartmentOption}
               onCreateClient={createClientOption}
+              errors={errors}
             />
           </section>
 
@@ -2161,6 +2237,7 @@ export default function AddResourcePage() {
               set={set}
               aff={autoFilledFields}
               resourceType={resourceType}
+              errors={errors}
             />
           </section>
 
@@ -2209,9 +2286,9 @@ export default function AddResourcePage() {
           </section>
 
           <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4">
-            <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-3">
               <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
-              <Button type="button" onClick={onSubmit} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Button type="button" onClick={onSubmit} className="w-full sm:w-auto flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white">
                 {isEditMode
                   ? (resourceType === 'internal' ? 'Update Internal Resource' : 'Update External Resource')
                   : (resourceType === 'internal' ? 'Save Internal Resource' : 'Save External Resource')}

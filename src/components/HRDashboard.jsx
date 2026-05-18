@@ -2864,6 +2864,7 @@ export default function HRDashboard() {
   const [companies, setCompanies] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isAddDemandOpen, setIsAddDemandOpen] = useState(false);
+  const [demandErrors, setDemandErrors] = useState({});
   const [demandForm, setDemandForm] = useState({
     demandTitle: "",
     projectName: "",
@@ -2923,6 +2924,7 @@ export default function HRDashboard() {
   };
 
   const resetDemandForm = () => {
+    setDemandErrors({});
     setDemandForm({
       demandTitle: "",
       projectName: "",
@@ -2954,8 +2956,18 @@ export default function HRDashboard() {
   };
 
   const handleCreateDemand = async () => {
-    if (!selectedAccount || !selectedDepartment) {
-      toast.error("Please select both account and department");
+    const newErrors = {};
+    if (!demandForm.demandTitle) newErrors.demandTitle = "Demand Title is required";
+    if (!demandForm.resourceRequests) newErrors.resourceRequests = "Number of Resources is required";
+    if (!selectedAccount) newErrors.accountId = "Client is required";
+    if (!selectedDepartment) newErrors.departmentId = "Role is required";
+    if (!demandForm.companyId) newErrors.companyId = "Company is required";
+    if (selectedSkills.length === 0) newErrors.skills = "At least one skill is required";
+    
+    setDemandErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -2980,16 +2992,7 @@ export default function HRDashboard() {
       overallStatus: demandForm.overallStatus, // NEW: Include status in payload
     };
 
-    // Validation
-    if (!demandForm.demandTitle || !demandForm.resourceRequests) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (selectedSkills.length === 0) {
-      toast.error("Please add at least one skill");
-      return;
-    }
+    // Validation done earlier
 
     try {
       const resp = await DemandService.create(payload);
@@ -3114,8 +3117,18 @@ export default function HRDashboard() {
   };
 
   const handleUpdateDemand = async () => {
-    if (!selectedAccount || !selectedDepartment) {
-      toast.error("Please select both account and department");
+    const newErrors = {};
+    if (!demandForm.demandTitle) newErrors.demandTitle = "Demand Title is required";
+    if (!demandForm.resourceRequests) newErrors.resourceRequests = "Number of Resources is required";
+    if (!selectedAccount) newErrors.accountId = "Client is required";
+    if (!selectedDepartment) newErrors.departmentId = "Role is required";
+    if (!demandForm.companyId) newErrors.companyId = "Company is required";
+    if (selectedSkills.length === 0) newErrors.skills = "At least one skill is required";
+    
+    setDemandErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -3140,16 +3153,7 @@ export default function HRDashboard() {
       status: demandForm.overallStatus, // NEW: Include updated status
     };
 
-    // Validation
-    if (!demandForm.demandTitle || !demandForm.resourceRequests) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (selectedSkills.length === 0) {
-      toast.error("Please add at least one skill");
-      return;
-    }
+    // Validation done earlier
 
     try {
       const resp = await DemandService.update(editingDemand.demandid, payload);
@@ -3965,10 +3969,14 @@ export default function HRDashboard() {
                       type="text"
                       placeholder="Enter demand title"
                       value={demandForm.demandTitle}
-                      onChange={(e) => setDemandForm({ ...demandForm, demandTitle: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                      required
+                      onChange={(e) => {
+                        setDemandForm({ ...demandForm, demandTitle: e.target.value });
+                        if(demandErrors.demandTitle) setDemandErrors({...demandErrors, demandTitle: null});
+                      }}
+                      className={`w-full h-11 px-4 border rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all ${demandErrors.demandTitle ? 'border-red-500' : 'border-gray-300'}`}
+                      aria-invalid={!!demandErrors.demandTitle}
                     />
+                    {demandErrors.demandTitle && <p className="text-red-500 text-xs mt-1">{demandErrors.demandTitle}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -3986,26 +3994,26 @@ export default function HRDashboard() {
                     />
                   </div>
 
-                                    <div className="space-y-2">
-                    <Label htmlFor="demandOpenDt">Demand Open Date</Label>
-                    <input
-                      id="demandOpenDt"
-                      type="date"
-                      value={demandForm.demandOpenDt}
-                      onChange={(e) => setDemandForm({ ...demandForm, demandOpenDt: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fulfilmentDt">Target Fulfilment Date</Label>
-                    <input
-                      id="fulfilmentDt"
-                      type="date"
-                      value={demandForm.fulfilmentDt}
-                      onChange={(e) => setDemandForm({ ...demandForm, fulfilmentDt: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    />
+                                    <div className="space-y-2">
+                    <Label htmlFor="demandOpenDt">Demand Open Date</Label>
+                    <input
+                      id="demandOpenDt"
+                      type="date"
+                      value={demandForm.demandOpenDt}
+                      onChange={(e) => setDemandForm({ ...demandForm, demandOpenDt: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fulfilmentDt">Target Fulfilment Date</Label>
+                    <input
+                      id="fulfilmentDt"
+                      type="date"
+                      value={demandForm.fulfilmentDt}
+                      onChange={(e) => setDemandForm({ ...demandForm, fulfilmentDt: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -4035,10 +4043,14 @@ export default function HRDashboard() {
                       min="1"
                       placeholder="e.g., 3"
                       value={demandForm.resourceRequests}
-                      onChange={(e) => setDemandForm({ ...demandForm, resourceRequests: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                      required
+                      onChange={(e) => {
+                        setDemandForm({ ...demandForm, resourceRequests: e.target.value });
+                        if(demandErrors.resourceRequests) setDemandErrors({...demandErrors, resourceRequests: null});
+                      }}
+                      className={`w-full h-11 px-4 border rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all ${demandErrors.resourceRequests ? 'border-red-500' : 'border-gray-300'}`}
+                      aria-invalid={!!demandErrors.resourceRequests}
                     />
+                    {demandErrors.resourceRequests && <p className="text-red-500 text-xs mt-1">{demandErrors.resourceRequests}</p>}
                   </div>
 
                   {/* Status Field - Only show when editing */}
@@ -4074,12 +4086,16 @@ export default function HRDashboard() {
                     <Label htmlFor="companyId">Company <span className="text-red-500">*</span></Label>
                     <SearchableSelect
                       value={demandForm.companyId?.toString() || ""}
-                      onValueChange={(value) => setDemandForm({ ...demandForm, companyId: value ? parseInt(value, 10) : null })}
+                      onValueChange={(value) => {
+                        setDemandForm({ ...demandForm, companyId: value ? parseInt(value, 10) : null });
+                        if(demandErrors.companyId) setDemandErrors({...demandErrors, companyId: null});
+                      }}
                       options={companies.map((comp) => ({ value: comp.companyId, label: comp.companyName }))}
                       placeholder="Select company"
-                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      triggerClassName={`h-11 px-4 rounded-xl focus-within:ring-emerald-500 ${demandErrors.companyId ? 'border-red-500' : 'border-gray-300'}`}
                       clearable
                     />
+                    {demandErrors.companyId && <p className="text-red-500 text-xs mt-1">{demandErrors.companyId}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -4087,6 +4103,7 @@ export default function HRDashboard() {
                     <SearchableSelect
                       value={selectedAccount?.accountId?.toString() || ''}
                       onValueChange={(value) => {
+                        if(demandErrors.accountId) setDemandErrors({...demandErrors, accountId: null});
                         if (!value) {
                           removeAccount();
                           return;
@@ -4096,12 +4113,13 @@ export default function HRDashboard() {
                       }}
                       options={accounts.map((acc) => ({ value: acc.accountId, label: acc.accountName }))}
                       placeholder="Search or create client"
-                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      triggerClassName={`h-11 px-4 rounded-xl focus-within:ring-emerald-500 ${demandErrors.accountId ? 'border-red-500' : 'border-gray-300'}`}
                       allowCreate
                       onCreate={createAccountOption}
                       creating={isCreatingAccount}
                       clearable
                     />
+                    {demandErrors.accountId && <p className="text-red-500 text-xs mt-1">{demandErrors.accountId}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -4109,6 +4127,7 @@ export default function HRDashboard() {
                     <SearchableSelect
                       value={selectedDepartment?.departmentId?.toString() || ''}
                       onValueChange={(value) => {
+                        if(demandErrors.departmentId) setDemandErrors({...demandErrors, departmentId: null});
                         if (!value) {
                           removeDepartment();
                           return;
@@ -4118,12 +4137,13 @@ export default function HRDashboard() {
                       }}
                       options={departments.map((dept) => ({ value: dept.departmentId, label: dept.departmentName }))}
                       placeholder="Search or create role"
-                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      triggerClassName={`h-11 px-4 rounded-xl focus-within:ring-emerald-500 ${demandErrors.departmentId ? 'border-red-500' : 'border-gray-300'}`}
                       allowCreate
                       onCreate={createDepartmentOption}
                       creating={isCreatingDepartment}
                       clearable
                     />
+                    {demandErrors.departmentId && <p className="text-red-500 text-xs mt-1">{demandErrors.departmentId}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -4190,23 +4210,31 @@ export default function HRDashboard() {
                       type="text"
                       placeholder="e.g., React, Python"
                       value={skillInput}
-                      onChange={handleSkillInputChange}
+                      onChange={(e) => {
+                        handleSkillInputChange(e);
+                        if(demandErrors.skills) setDemandErrors({...demandErrors, skills: null});
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           addSkill(skillInput);
+                          if(demandErrors.skills) setDemandErrors({...demandErrors, skills: null});
                         }
                       }}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                      className={`w-full h-11 px-4 border rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all ${demandErrors.skills ? 'border-red-500' : 'border-gray-300'}`}
                     />
                     <Button
                       type="button"
-                      onClick={() => addSkill(skillInput)}
+                      onClick={() => {
+                        addSkill(skillInput);
+                        if(demandErrors.skills) setDemandErrors({...demandErrors, skills: null});
+                      }}
                       className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                     >
                       Add
                     </Button>
                   </div>
+                  {demandErrors.skills && <p className="text-red-500 text-xs mt-1">{demandErrors.skills}</p>}
                   <div className="flex flex-wrap gap-2 mt-2">
                     {selectedSkills.map((skill, index) => (
                       <Badge
@@ -4282,7 +4310,6 @@ export default function HRDashboard() {
             </Button>
             <Button
               onClick={editingDemand ? handleUpdateDemand : handleCreateDemand}
-              disabled={!demandForm.demandTitle || !demandForm.resourceRequests || !selectedAccount || !selectedDepartment}
               size="lg"
               className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
             >

@@ -47,6 +47,8 @@ const UserManagement = ({ setCurrentPage }) => {
     status: 'Active'
   });
 
+  const [errors, setErrors] = useState({});
+
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanyEmail, setNewCompanyEmail] = useState('');
   const [newCompanyAddress, setNewCompanyAddress] = useState('');
@@ -220,15 +222,23 @@ const filteredUsers = users.filter(user => {
     setFormData({ ...formData, [name]: value });
   };
 
+const validateUserForm = (isEdit = false) => {
+  const newErrors = {};
+  let isValid = true;
+  if (!formData.companyId) { newErrors.companyId = 'Company is required'; isValid = false; }
+  if (!formData.name) { newErrors.name = 'Full Name is required'; isValid = false; }
+  if (!formData.email) { newErrors.email = 'Email is required'; isValid = false; }
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
+  if (!formData.username) { newErrors.username = 'Username is required'; isValid = false; }
+  if (!isEdit && !formData.password) { newErrors.password = 'Password is required'; isValid = false; }
+  if (!formData.roleId) { newErrors.roleId = 'Role is required'; isValid = false; }
+
+  setErrors(newErrors);
+  return isValid;
+};
+
 const handleAddUser = async () => {
-  if (!formData.name || !formData.email || !formData.username || !formData.password || !formData.roleId || !formData.companyId) {
-    setIsAddDialogOpen(false);
-    await Swal.fire({ 
-      icon: 'error', 
-      title: 'Error', 
-      text: 'Please fill in all required fields', 
-      confirmButtonText: 'OK' 
-    });
+  if (!validateUserForm(false)) {
     return;
   }
 
@@ -329,13 +339,7 @@ const handleAddUser = async () => {
 };
 
 const handleEditUser = async () => {
-  if (!selectedUser || !formData.name || !formData.email || !formData.username || !formData.roleId || !formData.companyId) {
-    await Swal.fire({ 
-      icon: 'error', 
-      title: 'Error', 
-      text: 'Please fill in all required fields', 
-      confirmButtonText: 'OK' 
-    });
+  if (!selectedUser || !validateUserForm(true)) {
     return;
   }
 
@@ -497,11 +501,12 @@ const openEditDialog = (user) => {
   };
 
 const handleAddCompany = async () => {
-  if (!newCompanyName) {
-    toast.error('Company name is required');
-    return;
-  }
-  
+  const newErrors = {};
+  if (!newCompanyName) newErrors.companyName = 'Company name is required';
+
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
+
   try {
     const response = await CompanyService.createCompany(
       newCompanyName, 
@@ -548,10 +553,12 @@ const handleAddCompany = async () => {
 };
 
 const handleAddRole = async () => {
-  if (!newRoleCompanyId || !newRoleName) {
-    toast.error('Company and role name are required');
-    return;
-  }
+  const newErrors = {};
+  if (!newRoleCompanyId) newErrors.roleCompanyId = 'Company is required';
+  if (!newRoleName) newErrors.roleName = 'Role name is required';
+  
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
   
   try {
     const response = await RoleService.createRole(
@@ -598,11 +605,12 @@ const handleAddRole = async () => {
 };
 
 const handleAddDepartment = async () => {
-  // Validation - Using toast for quick feedback
-  if (!newDeptCompanyId || !newDeptName) {
-    toast.error('Company and department name are required');
-    return;
-  }
+  const newErrors = {};
+  if (!newDeptCompanyId) newErrors.deptCompanyId = 'Company is required';
+  if (!newDeptName) newErrors.deptName = 'Department name is required';
+
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
   
   try {
     const response = await DepartmentService.createDepartment(
@@ -651,11 +659,11 @@ const handleAddDepartment = async () => {
 };
 
 const handleAddSkill = async () => {
-  // Validation - Using toast for quick feedback
-  if (!newSkillName) {
-    toast.error('Skill name is required');
-    return;
-  }
+  const newErrors = {};
+  if (!newSkillName) newErrors.skillName = 'Skill name is required';
+
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
   
   try {
     const response = await SkillService.createSkill(
@@ -749,11 +757,12 @@ const handleAddSkill = async () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.companyId && <p className="text-xs text-red-500 mt-1">{errors.companyId}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <Select value={formData.name} onValueChange={(value) => setFormData({ ...formData, name: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger aria-invalid={!!errors.name}>
                       <SelectValue placeholder="Select employee name" />
                     </SelectTrigger>
                     <SelectContent>
@@ -764,6 +773,7 @@ const handleAddSkill = async () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email *</Label>
@@ -774,7 +784,9 @@ const handleAddSkill = async () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="Enter email address"
+                    aria-invalid={!!errors.email}
                   />
+                  {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="username">Username *</Label>
@@ -784,7 +796,9 @@ const handleAddSkill = async () => {
                     value={formData.username}
                     onChange={handleInputChange}
                     placeholder="Enter username"
+                    aria-invalid={!!errors.username}
                   />
+                  {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">Password *</Label>
@@ -796,6 +810,7 @@ const handleAddSkill = async () => {
                       value={formData.password}
                       onChange={handleInputChange}
                       placeholder="Enter password"
+                      aria-invalid={!!errors.password}
                     />
                     <Button
                       type="button"
@@ -1115,11 +1130,16 @@ const handleAddSkill = async () => {
                 <AccordionContent>
                   <div className="space-y-4 mb-6">
                     <Label>Add New Company</Label>
-                    <Input 
-                      placeholder="Company Name *" 
-                      value={newCompanyName} 
-                      onChange={(e) => setNewCompanyName(e.target.value)} 
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="Company Name *" 
+                        value={newCompanyName} 
+                        onChange={(e) => setNewCompanyName(e.target.value)} 
+                        aria-invalid={!!errors.companyName}
+                        className={errors.companyName ? "border-red-500" : ""}
+                      />
+                      {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
+                    </div>
                     <Input 
                       placeholder="Company Email" 
                       value={newCompanyEmail} 
@@ -1159,23 +1179,31 @@ const handleAddSkill = async () => {
                 <AccordionContent>
                   <div className="space-y-4 mb-6">
                     <Label>Add New Role</Label>
-                    <Select value={newRoleCompanyId} onValueChange={setNewRoleCompanyId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Company *" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map(c => (
-                          <SelectItem key={c.companyId} value={c.companyId.toString()}>
-                            {c.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input 
-                      placeholder="Role Name *" 
-                      value={newRoleName} 
-                      onChange={(e) => setNewRoleName(e.target.value)} 
-                    />
+                    <div className="space-y-1">
+                      <Select value={newRoleCompanyId} onValueChange={setNewRoleCompanyId}>
+                        <SelectTrigger aria-invalid={!!errors.roleCompanyId} className={errors.roleCompanyId ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select Company *" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map(c => (
+                            <SelectItem key={c.companyId} value={c.companyId.toString()}>
+                              {c.companyName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.roleCompanyId && <p className="text-red-500 text-xs mt-1">{errors.roleCompanyId}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="Role Name *" 
+                        value={newRoleName} 
+                        onChange={(e) => setNewRoleName(e.target.value)} 
+                        aria-invalid={!!errors.roleName}
+                        className={errors.roleName ? "border-red-500" : ""}
+                      />
+                      {errors.roleName && <p className="text-red-500 text-xs mt-1">{errors.roleName}</p>}
+                    </div>
                     <Button onClick={handleAddRole} className="bg-red-600 hover:bg-red-700">Add Role</Button>
                   </div>
                   <Table>
@@ -1203,23 +1231,31 @@ const handleAddSkill = async () => {
                 <AccordionContent>
                   <div className="space-y-4 mb-6">
                     <Label>Add New Department</Label>
-                    <Select value={newDeptCompanyId} onValueChange={setNewDeptCompanyId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Company *" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map(c => (
-                          <SelectItem key={c.companyId} value={c.companyId.toString()}>
-                            {c.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input 
-                      placeholder="Department Name *" 
-                      value={newDeptName} 
-                      onChange={(e) => setNewDeptName(e.target.value)} 
-                    />
+                    <div className="space-y-1">
+                      <Select value={newDeptCompanyId} onValueChange={setNewDeptCompanyId}>
+                        <SelectTrigger aria-invalid={!!errors.deptCompanyId} className={errors.deptCompanyId ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select Company *" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map(c => (
+                            <SelectItem key={c.companyId} value={c.companyId.toString()}>
+                              {c.companyName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.deptCompanyId && <p className="text-red-500 text-xs mt-1">{errors.deptCompanyId}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="Department Name *" 
+                        value={newDeptName} 
+                        onChange={(e) => setNewDeptName(e.target.value)} 
+                        aria-invalid={!!errors.deptName}
+                        className={errors.deptName ? "border-red-500" : ""}
+                      />
+                      {errors.deptName && <p className="text-red-500 text-xs mt-1">{errors.deptName}</p>}
+                    </div>
                     {/* <Select value={newDeptParentId} onValueChange={setNewDeptParentId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Parent Department (optional)" />
@@ -1261,11 +1297,16 @@ const handleAddSkill = async () => {
                 <AccordionContent>
                   <div className="space-y-4 mb-6">
                     <Label>Add New Skill</Label>
-                    <Input 
-                      placeholder="Skill Name *" 
-                      value={newSkillName} 
-                      onChange={(e) => setNewSkillName(e.target.value)} 
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        placeholder="Skill Name *" 
+                        value={newSkillName} 
+                        onChange={(e) => setNewSkillName(e.target.value)} 
+                        aria-invalid={!!errors.skillName}
+                        className={errors.skillName ? "border-red-500" : ""}
+                      />
+                      {errors.skillName && <p className="text-red-500 text-xs mt-1">{errors.skillName}</p>}
+                    </div>
                     <Button onClick={handleAddSkill} className="bg-red-600 hover:bg-red-700">Add Skill</Button>
                   </div>
                   <Table>
