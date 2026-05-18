@@ -2509,7 +2509,7 @@ export default function ResourceManagement() {
                 interviewType: value,
                 demandId: '',
                 requestId: '',
-                candidateId: ''
+                // Do NOT clear candidateId, it is locked from row context
             }));
             setDemandResourceRequests([]);
         } else if (field === 'demandId') {
