@@ -2428,15 +2428,20 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedDemand?.demandTitle}</DialogTitle>
-            <DialogDescription>
-              Status: <Badge className={getStatusColor(selectedDemand?.overallStatus)}>
-                {selectedDemand?.overallStatus}
-              </Badge>
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl w-[95vw] flex flex-col p-0 gap-0 bg-white rounded-2xl shadow-2xl border border-gray-100" style={{ maxHeight: '90vh' }}>
+          {/* Sticky header */}
+          <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle>{selectedDemand?.demandTitle}</DialogTitle>
+              <DialogDescription>
+                Status: <Badge className={getStatusColor(selectedDemand?.overallStatus)}>
+                  {selectedDemand?.overallStatus}
+                </Badge>
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
           {selectedDemand && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2565,67 +2570,65 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 const totalResumePages = Math.ceil(totalResumes / resumeItemsPerPage);
 
                 return (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-bold mb-4 text-gray-800">Shared Resumes</h3>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm w-full">
-                      <table className="w-full bg-white">
-                        <thead>
-                          <tr className="border-b-2 border-gray-100">
-                            <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">
-                              Resource Name
-                            </th>
-                            <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">
-                              Email
-                            </th>
-                            <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">
-                              Shared By
-                            </th>
-                            <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">
-                              Shared At
-                            </th>
+                  <div className="mt-6">
+                    <h3 className="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">
+                      Shared Resumes
+                      <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{totalResumes}</span>
+                    </h3>
+
+                    {/* Table with sticky header + internal body scroll */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="w-full bg-white" style={{ minWidth: '520px' }}>
+                          <thead className="bg-gray-50 border-b-2 border-gray-100">
+                            <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Resource Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Email</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared By</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared At</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {paginatedResumes.map((resume, index) => (
-                            <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700">
-                                {resume.resourceName}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                <a
-                                  href={`mailto:${resume.resourceEmail}`}
-                                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                                >
-                                  {resume.resourceEmail}
-                                </a>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600">
-                                <div>{resume.sharedBy || 'N/A'}</div>
-                                {resume.sharedByEmail && (
-                                  <div className="text-[10px] text-gray-400">{resume.sharedByEmail}</div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                                {new Date(resume.sharedAt).toLocaleDateString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                        </table>
+                        {/* Scrollable table body in a separate div */}
+                        <div className="overflow-y-auto" style={{ maxHeight: '220px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}>
+                          <table className="w-full bg-white" style={{ minWidth: '520px' }}>
+                            <tbody className="divide-y divide-gray-100">
+                              {paginatedResumes.map((resume, index) => (
+                                <tr key={index} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30`}>
+                                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">{resume.resourceName}</td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <a href={`mailto:${resume.resourceEmail}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                                      {resume.resourceEmail}
+                                    </a>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    <div className="font-medium">{resume.sharedBy || 'N/A'}</div>
+                                    {resume.sharedByEmail && <div className="text-xs text-gray-400 truncate max-w-[160px]" title={resume.sharedByEmail}>{resume.sharedByEmail}</div>}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{new Date(resume.sharedAt).toLocaleDateString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
+                    {/* Pagination — always visible below table */}
                     {totalResumes > 0 && (
-                      <Pagination
-                        currentPage={resumeCurrentPage}
-                        totalPages={totalResumePages}
-                        onPageChange={setResumeCurrentPage}
-                        itemsPerPage={resumeItemsPerPage}
-                        onItemsPerPageChange={(val) => {
-                          setResumeItemsPerPage(val);
-                          setResumeCurrentPage(1);
-                        }}
-                        totalItems={totalResumes}
-                        label="resumes"
-                      />
+                      <div className="mt-2">
+                        <Pagination
+                          currentPage={resumeCurrentPage}
+                          totalPages={totalResumePages}
+                          onPageChange={setResumeCurrentPage}
+                          itemsPerPage={resumeItemsPerPage}
+                          onItemsPerPageChange={(val) => {
+                            setResumeItemsPerPage(val);
+                            setResumeCurrentPage(1);
+                          }}
+                          totalItems={totalResumes}
+                          label="resumes"
+                        />
+                      </div>
                     )}
                   </div>
                 );
@@ -2646,6 +2649,8 @@ const DemandsTab = ({ demands, onEditDemand }) => {
               </div>
             </div>
           )}
+          </div>
+          {/* END scrollable body */}
         </DialogContent>
       </Dialog>
 

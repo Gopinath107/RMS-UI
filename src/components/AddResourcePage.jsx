@@ -622,7 +622,7 @@ const SocialLinksTab = React.memo(({ links, setLinks, resourceType }) => {
 });
 
 // ── Documents Tab ──────────────────────────────────────────────────────────
-const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData }) => {
+const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData, onSaveResource, autoSaveStatus, isEditMode }) => {
   const today = new Date().toISOString().split('T')[0];
   const [newDoc, setNewDoc] = useState({ documentType: '', expiryDate: '', renewalDate: '', file: null });
   const [err, setErr] = useState('');
@@ -742,7 +742,7 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData }) => {
           </div>
         </div>
 
-        {/* Error + Save button — always below upload zone */}
+        {/* Error + Save Document button */}
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="flex-1">
             {err && <p className="text-sm text-red-500 font-medium">{err}</p>}
@@ -757,6 +757,31 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData }) => {
             <Plus className="w-4 h-4" /> Save Document
           </button>
         </div>
+
+        {/* Save Resource shortcut + Auto-save status */}
+        {onSaveResource && (
+          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+            {/* Auto-save badge */}
+            <div className="flex items-center">
+              {autoSaveStatus && autoSaveStatus !== 'idle' && (
+                <AutoSaveBadge status={autoSaveStatus} />
+              )}
+            </div>
+            {/* Save Resource button */}
+            <button
+              type="button"
+              onClick={onSaveResource}
+              style={{ backgroundColor: '#059669', color: '#fff', padding: '8px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {isEditMode ? 'Update Resource' : 'Save Resource'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Documents Table ── */}
@@ -2487,6 +2512,9 @@ export default function AddResourcePage() {
               setDocs={setResourceDocuments}
               resourceType={resourceType}
               formData={formData}
+              onSaveResource={onSubmit}
+              autoSaveStatus={autoSaveStatus}
+              isEditMode={isEditMode}
             />
           </section>
 

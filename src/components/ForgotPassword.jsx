@@ -398,8 +398,8 @@ export default function ForgotPassword() {
                       onClick={handleResendOtp}
                       disabled={timeLeft > 0 || isLoading}
                       className={`font-medium ${timeLeft > 0
-                        ? 'cursor-not-allowed text-gray-400'
-                        : 'text-blue-600 hover:underline'
+                          ? 'cursor-not-allowed text-gray-400'
+                          : 'text-blue-600 hover:underline'
                         }`}
                     >
                       Resend OTP
