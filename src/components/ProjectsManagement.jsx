@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDraggableColumns } from "./common/useDraggableColumns.js";
+import { DraggableTableHead, ColumnOrderResetButton } from "./common/DraggableTableHead.jsx";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table.jsx";
 import {
   Select,
   SelectTrigger,
@@ -67,6 +79,12 @@ const SCROLLBAR_STYLE = `
   .skills-scroll::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
 `;
 
+const PROJECT_DEFAULT_COLS = ['name', 'client', 'status', 'priority', 'budget', 'startDate', 'endDate', 'actions'];
+const PROJECT_COL_LABELS = {
+  name: 'Project Name', client: 'Client', status: 'Status', priority: 'Priority',
+  budget: 'Budget', startDate: 'Start Date', endDate: 'End Date', actions: 'Actions',
+};
+
 const ProjectsManagement = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
@@ -81,6 +99,12 @@ const ProjectsManagement = () => {
   const [skillsList, setSkillsList] = useState([]);
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
+  const [viewMode, setViewMode] = useState('card'); // 'card' | 'table'
+
+  // ── Column drag-to-reorder ──
+  const { columnOrder: projColOrder, sensors: projSensors, handleDragEnd: handleProjColDragEnd, resetColumns: resetProjCols } =
+    useDraggableColumns('projects', PROJECT_DEFAULT_COLS);
+
 
   const [newProject, setNewProject] = useState({
     name: "",
@@ -428,18 +452,43 @@ const ProjectsManagement = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedProject(null);
-              setNewProject({ name: "", accountName: "", accountId: null, startDate: "", endDate: "", status: "Planned", description: "", priority: "Medium", budget: "", companyId: 1, managerUserId: null, selectedSkills: [] });
-              setSkillInput("");
-              setIsModalOpen(true);
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Project
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <div className="flex rounded-md border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode('card')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === 'card' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Card View"
+              >
+                ⊞ Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Table View"
+              >
+                ☰ Table
+              </button>
+            </div>
+            <Button
+              onClick={() => {
+                setSelectedProject(null);
+                setNewProject({ name: "", accountName: "", accountId: null, startDate: "", endDate: "", status: "Planned", description: "", priority: "Medium", budget: "", companyId: 1, managerUserId: null, selectedSkills: [] });
+                setSkillInput("");
+                setIsModalOpen(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Project
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -490,8 +539,9 @@ const ProjectsManagement = () => {
           </Card>
         </div>
 
-        {/* Project Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Project Cards Grid (Card Mode) */}
+        {viewMode === 'card' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.length > 0 ? (
             filteredProjects.map((project) => (
               <Card
@@ -562,7 +612,86 @@ const ProjectsManagement = () => {
           ) : (
             <p className="text-gray-500 col-span-3">{error || "No projects found"}</p>
           )}
-        </div>
+          </div>
+        )}
+
+        {/* Table View (Table Mode) */}
+        {viewMode === 'table' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="flex justify-end px-4 py-2 border-b border-gray-100">
+              <ColumnOrderResetButton onReset={resetProjCols} />
+            </div>
+            <DndContext sensors={projSensors} collisionDetection={closestCenter} onDragEnd={handleProjColDragEnd}>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableContext items={projColOrder} strategy={horizontalListSortingStrategy}>
+                        {projColOrder.map(colId => (
+                          <DraggableTableHead key={colId} id={colId} label={PROJECT_COL_LABELS[colId]} />
+                        ))}
+                      </SortableContext>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProjects.length > 0 ? filteredProjects.map((project) => (
+                      <TableRow key={project.projectId} className="hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedDetails(project); setIsDetailsOpen(true); }}>
+                        {projColOrder.map(colId => {
+                          switch (colId) {
+                            case 'name':
+                              return <TableCell key={colId} className="font-medium">{project.projectName}</TableCell>;
+                            case 'client':
+                              return <TableCell key={colId}>{project.accountName}</TableCell>;
+                            case 'status':
+                              return (
+                                <TableCell key={colId}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    project.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                                    project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                    project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                    project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>{project.status}</span>
+                                </TableCell>
+                              );
+                            case 'priority':
+                              return (
+                                <TableCell key={colId}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    project.priority === 'High' ? 'bg-red-100 text-red-800' :
+                                    project.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-green-100 text-green-800'
+                                  }`}>{project.priority}</span>
+                                </TableCell>
+                              );
+                            case 'budget':
+                              return <TableCell key={colId}>${project.budget?.toLocaleString() || 'N/A'}</TableCell>;
+                            case 'startDate':
+                              return <TableCell key={colId}>{project.startDate || 'N/A'}</TableCell>;
+                            case 'endDate':
+                              return <TableCell key={colId}>{project.endDate || 'N/A'}</TableCell>;
+                            case 'actions':
+                              return (
+                                <TableCell key={colId} onClick={e => e.stopPropagation()}>
+                                  <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => handleEditProject(project)} className="text-blue-600 hover:text-blue-700"><Edit className="h-3 w-3" /></Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleDeleteProject(project.projectId)} className="text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+                                  </div>
+                                </TableCell>
+                              );
+                            default: return <TableCell key={colId} />;
+                          }
+                        })}
+                      </TableRow>
+                    )) : (
+                      <TableRow><TableCell colSpan={projColOrder.length} className="text-center py-8 text-gray-500">{error || "No projects found"}</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </DndContext>
+          </div>
+        )}
       </div>
 
       {/* CREATE / EDIT PROJECT MODAL */}

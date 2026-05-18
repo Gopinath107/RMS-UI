@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDraggableColumns } from './common/useDraggableColumns.js';
+import { DraggableTableHead, ColumnOrderResetButton } from './common/DraggableTableHead.jsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table.jsx';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -28,6 +40,12 @@ import { getCompanyId } from '../utils/authUtils';
 
 // Removed mock data
 
+const CLIENT_DEFAULT_COLS = ['name', 'industry', 'contact', 'email', 'projects', 'resources', 'actions'];
+const CLIENT_COL_LABELS = {
+  name: 'Client Name', industry: 'Industry', contact: 'Contact Person',
+  email: 'Email', projects: 'Active Projects', resources: 'Resources', actions: 'Actions',
+};
+
 export default function ClientsManagement({ setCurrentPage }) {
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
@@ -36,7 +54,12 @@ export default function ClientsManagement({ setCurrentPage }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [viewMode, setViewMode] = useState('card');
+
+  // ── Column drag-to-reorder ──
+  const { columnOrder: clientColOrder, sensors: clientSensors, handleDragEnd: handleClientColDragEnd, resetColumns: resetClientCols } =
+    useDraggableColumns('clients', CLIENT_DEFAULT_COLS);
+
   const [newClient, setNewClient] = useState({
     name: '',
     industry: '',
@@ -174,13 +197,36 @@ export default function ClientsManagement({ setCurrentPage }) {
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Client Management</h1>
         </div>
-        <Button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Client
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex rounded-md border border-gray-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('card')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === 'card' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              ⊞ Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              ☰ Table
+            </button>
+          </div>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Client
+          </Button>
+        </div>
       </motion.div>
 
       {/* Search Controls */}
@@ -252,6 +298,58 @@ export default function ClientsManagement({ setCurrentPage }) {
       ) : filteredClients.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
           No clients found.
+        </div>
+      ) : viewMode === 'table' ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="flex justify-end px-4 py-2 border-b border-gray-100">
+            <ColumnOrderResetButton onReset={resetClientCols} />
+          </div>
+          <DndContext sensors={clientSensors} collisionDetection={closestCenter} onDragEnd={handleClientColDragEnd}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <SortableContext items={clientColOrder} strategy={horizontalListSortingStrategy}>
+                      {clientColOrder.map(colId => (
+                        <DraggableTableHead key={colId} id={colId} label={CLIENT_COL_LABELS[colId]} />
+                      ))}
+                    </SortableContext>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map(client => (
+                    <TableRow key={client.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleClientClick(client)}>
+                      {clientColOrder.map(colId => {
+                        switch (colId) {
+                          case 'name':
+                            return <TableCell key={colId} className="font-medium">{client.name}</TableCell>;
+                          case 'industry':
+                            return <TableCell key={colId}>{client.industry}</TableCell>;
+                          case 'contact':
+                            return <TableCell key={colId}>{client.contactPerson || 'N/A'}</TableCell>;
+                          case 'email':
+                            return <TableCell key={colId}>{client.email || 'N/A'}</TableCell>;
+                          case 'projects':
+                            return <TableCell key={colId}>{client.activeProjects || 0}</TableCell>;
+                          case 'resources':
+                            return <TableCell key={colId}>{client.resourcesAssigned || 0}</TableCell>;
+                          case 'actions':
+                            return (
+                              <TableCell key={colId} onClick={e => e.stopPropagation()}>
+                                <Button variant="outline" size="sm" onClick={() => handleClientClick(client)} className="text-sky-600 hover:text-sky-700">
+                                  <Edit className="w-3 h-3 mr-1" />View
+                                </Button>
+                              </TableCell>
+                            );
+                          default: return <TableCell key={colId} />;
+                        }
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </DndContext>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
