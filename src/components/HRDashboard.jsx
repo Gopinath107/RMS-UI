@@ -54,9 +54,8 @@ import {
   ExternalLink,
   Calendar
 } from "lucide-react";
-import DatePicker from "react-datepicker";
 import { Input } from "./ui/input";
-import "react-datepicker/dist/react-datepicker.css";
+import { SearchableSelect } from "./ui/select";
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { toast } from "sonner";
@@ -65,6 +64,9 @@ import { OpportunityService } from "../services/OpportunityService";
 import { ChatService } from "../services/AI/ChatbotService";
 import { DemandService } from "../services/DemandService";
 import { SkillService } from "../services/SkillsService";
+
+const normalizeOptionName = (value) =>
+  String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Search Filter Component
 const SearchFilter = ({ value, onChange, placeholder = "Search..." }) => (
@@ -2909,13 +2911,24 @@ export default function HRDashboard() {
     }
   };
 
+  // Helper: convert any API date string to yyyy-MM-dd for <input type="date">
+  const toInputDate = (val) => {
+    if (!val) return "";
+    if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+    const parts = val.split("-");
+    if (parts.length === 3 && parts[0].length === 2) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    const d = new Date(val);
+    if (!isNaN(d)) return d.toISOString().slice(0, 10);
+    return "";
+  };
+
   const resetDemandForm = () => {
     setDemandForm({
       demandTitle: "",
       projectName: "",
       role: "",
-      demandOpenDt: null,
-      fulfilmentDt: null,
+      demandOpenDt: "",
+      fulfilmentDt: "",
       companyId: "",
       accountId: "",
       departmentId: "",
@@ -2928,7 +2941,7 @@ export default function HRDashboard() {
       skillIds: "",
       resourceRequests: "",
       description: "",
-      overallStatus: "", // Reset to default
+      overallStatus: "",
     });
     setSelectedSkills([]);
     setSkillInput("");
@@ -2953,12 +2966,8 @@ export default function HRDashboard() {
       departmentId: selectedDepartment.departmentId,
       projectName: demandForm.projectName,
       demandTitle: demandForm.demandTitle,
-      demandOpenDt: demandForm.demandOpenDt
-        ? format(demandForm.demandOpenDt, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
-      fulfilmentDt: demandForm.fulfilmentDt
-        ? format(demandForm.fulfilmentDt, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
+      demandOpenDt: demandForm.demandOpenDt || format(new Date(), "yyyy-MM-dd"),
+      fulfilmentDt: demandForm.fulfilmentDt || format(new Date(), "yyyy-MM-dd"),
       yearsofexp: demandForm.yearsOfExp,
       skillIds: selectedSkills.map(s => s.id),
       roleDuration: demandForm.roleDuration,
@@ -3049,13 +3058,13 @@ export default function HRDashboard() {
       }
     }
 
-    // Populate form with demand data - UPDATED with status
+    // Populate form with demand data
     setDemandForm({
       demandTitle: demand.demandTitle || "",
       projectName: demand.projectName || "",
       role: demand.departmentName || "",
-      demandOpenDt: demand.demandOpenDt ? new Date(demand.demandOpenDt) : null,
-      fulfilmentDt: demand.fulfilmentDt ? new Date(demand.fulfilmentDt) : null,
+      demandOpenDt: toInputDate(demand.demandOpenDt),
+      fulfilmentDt: toInputDate(demand.fulfilmentDt),
       companyId: demand.companyId || "",
       yearsOfExp: demand.yearsofexp || "",
       roleDuration: demand.roleDuration || "",
@@ -3066,7 +3075,7 @@ export default function HRDashboard() {
       skillIds: "",
       resourceRequests: demand.resourceRequestsCount?.toString(),
       description: demand.description || "",
-      overallStatus: demand.overallStatus, // NEW: Set status from demand
+      overallStatus: demand.overallStatus,
     });
 
     // Set selected skills if available
@@ -3117,12 +3126,8 @@ export default function HRDashboard() {
       departmentId: selectedDepartment.departmentId,
       projectName: demandForm.projectName,
       demandTitle: demandForm.demandTitle,
-      demandOpenDt: demandForm.demandOpenDt
-        ? format(demandForm.demandOpenDt, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
-      fulfilmentDt: demandForm.fulfilmentDt
-        ? format(demandForm.fulfilmentDt, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
+      demandOpenDt: demandForm.demandOpenDt || format(new Date(), "yyyy-MM-dd"),
+      fulfilmentDt: demandForm.fulfilmentDt || format(new Date(), "yyyy-MM-dd"),
       yearsofexp: demandForm.yearsOfExp,
       skillIds: selectedSkills.map(s => s.id),
       roleDuration: demandForm.roleDuration,
@@ -3378,6 +3383,54 @@ export default function HRDashboard() {
     }
   };
 
+  const createAccountOption = async (name) => {
+    const trimmed = name.trim().replace(/\s+/g, ' ');
+    const existing = accounts.find((acc) => normalizeOptionName(acc.accountName) === normalizeOptionName(trimmed));
+    if (existing) {
+      handleSelectAccount(existing);
+      return { value: String(existing.accountId), label: existing.accountName };
+    }
+
+    if (!demandForm.companyId) {
+      toast.error("Please select a Company first");
+      return null;
+    }
+
+    setIsCreatingAccount(true);
+    try {
+      const payload = {
+        companyId: demandForm.companyId,
+        accountName: trimmed,
+        relationshipStartDate: format(new Date(), "yyyy-MM-dd"),
+      };
+
+      const response = await DemandService.createAccount(payload);
+      if (!response.data.success) {
+        const errorMsg = response.data.errors?.[0] || response.data.message || "Unable to create value";
+        toast.error(errorMsg);
+        return null;
+      }
+
+      const newAccount = response.data.result;
+      setAccounts((prev) => [...prev, newAccount]);
+      setSelectedAccount(newAccount);
+      toast.success(`Client "${newAccount.accountName}" created and selected!`);
+      return { value: String(newAccount.accountId), label: newAccount.accountName };
+    } catch (error) {
+      console.error("Error creating account:", error);
+      const duplicate = accounts.find((acc) => normalizeOptionName(acc.accountName) === normalizeOptionName(trimmed));
+      if (duplicate) {
+        handleSelectAccount(duplicate);
+        toast.info(`Client "${duplicate.accountName}" already exists.`);
+        return { value: String(duplicate.accountId), label: duplicate.accountName };
+      }
+      toast.error("Unable to create value");
+      return null;
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
+
   const handleSelectAccount = (acc) => {
     setSelectedAccount(acc);
     setAccountInput("");
@@ -3584,6 +3637,53 @@ export default function HRDashboard() {
           (typeof errorData === 'string' ? errorData : null);
         if (errorMsg) toast.error(errorMsg);
       }
+    } finally {
+      setIsCreatingDepartment(false);
+    }
+  };
+
+  const createDepartmentOption = async (name) => {
+    const trimmed = name.trim().replace(/\s+/g, ' ');
+    const existing = departments.find((dept) => normalizeOptionName(dept.departmentName) === normalizeOptionName(trimmed));
+    if (existing) {
+      handleSelectDepartment(existing);
+      return { value: String(existing.departmentId), label: existing.departmentName };
+    }
+
+    if (!demandForm.companyId) {
+      toast.error("Please select a Company first");
+      return null;
+    }
+
+    setIsCreatingDepartment(true);
+    try {
+      const payload = {
+        companyId: demandForm.companyId,
+        departmentName: trimmed,
+      };
+
+      const response = await DemandService.createDepartment(payload);
+      if (!response.data.success) {
+        const errorMsg = response.data.errors?.[0] || response.data.message || "Unable to create value";
+        toast.error(errorMsg);
+        return null;
+      }
+
+      const newDepartment = response.data.result;
+      setDepartments((prev) => [...prev, newDepartment]);
+      handleSelectDepartment(newDepartment);
+      toast.success(`Department "${newDepartment.departmentName}" created and selected!`);
+      return { value: String(newDepartment.departmentId), label: newDepartment.departmentName };
+    } catch (error) {
+      console.error("Failed to create department:", error);
+      const duplicate = departments.find((dept) => normalizeOptionName(dept.departmentName) === normalizeOptionName(trimmed));
+      if (duplicate) {
+        handleSelectDepartment(duplicate);
+        toast.info(`Department "${duplicate.departmentName}" already exists.`);
+        return { value: String(duplicate.departmentId), label: duplicate.departmentName };
+      }
+      toast.error("Unable to create value");
+      return null;
     } finally {
       setIsCreatingDepartment(false);
     }
@@ -3886,42 +3986,43 @@ export default function HRDashboard() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="demandOpenDt">Demand Open Date</Label>
-                    <DatePicker
-                      selected={demandForm.demandOpenDt}
-                      onChange={(d) => setDemandForm({ ...demandForm, demandOpenDt: d })}
-                      dateFormat="dd MMM yyyy"
-                      placeholderText="dd-mm-yyyy"
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fulfilmentDt">Target Fulfilment Date</Label>
-                    <DatePicker
-                      selected={demandForm.fulfilmentDt}
-                      onChange={(d) => setDemandForm({ ...demandForm, fulfilmentDt: d })}
-                      dateFormat="dd MMM yyyy"
-                      placeholderText="dd-mm-yyyy"
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    />
+                                    <div className="space-y-2">
+                    <Label htmlFor="demandOpenDt">Demand Open Date</Label>
+                    <input
+                      id="demandOpenDt"
+                      type="date"
+                      value={demandForm.demandOpenDt}
+                      onChange={(e) => setDemandForm({ ...demandForm, demandOpenDt: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fulfilmentDt">Target Fulfilment Date</Label>
+                    <input
+                      id="fulfilmentDt"
+                      type="date"
+                      value={demandForm.fulfilmentDt}
+                      onChange={(e) => setDemandForm({ ...demandForm, fulfilmentDt: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="priority" className="flex items-center gap-1">
                       Priority
                     </Label>
-                    <select
-                      id="priority"
+                    <SearchableSelect
                       value={demandForm.priority}
-                      onChange={(e) => setDemandForm({ ...demandForm, priority: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                    </select>
+                      onValueChange={(value) => setDemandForm({ ...demandForm, priority: value })}
+                      options={[
+                        { value: "Low", label: "Low" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "High", label: "High" },
+                      ]}
+                      placeholder="Select priority"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -3946,17 +4047,17 @@ export default function HRDashboard() {
                       <Label htmlFor="overallStatus" className="flex items-center gap-1">
                         Status <span className="text-red-500">*</span>
                       </Label>
-                      <select
-                        id="overallStatus"
+                      <SearchableSelect
                         value={demandForm.overallStatus}
-                        onChange={(e) => setDemandForm({ ...demandForm, overallStatus: e.target.value })}
-                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                        required
-                      >
-                        <option value="Closed">Closed</option>
-                        <option value="Hold">Hold</option>
-                        <option value="Open">Open</option>
-                      </select>
+                        onValueChange={(value) => setDemandForm({ ...demandForm, overallStatus: value })}
+                        options={[
+                          { value: "Closed", label: "Closed" },
+                          { value: "Hold", label: "Hold" },
+                          { value: "Open", label: "Open" },
+                        ]}
+                        placeholder="Select status"
+                        triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      />
                     </div>
                   )}
                 </div>
@@ -3971,180 +4072,58 @@ export default function HRDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="companyId">Company <span className="text-red-500">*</span></Label>
-                    <select
-                      id="companyId"
-                      value={demandForm.companyId || ""}
-                      onChange={(e) => setDemandForm({ ...demandForm, companyId: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                    >
-                      <option value="">Select Company</option>
-                      {companies.map((comp) => (
-                        <option key={comp.companyId} value={comp.companyId}>
-                          {comp.companyName}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={demandForm.companyId?.toString() || ""}
+                      onValueChange={(value) => setDemandForm({ ...demandForm, companyId: value ? parseInt(value, 10) : null })}
+                      options={companies.map((comp) => ({ value: comp.companyId, label: comp.companyName }))}
+                      placeholder="Select company"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      clearable
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="accountInput">Client <span className="text-red-500">*</span></Label>
-
-                    <div className="flex gap-2">
-                      <Input
-                        id="accountInput"
-                        type="text"
-                        placeholder="Search or type account"
-                        value={accountInput}
-                        onChange={handleAccountInputChange}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddAccount();
-                          }
-                        }}
-                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (selectedAccount) return;
-                          handleAddAccount();
-                        }}
-                        disabled={isCreatingAccount || !accountInput.trim() || !demandForm.companyId || selectedAccount}
-                        className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50"
-                      >
-                        {isCreatingAccount ? <Loader className="w-4 h-4 animate-spin" /> : "Add"}
-                      </Button>
-                    </div>
-
-                    {selectedAccount && accountInput.trim() && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        Please remove the selected account to add a new one
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedAccount && (
-                        <Badge
-                          className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full flex items-center gap-1"
-                        >
-                          {selectedAccount.accountName}
-                          <button
-                            onClick={removeAccount}
-                            className="ml-1 text-indigo-700 hover:text-red-500 transition-colors"
-                            type="button"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      )}
-                    </div>
-
-                    {accountInput.trim() && !selectedAccount && (
-                      <>
-                        <div className="text-xs text-gray-500 mt-2">Suggested accounts:</div>
-                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                          {filteredAccounts.length > 0 ? (
-                            filteredAccounts.map((acc) => (
-                              <Badge
-                                key={acc.accountId}
-                                variant="outline"
-                                className="cursor-pointer hover:bg-indigo-50 text-xs transition-colors"
-                                onClick={() => handleSelectAccount(acc)}
-                              >
-                                {acc.accountName}
-                              </Badge>
-                            ))
-                          ) : (
-                            <p className="text-xs text-gray-500">No matches. Press "Add" to create.</p>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <SearchableSelect
+                      value={selectedAccount?.accountId?.toString() || ''}
+                      onValueChange={(value) => {
+                        if (!value) {
+                          removeAccount();
+                          return;
+                        }
+                        const account = accounts.find((acc) => acc.accountId?.toString() === value);
+                        if (account) handleSelectAccount(account);
+                      }}
+                      options={accounts.map((acc) => ({ value: acc.accountId, label: acc.accountName }))}
+                      placeholder="Search or create client"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      allowCreate
+                      onCreate={createAccountOption}
+                      creating={isCreatingAccount}
+                      clearable
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="departmentInput">Role<span className="text-red-500">*</span></Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="departmentInput"
-                        type="text"
-                        placeholder="Search or type role"
-                        value={departmentInput}
-                        onChange={handleDepartmentInputChange}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddDepartment();
-                          }
-                        }}
-                        className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (selectedDepartment) {
-                            return;
-                          }
-                          handleAddDepartment();
-                        }}
-                        disabled={isCreatingDepartment || !departmentInput.trim() || !demandForm.companyId || selectedDepartment}
-                        className="h-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50"
-                      >
-                        {isCreatingDepartment ? <Loader className="w-4 h-4 animate-spin" /> : "Add"}
-                      </Button>
-                    </div>
-
-                    {/* Validation Error Message */}
-                    {selectedDepartment && departmentInput.trim() && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
-                        Please remove the selected role to add a new one
-                      </p>
-                    )}
-
-                    {/* Selected Department */}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedDepartment && (
-                        <Badge
-                          className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full flex items-center gap-1"
-                        >
-                          {selectedDepartment.departmentName}
-                          <button
-                            onClick={removeDepartment}
-                            className="ml-1 text-indigo-700 hover:text-red-500 transition-colors"
-                            type="button"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Suggested Departments */}
-                    {departmentInput.trim() && !selectedDepartment && (
-                      <>
-                        <div className="text-xs text-gray-500 mt-2">Suggested departments:</div>
-                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                          {filteredDepartments.length > 0 ? (
-                            filteredDepartments.map((dept) => (
-                              <Badge
-                                key={dept.departmentId}
-                                variant="outline"
-                                className="cursor-pointer hover:bg-indigo-50 text-xs transition-colors"
-                                onClick={() => handleSelectDepartment(dept)}
-                              >
-                                {dept.departmentName}
-                              </Badge>
-                            ))
-                          ) : (
-                            <p className="text-xs text-gray-500">No matches. Press "Add" to create.</p>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <SearchableSelect
+                      value={selectedDepartment?.departmentId?.toString() || ''}
+                      onValueChange={(value) => {
+                        if (!value) {
+                          removeDepartment();
+                          return;
+                        }
+                        const department = departments.find((dept) => dept.departmentId?.toString() === value);
+                        if (department) handleSelectDepartment(department);
+                      }}
+                      options={departments.map((dept) => ({ value: dept.departmentId, label: dept.departmentName }))}
+                      placeholder="Search or create role"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                      allowCreate
+                      onCreate={createDepartmentOption}
+                      creating={isCreatingDepartment}
+                      clearable
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -4167,23 +4146,31 @@ export default function HRDashboard() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="locationType">Location Type</Label>
-                    <select id="locationType" value={demandForm.locationType}
-                      onChange={(e) => setDemandForm({ ...demandForm, locationType: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all">
-                      <option value="Onsite">Onsite</option>
-                      <option value="Remote">Remote</option>
-                      <option value="Hybrid">Hybrid</option>
-                    </select>
+                    <SearchableSelect
+                      value={demandForm.locationType}
+                      onValueChange={(value) => setDemandForm({ ...demandForm, locationType: value })}
+                      options={[
+                        { value: "Onsite", label: "Onsite" },
+                        { value: "Remote", label: "Remote" },
+                        { value: "Hybrid", label: "Hybrid" },
+                      ]}
+                      placeholder="Select location type"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="workMode">Work Mode</Label>
-                    <select id="workMode" value={demandForm.workMode}
-                      onChange={(e) => setDemandForm({ ...demandForm, workMode: e.target.value })}
-                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all">
-                      <option value="FullTime">FullTime</option>
-                      <option value="PartTime">PartTime</option>
-                      <option value="Contract">Contract</option>
-                    </select>
+                    <SearchableSelect
+                      value={demandForm.workMode}
+                      onValueChange={(value) => setDemandForm({ ...demandForm, workMode: value })}
+                      options={[
+                        { value: "FullTime", label: "FullTime" },
+                        { value: "PartTime", label: "PartTime" },
+                        { value: "Contract", label: "Contract" },
+                      ]}
+                      placeholder="Select work mode"
+                      triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
+                    />
                   </div>
                 </div>
               </section>
