@@ -2493,18 +2493,18 @@ export default function AddResourcePage() {
             />
           </section>
 
-          <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4 shadow-lg">
-            <div className="flex items-center justify-between gap-4">
+          <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4 shadow-lg rounded-b-md">
+            <div className="flex items-center justify-between gap-4 min-h-[40px]">
               {/* Auto-save status */}
-              <div className="flex items-center">
+              <div className="flex items-center h-10 self-center">
                 <AutoSaveBadge status={autoSaveStatus} />
               </div>
-              {/* Action buttons - Side by side perfectly */}
-              <div className="flex items-center gap-3">
-                <Button type="button" variant="outline" onClick={handleClose} className="px-5 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-100 font-medium">
+              {/* Action buttons - Side by side perfectly aligned */}
+              <div className="flex items-center gap-3 h-10 self-center">
+                <Button type="button" variant="outline" onClick={handleClose} className="h-10 px-5 flex items-center justify-center border-gray-300 text-gray-700 hover:bg-gray-100 font-medium rounded-lg transition-all shadow-2xs">
                   Cancel
                 </Button>
-                <Button type="button" onClick={onSubmit} className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm flex items-center gap-2">
+                <Button type="button" onClick={onSubmit} className="h-10 px-6 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm rounded-lg transition-all">
                   <Check className="w-4 h-4" />
                   {isEditMode ? 'Update Resource' : 'Save Resource'}
                 </Button>
