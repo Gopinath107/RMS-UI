@@ -30,10 +30,6 @@ import {
   Activity,
   CheckCircle,
   Clock,
-  Zap,
-  Users,
-  TrendingUp,
-  ArrowRight,
 } from "lucide-react";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
@@ -494,128 +490,77 @@ const ProjectsManagement = () => {
           </Card>
         </div>
 
-        {/* Project Cards Grid — Modern */}
+        {/* Project Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => {
-              const statusMeta = {
-                'In Progress': { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-                'Planned':     { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500' },
-                'Completed':   { bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-500' },
-                'On Hold':     { bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-                'Cancelled':   { bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500' },
-                'New':         { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
-              }[project.status] || { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-400' };
-              const gradients = [
-                'from-violet-500 to-purple-600',
-                'from-sky-500 to-blue-600',
-                'from-emerald-500 to-teal-600',
-                'from-orange-500 to-amber-600',
-                'from-rose-500 to-pink-600',
-                'from-indigo-500 to-blue-700',
-              ];
-              const grad = gradients[project.projectId % gradients.length];
-              const skillNames = (project.skills || []).map(s =>
-                typeof s === 'object' ? s.name
-                  : skillsList.find(sk => sk.skillId === s || sk.skillName === s)?.skillName || s
-              );
-              return (
-                <div
-                  key={project.projectId}
-                  className="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden cursor-pointer flex flex-col"
-                  onClick={() => { setSelectedDetails(project); setIsDetailsOpen(true); }}
-                >
-                  {/* Gradient header band */}
-                  <div className={`bg-gradient-to-r ${grad} px-5 pt-5 pb-8 relative overflow-hidden`}>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                    <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-                    <div className="flex items-start justify-between gap-2 relative z-10">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-bold text-base leading-snug truncate" title={project.projectName}>
-                          {project.projectName}
-                        </h3>
-                        <p className="text-white/75 text-xs mt-0.5 truncate">{project.accountName || 'No client'}</p>
-                      </div>
-                      <div className="w-10 h-10 shrink-0 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-                        <Briefcase className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
+            filteredProjects.map((project) => (
+              <Card
+                key={project.projectId}
+                className="shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => {
+                  setSelectedDetails(project);
+                  setIsDetailsOpen(true);
+                }}
+              >
+                <CardHeader className="rounded-lg bg-gray-50">
+                  <CardTitle className="text-lg font-semibold flex items-center" style={{ overflowWrap: "anywhere" }}>
+                    <Briefcase className="h-5 w-5 mr-2 text-blue-600" />
+                    {project.projectName}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-4">
+                  <p className="flex items-center text-sm text-gray-600">
+                    <Target className="h-4 w-4 mr-2" />
+                    Client: {project.accountName}
+                  </p>
+                  <p className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {project.startDate} - {project.endDate}
+                  </p>
+                  <p className="flex items-center text-sm text-gray-600">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Budget: ${project.budget?.toLocaleString() || "N/A"}
+                  </p>
+                  <p className="flex items-center text-sm text-gray-600">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Status: {project.status}
+                  </p>
+                  {project.skills && project.skills.length > 0 && (
+                    <p className="flex items-center text-sm text-gray-600">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Skills:{" "}
+                      {project.skills
+                        .map(s =>
+                          typeof s === "object"
+                            ? s.name
+                            : skillsList.find(sk => sk.skillId === s || sk.skillName === s)?.skillName || s
+                        )
+                        .join(", ")}
+                    </p>
+                  )}
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Edit className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.projectId); }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    </Button>
                   </div>
-
-                  {/* Body — pulled up to overlap the header */}
-                  <div className="flex-1 px-5 pb-4 -mt-4 relative z-10">
-                    {/* Status badge */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${statusMeta.bg} ${statusMeta.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
-                        {project.status}
-                      </span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        project.priority === 'High' ? 'bg-red-50 text-red-600' :
-                        project.priority === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                        'bg-gray-50 text-gray-500'
-                      }`}>{project.priority || 'Medium'}</span>
-                    </div>
-
-                    {/* Info rows */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                        <span className="truncate">{project.startDate} → {project.endDate}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <DollarSign className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                        <span className="font-semibold text-gray-700">${project.budget?.toLocaleString() || 'N/A'}</span>
-                      </div>
-                    </div>
-
-                    {/* Skill chips */}
-                    {skillNames.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {skillNames.slice(0, 3).map(s => (
-                          <span key={s} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{s}</span>
-                        ))}
-                        {skillNames.length > 3 && (
-                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">+{skillNames.length - 3}</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg py-1.5 transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" /> Edit
-                      </button>
-                      <div className="w-px h-4 bg-gray-200" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.projectId); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 rounded-lg py-1.5 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete
-                      </button>
-                      <div className="w-px h-4 bg-gray-200" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedDetails(project); setIsDetailsOpen(true); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 rounded-lg py-1.5 transition-colors"
-                      >
-                        <ArrowRight className="w-3.5 h-3.5" /> View
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                </CardContent>
+              </Card>
+            ))
           ) : (
-            <div className="col-span-3 flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                <Briefcase className="w-8 h-8 text-gray-400" />
-              </div>
-              <p className="text-gray-500 font-medium">{error || 'No projects found'}</p>
-              <p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p>
-            </div>
+            <p className="text-gray-500 col-span-3">{error || "No projects found"}</p>
           )}
         </div>
       </div>
@@ -900,100 +845,108 @@ const ProjectsManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* PROJECT DETAILS MODAL — Modern */}
+      {/* PROJECT DETAILS MODAL */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="w-[95vw] max-w-[860px] max-h-[90vh] overflow-hidden p-0 bg-white rounded-2xl shadow-2xl border-0">
-          {/* Hero gradient banner */}
-          {(() => {
-            const gradients = ['from-violet-600 to-purple-700','from-sky-600 to-blue-700','from-emerald-600 to-teal-700','from-orange-600 to-amber-700','from-rose-600 to-pink-700','from-indigo-600 to-blue-800'];
-            const grad = gradients[(selectedDetails?.projectId || 0) % gradients.length];
-            const sM = { 'In Progress':{ bg:'bg-emerald-400/30',tx:'text-emerald-100' }, 'Planned':{ bg:'bg-blue-400/30',tx:'text-blue-100' }, 'Completed':{ bg:'bg-purple-400/30',tx:'text-purple-100' }, 'On Hold':{ bg:'bg-amber-400/30',tx:'text-amber-100' }, 'Cancelled':{ bg:'bg-red-400/30',tx:'text-red-100' }, 'New':{ bg:'bg-sky-400/30',tx:'text-sky-100' } }[selectedDetails?.status] || { bg:'bg-white/20',tx:'text-white' };
-            return (
-              <div className={`bg-gradient-to-br ${grad} px-8 pt-7 pb-10 relative overflow-hidden`}>
-                <div className="absolute inset-0 opacity-10" style={{backgroundImage:'radial-gradient(circle at 70% 50%, white 0%, transparent 60%)'}} />
-                <div className="flex items-start justify-between gap-4 relative z-10">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${sM.bg} ${sM.tx}`}>{selectedDetails?.status}</span>
-                      {selectedDetails?.priority && (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-white">{selectedDetails.priority} Priority</span>
-                      )}
-                    </div>
-                    <h2 className="text-2xl font-bold text-white truncate">{selectedDetails?.projectName}</h2>
-                    <p className="text-white/70 text-sm mt-1">{selectedDetails?.accountName || 'No client assigned'}</p>
-                  </div>
-                  <div className="w-14 h-14 shrink-0 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
-                    <Briefcase className="w-7 h-7 text-white" />
-                  </div>
-                </div>
-                {/* Stat pills */}
-                <div className="flex flex-wrap gap-3 mt-5 relative z-10">
-                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl px-3 py-2">
-                    <Calendar className="w-3.5 h-3.5 text-white/80" />
-                    <span className="text-xs text-white/90 font-medium">{selectedDetails?.startDate} → {selectedDetails?.endDate}</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl px-3 py-2">
-                    <DollarSign className="w-3.5 h-3.5 text-white/80" />
-                    <span className="text-xs text-white/90 font-medium">${selectedDetails?.budget?.toLocaleString() || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+        <DialogContent
+          className="
+            w-[95vw] max-w-[1000px]
+            max-h-[92vh] overflow-y-auto
+            p-8 bg-white rounded-2xl shadow-2xl border border-gray-200
+          "
+        >
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-2xl font-bold text-gray-800">
+              Project Details: {selectedDetails?.projectName}
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 text-sm mt-1">
+              View all details of the selected project.
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Scrollable body */}
-          <div className="overflow-y-auto modal-scroll" style={{ maxHeight: 'calc(90vh - 200px)' }}>
-            <div className="px-8 py-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch auto-rows-fr">
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Briefcase className="w-4 h-4 text-blue-500" /> Project Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.accountName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.status || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
+                  <p className="text-gray-800 mt-0.5">${selectedDetails?.budget?.toLocaleString() || "N/A"}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Description */}
-              <div className="bg-gray-50 rounded-2xl p-5">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">
-                  <FileText className="w-4 h-4 text-indigo-500" /> Description
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {selectedDetails?.description || 'No description provided.'}
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Calendar className="w-4 h-4 text-blue-500" /> Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Start Date</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.startDate || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">End Date</p>
+                  <p className="text-gray-800 mt-0.5">{selectedDetails?.endDate || "N/A"}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <FileText className="w-4 h-4 text-blue-500" /> Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {selectedDetails?.description || "No description provided."}
                 </p>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Skills */}
-              <div className="bg-gray-50 rounded-2xl p-5">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">
-                  <Zap className="w-4 h-4 text-indigo-500" /> Required Skills
-                </h3>
-                {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDetails.skills.map((skill) => {
-                      const sn = typeof skill === 'object' ? skill.name
-                        : skillsList.find(s => s.skillId === skill || s.skillName === skill)?.skillName || skill;
+            <Card className="border border-gray-300 h-full min-h-[160px]">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+                  <Activity className="w-4 h-4 text-blue-500" /> Required Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="flex flex-wrap gap-2">
+                  {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
+                    selectedDetails.skills.map((skill) => {
+                      const skillName =
+                        typeof skill === "object"
+                          ? skill.name
+                          : skillsList.find(s => s.skillId === skill || s.skillName === skill)?.skillName || skill;
                       return (
-                        <span key={skill.id || skill} className="inline-flex items-center gap-1.5 text-sm font-medium bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />{sn}
-                        </span>
+                        <Badge key={skill.id || skill} className="bg-blue-100 text-blue-700">
+                          {skillName}
+                        </Badge>
                       );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-gray-400 text-sm">No skills assigned to this project.</p>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-3 pb-2">
-                <Button
-                  onClick={() => { setIsDetailsOpen(false); handleEditProject(selectedDetails); }}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  <Edit className="w-4 h-4 mr-2" /> Edit Project
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDetailsOpen(false)}
-                  className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm">No skills assigned</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </DialogContent>
       </Dialog>
