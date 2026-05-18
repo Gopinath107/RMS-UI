@@ -837,7 +837,7 @@ const ResourceTable = ({
                                                                                     No previous projects found
                                                                                 </p>
                                                                             )}
-                                                                            <div className="flex justify-center mt-3">
+                                                                                <div className="flex justify-center mt-3">
                                                                                 <Button
                                                                                     variant="outline"
                                                                                     size="sm"
@@ -853,211 +853,156 @@ const ResourceTable = ({
                                                                 )}
 
                                                                 {/* ── ROW 3 COL 2: Resume Sharing History ── */}
-                                                                {resource.resumeShareAudit && resource.resumeShareAudit.length > 0 && (
-                                                                    <Card className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                                                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                                                            <Share2 className="w-5 h-5 text-blue-600" />
-                                                                            Resume Sharing History
-                                                                            <Badge variant="secondary" className="ml-2">
-                                                                                {resource.resumeShareAudit.length} {resource.resumeShareAudit.length === 1 ? 'Share' : 'Shares'}
-                                                                            </Badge>
-                                                                        </h3>
+                                                                {(() => {
+                                                                    const auditList = resource.resumeShareAudit || [];
+                                                                    // Sort descending — newest first
+                                                                    const sortedAudits = [...auditList].sort((a, b) => {
+                                                                        const dA = new Date(a.sharedAt || a.sharedDate || a.createdAt || 0).getTime();
+                                                                        const dB = new Date(b.sharedAt || b.sharedDate || b.createdAt || 0).getTime();
+                                                                        return dB - dA;
+                                                                    });
+                                                                    return (
+                                                                        <Card className="p-4 flex flex-col" style={{ minHeight: 0 }}>
+                                                                            {/* Header */}
+                                                                            <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+                                                                                <Share2 className="w-5 h-5 text-blue-600" />
+                                                                                <h3 className="font-semibold text-sm">Resume Sharing History</h3>
+                                                                                <Badge variant="secondary" className="ml-1 text-xs">
+                                                                                    {auditList.length} {auditList.length === 1 ? 'Share' : 'Shares'}
+                                                                                </Badge>
+                                                                            </div>
 
-                                                                        <div className="overflow-y-auto flex-1" style={{ maxHeight: '320px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', alignItems: 'stretch' }}>
-                                                                            {resource.resumeShareAudit.map((audit, index) => (
+                                                                            {sortedAudits.length === 0 ? (
+                                                                                <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                                                                                    <Share2 className="w-8 h-8 mb-2 opacity-30" />
+                                                                                    <p className="text-sm italic">No resume sharing history found</p>
+                                                                                </div>
+                                                                            ) : (
                                                                                 <div
-                                                                                    key={index}
-                                                                                    className={`border rounded-lg p-3 transition-colors ${audit.type === 'GROUP' || audit.type === 'OPPORTUNITY'
-                                                                                        ? 'hover:bg-purple-50 border-purple-100'
-                                                                                        : 'hover:bg-blue-50 border-blue-100'
-                                                                                        }`}
+                                                                                    className="flex flex-col gap-2 overflow-y-auto"
+                                                                                    style={{ maxHeight: '280px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}
                                                                                 >
-                                                                                    <div className="flex items-start justify-between">
-                                                                                        <div className="flex-1">
-                                                                                            <div className="flex items-center gap-2 mb-2">
-                                                                                                {/* Status Badge */}
-                                                                                                <Badge className={
-                                                                                                    audit.status === 'Shared'
-                                                                                                        ? 'bg-green-100 text-green-700 border-green-200'
-                                                                                                        : audit.status === 'Rejected'
-                                                                                                            ? 'bg-red-100 text-red-700 border-red-200'
-                                                                                                            : 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                                                                                                }>
-                                                                                                    {audit.status}
-                                                                                                </Badge>
-
-                                                                                                {/* Type Badge with different colors */}
-                                                                                                <Badge variant="outline" className={`text-xs ${audit.type === 'GROUP' || audit.type === 'OPPORTUNITY'
-                                                                                                    ? 'border-purple-300 text-purple-700 bg-purple-50'
-                                                                                                    : 'border-blue-300 text-blue-700 bg-blue-50'
-                                                                                                    }`}>
-                                                                                                    {audit.type === 'GROUP' || audit.type === 'OPPORTUNITY'
-                                                                                                        ? 'Opportunity'
-                                                                                                        : 'Demand'}
-                                                                                                </Badge>
-
-                                                                                                {/* ID Display */}
-                                                                                                {audit.type === 'GROUP' || audit.type === 'OPPORTUNITY' ? (
-                                                                                                    audit.groupId && (
-                                                                                                        <span className="text-md text-purple-700 font-semibold font-mono">
-                                                                                                            ID: {audit.groupId}
+                                                                                    {sortedAudits.map((audit, index) => {
+                                                                                        const isOpportunity = audit.type === 'GROUP' || audit.type === 'OPPORTUNITY';
+                                                                                        const sharedDateTime = audit.sharedAt || audit.sharedDate || audit.createdAt;
+                                                                                        const resourceIdNum = parseInt(resource.id, 10);
+                                                                                        const auditRequestId = audit.requestId || audit.resourceRequestId;
+                                                                                        const matchingInterviews = allInterviewsRaw.filter(iv => {
+                                                                                            const matchesRequest = auditRequestId
+                                                                                                ? String(iv.requestId) === String(auditRequestId) ||
+                                                                                                  String(iv.requestId) === String(auditRequestId).replace(/^REQ-0*/, '')
+                                                                                                : false;
+                                                                                            const matchesResource =
+                                                                                                (resourceType === 'internal' && iv.employeeId === resourceIdNum) ||
+                                                                                                (resourceType === 'external' && iv.candidateId === resourceIdNum);
+                                                                                            return matchesRequest && matchesResource;
+                                                                                        });
+                                                                                        const activeInterview = matchingInterviews.find(iv =>
+                                                                                            !['selected', 'completed', 'rejected'].includes((iv.status || '').toLowerCase())
+                                                                                        );
+                                                                                        return (
+                                                                                            <div
+                                                                                                key={index}
+                                                                                                className={`border rounded-xl p-3 transition-colors flex-shrink-0 ${isOpportunity
+                                                                                                    ? 'hover:bg-purple-50 border-purple-100 bg-purple-50/40'
+                                                                                                    : 'hover:bg-blue-50 border-blue-100 bg-blue-50/30'
+                                                                                                }`}
+                                                                                            >
+                                                                                                {/* Top row: badges + icon */}
+                                                                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                        <Badge className={
+                                                                                                            audit.status === 'Shared'
+                                                                                                                ? 'bg-green-100 text-green-700 border-green-200 text-xs'
+                                                                                                                : audit.status === 'Rejected'
+                                                                                                                    ? 'bg-red-100 text-red-700 border-red-200 text-xs'
+                                                                                                                    : 'bg-yellow-100 text-yellow-700 border-yellow-200 text-xs'
+                                                                                                        }>
+                                                                                                            {audit.status}
+                                                                                                        </Badge>
+                                                                                                        <Badge variant="outline" className={`text-xs ${isOpportunity
+                                                                                                            ? 'border-purple-300 text-purple-700 bg-purple-50'
+                                                                                                            : 'border-blue-300 text-blue-700 bg-blue-50'
+                                                                                                        }`}>
+                                                                                                            {isOpportunity ? 'Opportunity' : 'Demand'}
+                                                                                                        </Badge>
+                                                                                                        <span className={`text-xs font-bold font-mono ${isOpportunity ? 'text-purple-700' : 'text-blue-700'}`}>
+                                                                                                            {isOpportunity
+                                                                                                                ? (audit.groupId ? `GRP-${audit.groupId}` : '')
+                                                                                                                : (audit.demandId ? `DM-${audit.demandId}` : '')}
                                                                                                         </span>
-                                                                                                    )
-                                                                                                ) : (
-                                                                                                    audit.demandId && (
-                                                                                                        <span className="text-xs text-blue-700 font-semibold font-mono">
-                                                                                                            ID: {audit.demandId}
-                                                                                                        </span>
-                                                                                                    )
-                                                                                                )}
-                                                                                            </div>
-
-                                                                                            {/* Main Content - Different layout for Opportunity vs Demand */}
-                                                                                            <div className="space-y-2">
-                                                                                                {/* Title/Name */}
-                                                                                                <div className="flex items-center justify-between">
-                                                                                                    <div className="flex items-center gap-2">
-                                                                                                        {audit.type === 'GROUP' || audit.type === 'OPPORTUNITY' ? (
-                                                                                                            <>
-                                                                                                                <span className="text-sm font-medium text-gray-700">Title:</span>
-                                                                                                                <span className="text-sm font-semibold text-purple-700">
-                                                                                                                    {audit.title || audit.projectName || 'Untitled Opportunity'}
-                                                                                                                </span>
-                                                                                                            </>
-                                                                                                        ) : (
-                                                                                                            <>
-                                                                                                                <span className="text-sm font-medium text-gray-700">Title:</span>
-                                                                                                                <span className="text-sm font-semibold text-blue-700">
-                                                                                                                    {audit.demandTitle || audit.title || 'Untitled Demand'}
-                                                                                                                </span>
-                                                                                                            </>
-                                                                                                        )}
                                                                                                     </div>
-
+                                                                                                    <div className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full ${isOpportunity ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                                                                                                        {isOpportunity
+                                                                                                            ? <Users className="w-3.5 h-3.5 text-purple-600" />
+                                                                                                            : <FileText className="w-3.5 h-3.5 text-blue-600" />}
+                                                                                                    </div>
                                                                                                 </div>
 
-                                                                                                {/* Client Information */}
-                                                                                                <div className="flex items-center gap-2">
-                                                                                                    <span className="text-sm text-gray-600">Client:</span>
-                                                                                                    <span className="text-sm font-medium">{audit.clientName || 'N/A'}</span>
+                                                                                                {/* Title */}
+                                                                                                <p
+                                                                                                    className={`text-sm font-semibold truncate mb-1 ${isOpportunity ? 'text-purple-800' : 'text-blue-800'}`}
+                                                                                                    title={isOpportunity
+                                                                                                        ? (audit.title || audit.projectName || 'Untitled Opportunity')
+                                                                                                        : (audit.demandTitle || audit.title || 'Untitled Demand')}
+                                                                                                >
+                                                                                                    {isOpportunity
+                                                                                                        ? (audit.title || audit.projectName || 'Untitled Opportunity')
+                                                                                                        : (audit.demandTitle || audit.title || 'Untitled Demand')}
+                                                                                                </p>
 
+                                                                                                {/* Client + Date */}
+                                                                                                <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mb-2">
+                                                                                                    <span className="flex items-center gap-1 truncate">
+                                                                                                        <span className="font-medium text-gray-600">Client:</span>
+                                                                                                        {audit.clientName || 'N/A'}
+                                                                                                    </span>
+                                                                                                    {sharedDateTime && (
+                                                                                                        <span className="flex items-center gap-1 flex-shrink-0 text-gray-400">
+                                                                                                            <Calendar className="w-3 h-3" />
+                                                                                                            {new Date(sharedDateTime).toLocaleDateString('en-IN', {
+                                                                                                                day: '2-digit', month: 'short', year: 'numeric'
+                                                                                                            })}
+                                                                                                        </span>
+                                                                                                    )}
                                                                                                 </div>
-                                                                                                {/* Interview Status — Show if Shared */}
-                                                                                                {audit.status === 'Shared' && (() => {
-                                                                                                    // Look up whether an interview already exists for this resource+request pair
-                                                                                                    const resourceIdNum = parseInt(resource.id, 10);
-                                                                                                    const auditRequestId = audit.requestId || audit.resourceRequestId;
-                                                                                                    const matchingInterviews = allInterviewsRaw.filter(iv => {
-                                                                                                        const ivRequestId = iv.requestId;
-                                                                                                        const matchesRequest = auditRequestId
-                                                                                                            ? String(ivRequestId) === String(auditRequestId) ||
-                                                                                                            String(ivRequestId) === String(auditRequestId).replace(/^REQ-0*/, '')
-                                                                                                            : false;
-                                                                                                        const matchesResource =
-                                                                                                            (resourceType === 'internal' && iv.employeeId === resourceIdNum) ||
-                                                                                                            (resourceType === 'external' && iv.candidateId === resourceIdNum);
-                                                                                                        return matchesRequest && matchesResource;
-                                                                                                    });
 
-                                                                                                    // Find an active interview first
-                                                                                                    const activeInterview = matchingInterviews.find(iv =>
-                                                                                                        !['selected', 'completed', 'rejected'].includes((iv.status || '').toLowerCase())
-                                                                                                    );
-
-                                                                                                    // Use the active interview if it exists, otherwise use null (to trigger Schedule button)
-                                                                                                    const existingInterview = activeInterview;
-
-                                                                                                    if (existingInterview) {
-                                                                                                        return (
-                                                                                                            <div className="flex items-center gap-2">
-                                                                                                                {/* Interview Scheduled badge */}
-                                                                                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                                                                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                                                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                                                                                    </svg>
-                                                                                                                    Interview Scheduled
-                                                                                                                </span>
-                                                                                                                {/* Edit button */}
-                                                                                                                <Button
-                                                                                                                    size="sm"
-                                                                                                                    onClick={(e) => {
-                                                                                                                        e.stopPropagation();
-                                                                                                                        onEditInterviewFromRow(existingInterview);
-                                                                                                                    }}
-                                                                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium h-7 px-3 shadow-md"
-                                                                                                                >
-                                                                                                                    Edit
-                                                                                                                </Button>
-                                                                                                            </div>
-                                                                                                        );
-                                                                                                    }
-
-                                                                                                    return (
+                                                                                                {/* Interview action */}
+                                                                                                {audit.status === 'Shared' && (
+                                                                                                    activeInterview ? (
+                                                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                                                                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                                                                </svg>
+                                                                                                                Interview Scheduled
+                                                                                                            </span>
+                                                                                                            <Button
+                                                                                                                size="sm"
+                                                                                                                onClick={(e) => { e.stopPropagation(); onEditInterviewFromRow(activeInterview); }}
+                                                                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium h-6 px-2"
+                                                                                                            >
+                                                                                                                Edit
+                                                                                                            </Button>
+                                                                                                        </div>
+                                                                                                    ) : (
                                                                                                         <Button
                                                                                                             size="sm"
-                                                                                                            onClick={(e) => {
-                                                                                                                e.stopPropagation();
-                                                                                                                onScheduleInterviewFromAudit(resource, audit);
-                                                                                                            }}
-                                                                                                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-xs h-7"
+                                                                                                            onClick={(e) => { e.stopPropagation(); onScheduleInterviewFromAudit(resource, audit); }}
+                                                                                                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-xs h-6 mt-1"
                                                                                                         >
                                                                                                             Schedule
                                                                                                         </Button>
-                                                                                                    );
-                                                                                                })()}
-
+                                                                                                    )
+                                                                                                )}
                                                                                             </div>
-                                                                                        </div>
-
-                                                                                        {/* Icons for quick identification */}
-                                                                                        <div className="ml-4">
-                                                                                            {audit.type === 'GROUP' || audit.type === 'OPPORTUNITY' ? (
-                                                                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100">
-                                                                                                    <Users className="w-4 h-4 text-purple-600" />
-                                                                                                </div>
-                                                                                            ) : (
-                                                                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100">
-                                                                                                    <FileText className="w-4 h-4 text-blue-600" />
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* Date and Shared By Information */}
-                                                                                    {/* {(resource.resumeShareActionAt && index === 0) && (
-                        <div className="mt-2 pt-2 border-t text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>
-                                Last shared by {resource.resumeShareActionByUserName || 'Unknown'} on{' '}
-                                {new Date(resource.resumeShareActionAt).toLocaleDateString('en-IN', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}
-                            </span>
-                        </div>
-                    )} */}
-
-                                                                                    {/* Show specific shared date for each audit item */}
-                                                                                    {audit.sharedDate && (
-                                                                                        <div className="mt-1 text-xs text-gray-400 flex items-center gap-1">
-                                                                                            <Calendar className="w-3 h-3" />
-                                                                                            <span>
-                                                                                                Shared on: {new Date(audit.sharedDate).toLocaleDateString('en-IN', {
-                                                                                                    day: '2-digit',
-                                                                                                    month: 'short',
-                                                                                                    year: 'numeric'
-                                                                                                })}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    )}
+                                                                                        );
+                                                                                    })}
                                                                                 </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </Card>
-                                                                )}
+                                                                            )}
+                                                                        </Card>
+                                                                    );
+                                                                })()}
                                                             </div>{/* end 2-column grid */}
 
                                                         </CardContent>
