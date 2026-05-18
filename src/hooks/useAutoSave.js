@@ -9,6 +9,8 @@
  * - Create flow: stores draftId in sessionStorage so refreshes don't create duplicates.
  * - Edit flow: always calls update via existingId.
  * - Validation errors are NEVER surfaced during auto-save – only during manual submit.
+ * - Only one save can run at a time. If a save is already running, the timer is
+ *   cancelled and the next debounce window restarts after the in-flight save finishes.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -75,6 +77,54 @@ export function useAutoSave({
   // Track whether an auto-save is already running
   const isSavingRef = useRef(false);
 
+  // Queued flag: if a change arrives while saving, re-trigger after save finishes
+  const pendingRetriggerRef = useRef(false);
+
+  // Stable ref for the callback so we never capture stale closures
+  const onAutoSaveRef = useRef(onAutoSave);
+  useEffect(() => { onAutoSaveRef.current = onAutoSave; }, [onAutoSave]);
+
+  // Core save executor
+  const executeSave = useCallback(async () => {
+    if (isSavingRef.current) {
+      // Already saving — queue a re-trigger for when it finishes
+      pendingRetriggerRef.current = true;
+      return;
+    }
+
+    isSavingRef.current = true;
+    pendingRetriggerRef.current = false;
+    setAutoSaveStatus('saving');
+
+    try {
+      const result = await onAutoSaveRef.current(draftIdRef.current);
+      if (result?.id) {
+        // Persist draft ID for subsequent saves
+        if (!isEditMode) {
+          draftIdRef.current = result.id;
+          try {
+            sessionStorage.setItem(`${draftStorageKey}_autoSaveId`, String(result.id));
+          } catch (_) { /* ignore */ }
+        }
+      }
+      setAutoSaveStatus('saved');
+      // Reset to idle after 3 s so the badge fades
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    } catch (err) {
+      // Silent fail during auto-save — only show the badge, never a toast
+      console.warn('[AutoSave] Failed:', err?.response?.data || err?.message || err);
+      setAutoSaveStatus('failed');
+    } finally {
+      isSavingRef.current = false;
+      // If a change came in while we were saving, re-trigger after a short delay
+      if (pendingRetriggerRef.current) {
+        pendingRetriggerRef.current = false;
+        timerRef.current = setTimeout(executeSave, DEBOUNCE_MS);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, draftStorageKey]);
+
   // Mark unsaved on every data change
   useEffect(() => {
     if (!isFormVisible) return;
@@ -94,38 +144,19 @@ export function useAutoSave({
     const hasMinimumData = Boolean(formData?.firstName?.trim());
     if (!hasMinimumData) return;
 
-    timerRef.current = setTimeout(async () => {
-      if (isSavingRef.current) return;
-      isSavingRef.current = true;
-      setAutoSaveStatus('saving');
+    // If already saving, flag for re-trigger instead of stacking timers
+    if (isSavingRef.current) {
+      pendingRetriggerRef.current = true;
+      return;
+    }
 
-      try {
-        const result = await onAutoSave(draftIdRef.current);
-        if (result?.id) {
-          // Persist draft ID for subsequent saves
-          if (!isEditMode) {
-            draftIdRef.current = result.id;
-            try {
-              sessionStorage.setItem(`${draftStorageKey}_autoSaveId`, String(result.id));
-            } catch (_) { /* ignore */ }
-          }
-        }
-        setAutoSaveStatus('saved');
-        // Reset to idle after 3 s so the badge fades
-        setTimeout(() => setAutoSaveStatus('idle'), 3000);
-      } catch (err) {
-        console.warn('[AutoSave] Failed:', err);
-        setAutoSaveStatus('failed');
-      } finally {
-        isSavingRef.current = false;
-      }
-    }, DEBOUNCE_MS);
+    timerRef.current = setTimeout(executeSave, DEBOUNCE_MS);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, socialLinks, selectedSkills, isFormVisible]);
+  }, [formData, socialLinks, selectedSkills, isFormVisible, executeSave]);
 
   return {
     autoSaveStatus,

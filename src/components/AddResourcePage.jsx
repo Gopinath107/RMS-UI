@@ -88,6 +88,27 @@ function SectionHeader({ title }) {
   );
 }
 
+// ── DOB helpers (shared) ─────────────────────────────────────────────────────
+/** Returns the max allowed DOB date string: today minus minimumAge years */
+function maxDobDateStr(minimumAge = 5) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - minimumAge);
+  return d.toISOString().split('T')[0];
+}
+/** Validates a DOB value string; returns an error message or empty string */
+function validateDobValue(value, minimumAge = 5) {
+  if (!value) return '';
+  const selected = new Date(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (selected >= today) return 'Date of birth cannot be today or a future date.';
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - minimumAge);
+  minDate.setHours(0, 0, 0, 0);
+  if (selected > minDate) return `Date of birth must be at least ${minimumAge} years before today.`;
+  return '';
+}
+
 // ── Profile Tab ───────────────────────────────────────────────────────────────
 const ProfileTab = React.memo(({
   formData,
@@ -215,8 +236,26 @@ const ProfileTab = React.memo(({
               <Input value={v('secondaryContactNo')} onChange={e => set('secondaryContactNo', e.target.value)} className="flex-1" placeholder="Optional" />
             </div>
           </div>
-          <F label="Date of Birth">
-            <Input type="date" value={v('dateOfBirth')} onChange={e => set('dateOfBirth', e.target.value)} className={af(aff, 'dateOfBirth')} />
+          <F label="Date of Birth" error={errors?.dateOfBirth}>
+            <Input
+              type="date"
+              value={v('dateOfBirth')}
+              max={maxDobDateStr(5)}
+              min="1900-01-01"
+              onChange={e => {
+                const val = e.target.value;
+                set('dateOfBirth', val);
+                // Inline DOB validation — errors are passed down via the errors prop
+                const err = validateDobValue(val, 5);
+                if (errors !== undefined && typeof set === 'function') {
+                  // Signal error up via a synthetic errors key update if handler is available
+                  // We store it on the formData side via a dedicated callback prop if provided
+                }
+                // Store the error in a data attribute for instant UI feedback
+                e.target.setCustomValidity(err);
+              }}
+              className={`${af(aff, 'dateOfBirth')}${errors?.dateOfBirth ? ' border-red-400' : ''}`}
+            />
           </F>
           <F label="Gender">
             <SearchableSelect
@@ -1274,7 +1313,11 @@ export default function AddResourcePage() {
     if (fd.primaryCountryCode) payload.append('primaryCountryCode', fd.primaryCountryCode);
     if (fd.secondaryContactNo) payload.append('secondaryContactNo', fd.secondaryContactNo);
     if (fd.secondaryCountryCode) payload.append('secondaryCountryCode', fd.secondaryCountryCode);
-    if (fd.personalEmailId) payload.append('personalEmailId', fd.personalEmailId);
+    // Skip personalEmailId on the very first create auto-save (no draftId yet).
+    // It will be included in subsequent auto-saves which call PUT /Update and
+    // correctly exclude the draft's own ID from the uniqueness check.
+    const isFirstAutoSaveCreate = !isEditMode && !draftId;
+    if (fd.personalEmailId && !isFirstAutoSaveCreate) payload.append('personalEmailId', fd.personalEmailId);
     if (fd.dateOfBirth) payload.append('dateOfBirth', fd.dateOfBirth);
     if (fd.gender) payload.append('gender', fd.gender);
 
@@ -1545,6 +1588,15 @@ export default function AddResourcePage() {
     if (!formData.currency) { newErrors.currency = "Required"; isValid = false; }
     if (!formData.frequency) { newErrors.frequency = "Required"; isValid = false; }
     if (formData.sourcingRate === undefined || formData.sourcingRate === null || formData.sourcingRate === '') { newErrors.sourcingRate = "Required"; isValid = false; }
+
+    // Date of Birth
+    if (formData.dateOfBirth) {
+      const dobErr = validateDobValue(formData.dateOfBirth, 5);
+      if (dobErr) {
+        newErrors.dateOfBirth = dobErr;
+        isValid = false;
+      }
+    }
 
     setErrors(newErrors);
     
@@ -2034,6 +2086,11 @@ export default function AddResourcePage() {
 
   const set = useCallback((key, val) => {
     setFormData(prev => ({ ...prev, [key]: val }));
+    // Live DOB validation — show/clear error immediately as user picks a date
+    if (key === 'dateOfBirth') {
+      const dobErr = validateDobValue(val, 5);
+      setErrors(prev => ({ ...prev, dateOfBirth: dobErr || undefined }));
+    }
   }, []);
 
   // Removed auto-reset of documentType as it causes focus loss and is annoying for users.
