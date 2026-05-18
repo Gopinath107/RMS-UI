@@ -3,7 +3,7 @@ import { APIConfigurations } from '../constant/AuthPath';
 import { setAuthData } from '../utils/authUtils';
 import { hashPassword } from '../utils/securityUtils';
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (email, password, roleId = null) => {
   try {
     // Create Axios instance using APIConfigurations
     const api = axios.create({
@@ -19,6 +19,10 @@ export const loginUser = async (email, password) => {
       email,
       password: hashedPassword,
     };
+
+    if (roleId != null && roleId !== '') {
+      payload.roleId = Number(roleId);
+    }
 
     const response = await api.post('/auth/login', payload, APIConfigurations.getConfig());
 

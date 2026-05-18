@@ -204,10 +204,22 @@ export default function LoginPage({ onLogin }) {
     setErrorMessage('');
 
     try {
-      const response = await loginUser(email, password);
+      const selectedRoleConfig = roleConfigs.find(config => config.id === activeRole) || currentRoleConfig;
+      const selectedRoleId = selectedRoleConfig?.roleId;
+      const response = await loginUser(email, password, selectedRoleId);
 
       if (response.success) {
-        const user = response.result;
+        const backendUser = response.result;
+        const normalizedEmail = email.trim().toLowerCase();
+        const selectedAccount = usersData.find((account) => {
+          const emailMatches = account.email?.trim().toLowerCase() === normalizedEmail;
+          const roleIdMatches = selectedRoleId != null && Number(account.roleId) === Number(selectedRoleId);
+          const roleNameMatches = toRoleSlug(account.roleName) === selectedRoleConfig?.id;
+          return emailMatches && (roleIdMatches || roleNameMatches);
+        });
+        const user = selectedAccount
+          ? { ...backendUser, ...selectedAccount, token: backendUser.token }
+          : backendUser;
 
         const backendRoleSlug = toRoleSlug(user?.roleName);
         const roleFromId = roleConfigs.find(
@@ -216,12 +228,20 @@ export default function LoginPage({ onLogin }) {
         const roleFromName = roleConfigs.find(
           (config) => toRoleSlug(config.title) === backendRoleSlug || toRoleSlug(config.id) === backendRoleSlug
         );
-        const resolvedRoleKey = roleFromId?.id || roleFromName?.id || currentRoleConfig?.id;
+        const resolvedRoleKey = selectedAccount
+          ? selectedRoleConfig?.id
+          : roleFromId?.id || roleFromName?.id || selectedRoleConfig?.id;
 
         // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userId', user.userId);
         localStorage.setItem('userRole', resolvedRoleKey);
         localStorage.setItem('userName', user.employeeName);
+        localStorage.setItem('employeeName', user.employeeName || '');
+        localStorage.setItem('roleName', user.roleName || '');
+        localStorage.setItem('companyName', user.companyName || '');
+        localStorage.setItem('companyId', user.companyId?.toString() || '');
+        localStorage.setItem('employeeId', user.employeeId?.toString() || '');
         localStorage.setItem('roleId', user.roleId?.toString() || '');
         localStorage.setItem('email', user.email);
         localStorage.setItem('token', user.token);
