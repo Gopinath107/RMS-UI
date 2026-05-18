@@ -5,7 +5,7 @@ import { Label } from './ui/label.jsx';
 import { Button } from './ui/button.jsx';
 import { SearchableSelect } from './ui/select.jsx';
 import { Textarea } from './ui/textarea.jsx';
-import { ArrowLeft, User, Mail, Phone, Upload, Download, FileText, Maximize2, Plus, Trash2, X, Eye } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Upload, Download, FileText, Maximize2, Plus, Trash2, X, Eye, Check } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Swal from 'sweetalert2';
@@ -757,31 +757,6 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData, onSave
             <Plus className="w-4 h-4" /> Save Document
           </button>
         </div>
-
-        {/* Save Resource shortcut + Auto-save status */}
-        {onSaveResource && (
-          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2">
-            {/* Auto-save badge */}
-            <div className="flex items-center">
-              {autoSaveStatus && autoSaveStatus !== 'idle' && (
-                <AutoSaveBadge status={autoSaveStatus} />
-              )}
-            </div>
-            {/* Save Resource button */}
-            <button
-              type="button"
-              onClick={onSaveResource}
-              style={{ backgroundColor: '#059669', color: '#fff', padding: '8px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {isEditMode ? 'Update Resource' : 'Save Resource'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ── Documents Table ── */}
@@ -2518,19 +2493,20 @@ export default function AddResourcePage() {
             />
           </section>
 
-          <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4">
-            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between gap-3">
+          <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 px-5 sm:px-7 py-4 shadow-lg rounded-b-md">
+            <div className="flex items-center justify-between gap-4 min-h-[40px]">
               {/* Auto-save status */}
-              <div className="flex items-center">
+              <div className="flex items-center h-10 self-center">
                 <AutoSaveBadge status={autoSaveStatus} />
               </div>
-              {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
-                <Button type="button" onClick={onSubmit} className="w-full sm:w-auto flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white">
-                  {isEditMode
-                    ? (resourceType === 'internal' ? 'Update Internal Resource' : 'Update External Resource')
-                    : (resourceType === 'internal' ? 'Save Internal Resource' : 'Save External Resource')}
+              {/* Action buttons - Side by side perfectly aligned */}
+              <div className="flex items-center gap-3 h-10 self-center">
+                <Button type="button" variant="outline" onClick={handleClose} className="h-10 px-5 flex items-center justify-center border-gray-300 text-gray-700 hover:bg-gray-100 font-medium rounded-lg transition-all shadow-2xs">
+                  Cancel
+                </Button>
+                <Button type="button" onClick={onSubmit} className="h-10 px-6 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm rounded-lg transition-all">
+                  <Check className="w-4 h-4" />
+                  {isEditMode ? 'Update Resource' : 'Save Resource'}
                 </Button>
               </div>
             </div>

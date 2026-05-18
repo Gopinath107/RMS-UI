@@ -42,12 +42,12 @@ export function AutoSaveBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-all duration-300 ${cfg.className}`}
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border shadow-2xs transition-all duration-300 ${cfg.className}`}
       role="status"
       aria-live="polite"
     >
       {cfg.icon}
-      {cfg.label}
+      <span>{cfg.label}</span>
     </span>
   );
 }
