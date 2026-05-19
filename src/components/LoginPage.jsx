@@ -125,42 +125,59 @@ export default function LoginPage({ onLogin }) {
           setUsersData(users); // Store users data for later use
 
           // Group users by role to get unique roles with their roleId
-          const roleGroups = users.reduce((acc, user) => {
-            const roleName = user.roleName;
-            if (!acc[roleName]) {
-              acc[roleName] = {
-                roleId: user.roleId,
-                users: []
-              };
-            }
-            acc[roleName].users.push(user);
-            return acc;
-          }, {});
+          const roleGroups = {};
+          
+          users.forEach(user => {
+            const userRoles = Array.isArray(user.roles) && user.roles.length > 0
+              ? user.roles
+              : (user.roleName ? [{ roleId: user.roleId, roleName: user.roleName }] : []);
+              
+            userRoles.forEach(role => {
+              const roleName = role.roleName;
+              if (!roleName) return;
+              
+              const normalizedRoleName = roleName.trim().toLowerCase();
+              
+              if (!roleGroups[normalizedRoleName]) {
+                roleGroups[normalizedRoleName] = {
+                  roleId: role.roleId,
+                  originalRoleName: roleName,
+                  users: []
+                };
+              }
+              // Prevent duplicate users in the same role group
+              const userEmail = user.email?.trim().toLowerCase();
+              if (userEmail && !roleGroups[normalizedRoleName].users.find(u => u.email?.trim().toLowerCase() === userEmail)) {
+                roleGroups[normalizedRoleName].users.push(user);
+              }
+            });
+          });
 
           // Create role configs from unique roles
           const uniqueRoleNames = Object.keys(roleGroups);
-          const newConfigs = uniqueRoleNames.map(roleName => {
-            const roleGroup = roleGroups[roleName];
+          const newConfigs = uniqueRoleNames.map(normalizedRoleName => {
+            const roleGroup = roleGroups[normalizedRoleName];
+            const originalRoleName = roleGroup.originalRoleName;
             const demoEmail = roleGroup.users.length > 0 ? roleGroup.users[0].email : '';
 
             // Find matching hardcoded config
             let config = hardcodedRoleConfigs.find(c =>
-              c.title.toLowerCase() === roleName.toLowerCase() ||
-              c.id === roleName.toLowerCase().replace(/\s+/g, '-')
+              c.title.toLowerCase() === normalizedRoleName ||
+              c.id === normalizedRoleName.replace(/\s+/g, '-')
             );
 
             // If no match, create a default config
             if (!config) {
               config = {
-                id: roleName.toLowerCase().replace(/\s+/g, '-'),
-                title: roleName,
-                subtitle: roleName,
+                id: normalizedRoleName.replace(/\s+/g, '-'),
+                title: originalRoleName,
+                subtitle: originalRoleName,
                 icon: Users,
                 color: 'text-gray-600',
                 gradient: 'from-gray-500 to-gray-600',
                 bgColor: 'bg-gray-50',
                 image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=300&fit=crop',
-                description: 'Description for ' + roleName,
+                description: 'Description for ' + originalRoleName,
               };
             }
 
@@ -236,8 +253,17 @@ export default function LoginPage({ onLogin }) {
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userId', user.userId);
         localStorage.setItem('userRole', resolvedRoleKey);
-        localStorage.setItem('userName', user.employeeName);
-        localStorage.setItem('employeeName', user.employeeName || '');
+        let displayUserName = user.employeeName || user.name;
+        if (!displayUserName || displayUserName === 'null' || displayUserName === 'undefined') {
+          displayUserName = user.email ? user.email.split('@')[0] : 'User';
+        }
+        displayUserName = displayUserName
+          .split(/[.\\s]+/)
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        
+        localStorage.setItem('userName', displayUserName);
+        localStorage.setItem('employeeName', displayUserName);
         localStorage.setItem('roleName', user.roleName || '');
         localStorage.setItem('companyName', user.companyName || '');
         localStorage.setItem('companyId', user.companyId?.toString() || '');
