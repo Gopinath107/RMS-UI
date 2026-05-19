@@ -223,8 +223,10 @@ function AppShell({ userRole, onLogout }) {
 
                 {/* ── Sales Manager ── */}
                 <Route path="/sales" element={<ProtectedRoute allowedRoles={['sales-manager']}><OpportunityRequests /></ProtectedRoute>} />
+                <Route path="/sales/clients" element={<ProtectedRoute allowedRoles={['sales-manager']}><ClientList /></ProtectedRoute>} />
+                <Route path="/sales/interview-hub" element={<ProtectedRoute allowedRoles={['sales-manager']}><InterviewHub /></ProtectedRoute>} />
                 <Route path="/sales/pipeline" element={<ProtectedRoute allowedRoles={['sales-manager']}><Placeholder title="Sales Pipeline" color="text-yellow-600" /></ProtectedRoute>} />
-
+                
                 {/* ── Interview Panel ── */}
                 <Route path="/panel" element={<ProtectedRoute allowedRoles={['interview-panel']}><InterviewPanelDashboard /></ProtectedRoute>} />
                 <Route path="/panel/interview-hub" element={<ProtectedRoute allowedRoles={['interview-panel']}><InterviewHub /></ProtectedRoute>} />

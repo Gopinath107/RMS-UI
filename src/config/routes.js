@@ -63,6 +63,8 @@ export const APP_ROUTES = [
 
   // ── Sales Manager ────────────────────────────────────────────────
   { path: '/sales',          allowedRoles: ['sales-manager'] },
+  { path: '/sales/clients',  allowedRoles: ['sales-manager'] },
+  { path: '/sales/interview-hub', allowedRoles: ['sales-manager'] },
   { path: '/sales/pipeline', allowedRoles: ['sales-manager'] },
 
   // ── Interview Panel ──────────────────────────────────────────────
