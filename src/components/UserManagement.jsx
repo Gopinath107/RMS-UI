@@ -17,6 +17,7 @@ import { DepartmentService } from '../services/DepartmentService';
 import { RoleService } from '../services/RoleService';
 import { SkillService } from '../services/SkillsService';
 import { toast } from 'sonner';
+import { Checkbox } from './ui/checkbox';
 
 const UserManagement = ({ setCurrentPage }) => {
   const [users, setUsers] = useState([]);
@@ -42,7 +43,7 @@ const UserManagement = ({ setCurrentPage }) => {
     email: '',
     username: '',
     password: '',
-    roleId: '',
+    roleIds: [],
     companyId: '',
     status: 'Active'
   });
@@ -126,73 +127,73 @@ const UserManagement = ({ setCurrentPage }) => {
     }
   };
 
-const mapToUi = (apiUsers) => {
-  // Create a map to group users by userId
-  const userMap = {};
-  
-  apiUsers.forEach(user => {
-    const userId = user.userId.toString();
-    
-    // If this user doesn't exist in our map yet, create an entry
-    if (!userMap[userId]) {
-      userMap[userId] = {
-        id: userId,
-        name: user.employeeName,
-        email: user.email,
-        username: user.email.split('@')[0],
-        roles: [], // This will store all role objects
-        status: user.isActive ? 'Active' : 'Inactive',
-        lastLogin: user.lastLogin || 'N/A',
-        createdAt: user.createdAt || 'N/A',
-        companyId: user.companyId,
-        employeeId: user.employeeId,
-        companyName: user.companyName
-      };
-    }
-    
-    // Add the role to the user's roles array
-    // Check if role already exists to avoid duplicates
-    const roleExists = userMap[userId].roles.some(r => r.roleId === user.roleId);
-    if (!roleExists && user.roleId) {
-      userMap[userId].roles.push({
-        roleId: user.roleId,
-        roleName: user.roleName || 'unknown'
-      });
-    }
-  });
-  
-  // Convert the map back to array and set primary role (first role)
-  return Object.values(userMap).map(user => {
-    // Determine primary role (first role in array or 'unknown')
-    const primaryRole = user.roles.length > 0 
-      ? user.roles[0].roleName 
-      : 'unknown';
-    
-    // Create a comma-separated string of all role names
-    const allRoleNames = user.roles.map(r => r.roleName).join(', ');
-    
-    return {
-      ...user,
-      role: primaryRole, // Keep for backward compatibility
-      allRoles: allRoleNames, // New property for displaying all roles
-      roleId: user.roles.length > 0 ? user.roles[0].roleId : '' // Primary role ID
-    };
-  });
-};
+  const mapToUi = (apiUsers) => {
+    // Create a map to group users by userId
+    const userMap = {};
 
-const filteredUsers = users.filter(user => {
-  const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       user.username.toLowerCase().includes(searchTerm.toLowerCase());
-  
-  // Check if any of the user's roles match the filter
-  const matchesRole = filterRole === 'all' || 
-                     user.roles.some(role => role.roleName === filterRole);
-  
-  const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
- 
-  return matchesSearch && matchesRole && matchesStatus;
-});
+    apiUsers.forEach(user => {
+      const userId = user.userId.toString();
+
+      // If this user doesn't exist in our map yet, create an entry
+      if (!userMap[userId]) {
+        userMap[userId] = {
+          id: userId,
+          name: user.employeeName,
+          email: user.email,
+          username: user.email.split('@')[0],
+          roles: [], // This will store all role objects
+          status: user.isActive ? 'Active' : 'Inactive',
+          lastLogin: user.lastLogin || 'N/A',
+          createdAt: user.createdAt || 'N/A',
+          companyId: user.companyId,
+          employeeId: user.employeeId,
+          companyName: user.companyName
+        };
+      }
+
+      // Add the role to the user's roles array
+      // Check if role already exists to avoid duplicates
+      const roleExists = userMap[userId].roles.some(r => r.roleId === user.roleId);
+      if (!roleExists && user.roleId) {
+        userMap[userId].roles.push({
+          roleId: user.roleId,
+          roleName: user.roleName || 'unknown'
+        });
+      }
+    });
+
+    // Convert the map back to array and set primary role (first role)
+    return Object.values(userMap).map(user => {
+      // Determine primary role (first role in array or 'unknown')
+      const primaryRole = user.roles.length > 0
+        ? user.roles[0].roleName
+        : 'unknown';
+
+      // Create a comma-separated string of all role names
+      const allRoleNames = user.roles.map(r => r.roleName).join(', ');
+
+      return {
+        ...user,
+        role: primaryRole, // Keep for backward compatibility
+        allRoles: allRoleNames, // New property for displaying all roles
+        roleId: user.roles.length > 0 ? user.roles[0].roleId : '' // Primary role ID
+      };
+    });
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Check if any of the user's roles match the filter
+    const matchesRole = filterRole === 'all' ||
+      user.roles.some(role => role.roleName === filterRole);
+
+    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   const getRoleCode = (roleName) => {
     return roleName ? roleName.toLowerCase().replace(/ /g, '-') : '';
@@ -222,216 +223,212 @@ const filteredUsers = users.filter(user => {
     setFormData({ ...formData, [name]: value });
   };
 
-const validateUserForm = (isEdit = false) => {
-  const newErrors = {};
-  let isValid = true;
-  if (!formData.companyId) { newErrors.companyId = 'Company is required'; isValid = false; }
-  if (!formData.name) { newErrors.name = 'Full Name is required'; isValid = false; }
-  if (!formData.email) { newErrors.email = 'Email is required'; isValid = false; }
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
-  if (!formData.username) { newErrors.username = 'Username is required'; isValid = false; }
-  if (!isEdit && !formData.password) { newErrors.password = 'Password is required'; isValid = false; }
-  if (!formData.roleId) { newErrors.roleId = 'Role is required'; isValid = false; }
+  const validateUserForm = (isEdit = false) => {
+    const newErrors = {};
+    let isValid = true;
+    if (!formData.companyId) { newErrors.companyId = 'Company is required'; isValid = false; }
+    if (!formData.name) { newErrors.name = 'Full Name is required'; isValid = false; }
+    if (!formData.email) { newErrors.email = 'Email is required'; isValid = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
+    if (!formData.username) { newErrors.username = 'Username is required'; isValid = false; }
+    if (!isEdit && !formData.password) { newErrors.password = 'Password is required'; isValid = false; }
+    if (!formData.roleIds || formData.roleIds.length === 0) { newErrors.roleIds = 'At least one role is required'; isValid = false; }
 
-  setErrors(newErrors);
-  return isValid;
-};
+    setErrors(newErrors);
+    return isValid;
+  };
 
-const handleAddUser = async () => {
-  if (!validateUserForm(false)) {
-    return;
-  }
-
-  const roleId = parseInt(formData.roleId);
-  const companyId = parseInt(formData.companyId);
-  const selectedEmployee = employees.find(emp => (emp.firstName + " " + emp.lastName) === formData.name);
-  const employeeId = selectedEmployee ? selectedEmployee.employeeId : 0;
-
-  try {
-    // Call the API
-    const response = await UserManagementService.createUser(
-      companyId,
-      employeeId,
-      roleId,
-      formData.email,
-      formData.password,
-      formData.status === 'Active'
-    );
-    
-    console.log('Full API Response:', response); // Debug: Check what you're actually getting
-    
-    // IMPORTANT: Check if response exists at all
-    if (!response) {
-      throw new Error('No response received from server');
+  const handleAddUser = async () => {
+    if (!validateUserForm(false)) {
+      return;
     }
-    
-    // Check the success flag in the response body
-    // The API returns success: true/false in the JSON body
-    if (response.data.success === true) {
-      // SUCCESS case
+
+    const roleIds = formData.roleIds.map(id => parseInt(id));
+    const companyId = parseInt(formData.companyId);
+    const selectedEmployee = employees.find(emp => (emp.firstName + " " + emp.lastName) === formData.name);
+    const employeeId = selectedEmployee ? selectedEmployee.employeeId : 0;
+
+    try {
+      // Call the API
+      const response = await UserManagementService.createUser(
+        companyId,
+        employeeId,
+        roleIds,
+        formData.email,
+        formData.password,
+        formData.status === 'Active'
+      );
+
+      // IMPORTANT: Check if response exists at all
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Check the success flag in the response body
+      // The API returns success: true/false in the JSON body
+      if (response.data.success === true) {
+        // SUCCESS case
+        setIsAddDialogOpen(false);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'User added successfully',
+          confirmButtonText: 'OK'
+        });
+
+        await fetchUsers();
+
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          username: '',
+          password: '',
+          roleIds: [],
+          companyId: '',
+          status: 'Active'
+        });
+
+        // If you need to update the users list, you can:
+        // 1. Refresh the entire list
+        // fetchUsers();
+
+        // OR 2. Add the new user to existing list
+        // if (response.result) {
+        //   const newUser = {
+        //     userId: response.result.userId,
+        //     // map other fields as needed
+        //   };
+        //   setUsers(prevUsers => [...prevUsers, newUser]);
+        // }
+
+      } else {
+        // ERROR case: success is false
+        // The API returns errors array in the response body
+        const errorMessage = response.data.errors && response.data.errors.length > 0
+          ? response.data.errors.join(', ')
+          : 'Failed to add user';
+
+        setIsAddDialogOpen(false);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorMessage,
+          confirmButtonText: 'OK'
+        });
+      }
+    }
+    catch (error) {
+      // This catches network errors, 500 errors, etc.
+      // NOT the case where API returns success:false with HTTP 201
+      console.error('Error in handleAddUser:', error);
       setIsAddDialogOpen(false);
-      await Swal.fire({ 
-        icon: 'success', 
-        title: 'Success', 
-        text: 'User added successfully', 
-        confirmButtonText: 'OK' 
-      });
 
-      await fetchUsers(); 
-      
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        username: '',
-        password: '',
-        roleId: '',
-        companyId: '',
-        status: 'Active'
-      });
-      
-      // If you need to update the users list, you can:
-      // 1. Refresh the entire list
-      // fetchUsers();
-      
-      // OR 2. Add the new user to existing list
-      // if (response.result) {
-      //   const newUser = {
-      //     userId: response.result.userId,
-      //     // map other fields as needed
-      //   };
-      //   setUsers(prevUsers => [...prevUsers, newUser]);
-      // }
-      
-    } else {
-      // ERROR case: success is false
-      // The API returns errors array in the response body
-      const errorMessage = response.data.errors && response.data.errors.length > 0 
-        ? response.data.errors.join(', ') 
-        : 'Failed to add user';
-      
-      setIsAddDialogOpen(false);
-      await Swal.fire({ 
-        icon: 'error', 
-        title: 'Error', 
-        text: errorMessage, 
-        confirmButtonText: 'OK' 
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to add user';
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonText: 'OK'
       });
     }
-  } 
-  catch (error) {
-    // This catches network errors, 500 errors, etc.
-    // NOT the case where API returns success:false with HTTP 201
-    console.error('Error in handleAddUser:', error);
-    setIsAddDialogOpen(false);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to add user';
-    
-    await Swal.fire({ 
-      icon: 'error', 
-      title: 'Error', 
-      text: errorMessage, 
-      confirmButtonText: 'OK' 
-    });
-  }
-};
+  };
 
-const handleEditUser = async () => {
-  if (!selectedUser || !validateUserForm(true)) {
-    return;
-  }
-
-  const roleId = parseInt(formData.roleId);
-  const companyId = parseInt(formData.companyId);
-  const selectedEmployee = employees.find(emp => (emp.firstName + " " + emp.lastName) === formData.name);
-  const employeeId = selectedEmployee ? selectedEmployee.employeeId : selectedUser.employeeId;
-
-  try {
-    // Call the API and capture the response
-    const response = await UserManagementService.updateUser(
-      selectedUser.id,
-      companyId,
-      employeeId,
-      roleId,
-      formData.email,
-      formData.password || null,
-      formData.status === 'Active'
-    );
-    
-    console.log('Update API Response:', response); // Debug: Check what you're actually getting
-    
-    // Check if response exists at all
-    if (!response) {
-      throw new Error('No response received from server');
+  const handleEditUser = async () => {
+    if (!selectedUser || !validateUserForm(true)) {
+      return;
     }
-    
-    // Check the success flag in the response body
-    // Assuming update API has same structure: success: true/false
-    if (response.data.success === true) {
-      // SUCCESS case
+
+    const roleIds = formData.roleIds.map(id => parseInt(id));
+    const companyId = parseInt(formData.companyId);
+    const selectedEmployee = employees.find(emp => (emp.firstName + " " + emp.lastName) === formData.name);
+    const employeeId = selectedEmployee ? selectedEmployee.employeeId : selectedUser.employeeId;
+
+    try {
+      // Call the API and capture the response
+      const response = await UserManagementService.updateUser(
+        parseInt(selectedUser.id, 10),
+        companyId,
+        employeeId,
+        roleIds,
+        formData.email,
+        formData.password || "",
+        formData.status === 'Active'
+      );
+
+      // Check if response exists at all
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Check the success flag in the response body
+      // Assuming update API has same structure: success: true/false
+      if (response.data.success === true) {
+        // SUCCESS case
+        setIsEditDialogOpen(false);
+        setSelectedUser(null);
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'User updated successfully',
+          confirmButtonText: 'OK'
+        });
+
+        // Refresh the user list
+        await fetchUsers();
+
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          username: '',
+          password: '',
+          roleIds: [],
+          companyId: '',
+          status: 'Active'
+        });
+
+      } else {
+        // ERROR case: success is false
+        // The API returns errors array in the response body
+        const errorMessage = response.data.errors && response.data.errors.length > 0
+          ? response.data.errors.join(', ')
+          : 'Failed to update user';
+
+        setIsEditDialogOpen(false);
+        setSelectedUser(null);
+
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorMessage,
+          confirmButtonText: 'OK'
+        });
+      }
+    }
+    catch (error) {
+      // This catches network errors, 500 errors, etc.
       setIsEditDialogOpen(false);
       setSelectedUser(null);
-      
-      await Swal.fire({ 
-        icon: 'success', 
-        title: 'Success', 
-        text: 'User updated successfully', 
-        confirmButtonText: 'OK' 
-      });
-      
-      // Refresh the user list
-      await fetchUsers();
-      
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        username: '',
-        password: '',
-        roleId: '',
-        companyId: '',
-        status: 'Active'
-      });
-      
-    } else {
-      // ERROR case: success is false
-      // The API returns errors array in the response body
-      const errorMessage = response.data.errors && response.data.errors.length > 0 
-        ? response.data.errors.join(', ') 
-        : 'Failed to update user';
-      
-      setIsEditDialogOpen(false);
-      setSelectedUser(null);
-      
-      await Swal.fire({ 
-        icon: 'error', 
-        title: 'Error', 
-        text: errorMessage, 
-        confirmButtonText: 'OK' 
+
+      console.error('Error updating user:', error);
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to update user';
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonText: 'OK'
       });
     }
-  } 
-  catch (error) {
-    // This catches network errors, 500 errors, etc.
-    setIsEditDialogOpen(false);
-    setSelectedUser(null);
-    
-    console.error('Error updating user:', error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to update user';
-    
-    await Swal.fire({ 
-      icon: 'error', 
-      title: 'Error', 
-      text: errorMessage, 
-      confirmButtonText: 'OK' 
-    });
-  }
-};
+  };
 
   const handleDeleteUser = async (userId) => {
     const result = await Swal.fire({
@@ -457,257 +454,257 @@ const handleEditUser = async () => {
     }
   };
 
-const handleToggleStatus = async (userId) => {
-  const user = users.find(u => u.id === userId);
-  if (!user) return;
+  const handleToggleStatus = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
 
-  try {
-    // Note: This will only update the status for all roles
-    // You might need to adjust your API to handle multiple roles
-    await UserManagementService.updateUser(
-      user.id,
-      user.companyId || 1,
-      user.employeeId,
-      user.roles.length > 0 ? user.roles[0].roleId : '',
-      user.email,
-      null,
-      user.status !== 'Active'
-    );
-    
-    await Swal.fire({ icon: 'success', title: 'Success', text: 'User status updated successfully', confirmButtonText: 'OK' });
-    await fetchUsers();
-  } catch (error) {
-    console.error('Error toggling user status:', error);
-    await Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update status', confirmButtonText: 'OK' });
-  }
-};
+    try {
+      // Note: This will only update the status for all roles
+      // You might need to adjust your API to handle multiple roles
+      await UserManagementService.updateUser(
+        parseInt(user.id, 10),
+        user.companyId || 1,
+        user.employeeId,
+        user.roles.map(r => r.roleId),
+        user.email,
+        null,
+        user.status !== 'Active'
+      );
 
-const openEditDialog = (user) => {
-  setSelectedUser(user);
-  setFormData({
-    name: user.name,
-    email: user.email,
-    username: user.username,
-    password: '',
-    roleId: user.roles.length > 0 ? user.roles[0].roleId.toString() : '',
-    companyId: user.companyId.toString(),
-    status: user.status
-  });
-  setIsEditDialogOpen(true);
-};
+      await Swal.fire({ icon: 'success', title: 'Success', text: 'User status updated successfully', confirmButtonText: 'OK' });
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      await Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update status', confirmButtonText: 'OK' });
+    }
+  };
+
+  const openEditDialog = (user) => {
+    setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      password: '',
+      roleIds: user.roles.map(r => r.roleId.toString()),
+      companyId: user.companyId.toString(),
+      status: user.status
+    });
+    setIsEditDialogOpen(true);
+  };
   const getFilteredRoles = (companyId) => {
     if (!companyId) return roles;
     return roles.filter(r => r.companyId.toString() === companyId);
   };
 
-const handleAddCompany = async () => {
-  const newErrors = {};
-  if (!newCompanyName) newErrors.companyName = 'Company name is required';
+  const handleAddCompany = async () => {
+    const newErrors = {};
+    if (!newCompanyName) newErrors.companyName = 'Company name is required';
 
-  setErrors(newErrors);
-  if (Object.keys(newErrors).length > 0) return;
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
-  try {
-    const response = await CompanyService.createCompany(
-      newCompanyName, 
-      newCompanyEmail, 
-      newCompanyAddress
-    );
-    
-    if (!response) {
-      throw new Error('No response received from server');
-    }
-    
-    // Adjust based on actual response structure
-    if (response.data?.success === true || response.success === true) {
-      // Show success message
-      toast.success('Company added successfully');
-      // setIsManageOpen(false);
-      // await Swal.fire({ icon: 'success', title: 'Success', text: 'Company added successfully', confirmButtonText: 'OK' });
-      
-      setNewCompanyName('');
-      setNewCompanyEmail('');
-      setNewCompanyAddress('');
-      await fetchEntities();
-      
-    } else {
-      // Extract error message
-      const errorMessage = response.data?.errors?.join(', ') || 
-                          response.errors?.join(', ') || 
-                          response.data?.message || 
-                          response.message || 
-                          'Failed to add company';
-      
+    try {
+      const response = await CompanyService.createCompany(
+        newCompanyName,
+        newCompanyEmail,
+        newCompanyAddress
+      );
+
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Adjust based on actual response structure
+      if (response.data?.success === true || response.success === true) {
+        // Show success message
+        toast.success('Company added successfully');
+        // setIsManageOpen(false);
+        // await Swal.fire({ icon: 'success', title: 'Success', text: 'Company added successfully', confirmButtonText: 'OK' });
+
+        setNewCompanyName('');
+        setNewCompanyEmail('');
+        setNewCompanyAddress('');
+        await fetchEntities();
+
+      } else {
+        // Extract error message
+        const errorMessage = response.data?.errors?.join(', ') ||
+          response.errors?.join(', ') ||
+          response.data?.message ||
+          response.message ||
+          'Failed to add company';
+
+        toast.error(errorMessage);
+      }
+
+    } catch (error) {
+      console.error('Error adding company:', error);
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to add company';
+
       toast.error(errorMessage);
     }
-    
-  } catch (error) {
-    console.error('Error adding company:', error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to add company';
-    
-    toast.error(errorMessage);
-  }
-};
+  };
 
-const handleAddRole = async () => {
-  const newErrors = {};
-  if (!newRoleCompanyId) newErrors.roleCompanyId = 'Company is required';
-  if (!newRoleName) newErrors.roleName = 'Role name is required';
-  
-  setErrors(newErrors);
-  if (Object.keys(newErrors).length > 0) return;
-  
-  try {
-    const response = await RoleService.createRole(
-      parseInt(newRoleCompanyId), 
-      newRoleName
-    );
-    
-    if (!response) {
-      throw new Error('No response received from server');
-    }
-    
-    // Adjust based on actual response structure
-    if (response.data?.success === true || response.success === true) {
-      // SUCCESS case - Using toast for success
-      toast.success('Role added successfully');
-      
-      // Reset form fields
-      setNewRoleCompanyId('');
-      setNewRoleName('');
-      
-      // Refresh data
-      await fetchEntities();
-      
-    } else {
-      // ERROR case: success is false or not true
-      const errorMessage = response.data?.errors?.join(', ') || 
-                          response.errors?.join(', ') || 
-                          response.data?.message || 
-                          response.message || 
-                          'Failed to add role';
-      
+  const handleAddRole = async () => {
+    const newErrors = {};
+    if (!newRoleCompanyId) newErrors.roleCompanyId = 'Company is required';
+    if (!newRoleName) newErrors.roleName = 'Role name is required';
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      const response = await RoleService.createRole(
+        parseInt(newRoleCompanyId),
+        newRoleName
+      );
+
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Adjust based on actual response structure
+      if (response.data?.success === true || response.success === true) {
+        // SUCCESS case - Using toast for success
+        toast.success('Role added successfully');
+
+        // Reset form fields
+        setNewRoleCompanyId('');
+        setNewRoleName('');
+
+        // Refresh data
+        await fetchEntities();
+
+      } else {
+        // ERROR case: success is false or not true
+        const errorMessage = response.data?.errors?.join(', ') ||
+          response.errors?.join(', ') ||
+          response.data?.message ||
+          response.message ||
+          'Failed to add role';
+
+        toast.error(errorMessage);
+      }
+
+    } catch (error) {
+      console.error('Error adding role:', error);
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to add role';
+
       toast.error(errorMessage);
     }
-    
-  } catch (error) {
-    console.error('Error adding role:', error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to add role';
-    
-    toast.error(errorMessage);
-  }
-};
+  };
 
-const handleAddDepartment = async () => {
-  const newErrors = {};
-  if (!newDeptCompanyId) newErrors.deptCompanyId = 'Company is required';
-  if (!newDeptName) newErrors.deptName = 'Department name is required';
+  const handleAddDepartment = async () => {
+    const newErrors = {};
+    if (!newDeptCompanyId) newErrors.deptCompanyId = 'Company is required';
+    if (!newDeptName) newErrors.deptName = 'Department name is required';
 
-  setErrors(newErrors);
-  if (Object.keys(newErrors).length > 0) return;
-  
-  try {
-    const response = await DepartmentService.createDepartment(
-      parseInt(newDeptCompanyId), 
-      newDeptName, 
-      newDeptParentId ? parseInt(newDeptParentId) : null
-    );
-    
-    if (!response) {
-      throw new Error('No response received from server');
-    }
-    
-    // Adjust based on actual response structure
-    if (response.data?.success === true || response.success === true) {
-      // SUCCESS case - Using toast for success
-      toast.success('Department added successfully');
-      
-      // Reset form fields
-      setNewDeptCompanyId('');
-      setNewDeptName('');
-      setNewDeptParentId('');
-      
-      // Refresh data
-      await fetchEntities();
-      
-    } else {
-      // ERROR case: success is false or not true
-      const errorMessage = response.data?.errors?.join(', ') || 
-                          response.errors?.join(', ') || 
-                          response.data?.message || 
-                          response.message || 
-                          'Failed to add department';
-      
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      const response = await DepartmentService.createDepartment(
+        parseInt(newDeptCompanyId),
+        newDeptName,
+        newDeptParentId ? parseInt(newDeptParentId) : null
+      );
+
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Adjust based on actual response structure
+      if (response.data?.success === true || response.success === true) {
+        // SUCCESS case - Using toast for success
+        toast.success('Department added successfully');
+
+        // Reset form fields
+        setNewDeptCompanyId('');
+        setNewDeptName('');
+        setNewDeptParentId('');
+
+        // Refresh data
+        await fetchEntities();
+
+      } else {
+        // ERROR case: success is false or not true
+        const errorMessage = response.data?.errors?.join(', ') ||
+          response.errors?.join(', ') ||
+          response.data?.message ||
+          response.message ||
+          'Failed to add department';
+
+        toast.error(errorMessage);
+      }
+
+    } catch (error) {
+      console.error('Error adding department:', error);
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to add department';
+
       toast.error(errorMessage);
     }
-    
-  } catch (error) {
-    console.error('Error adding department:', error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to add department';
-    
-    toast.error(errorMessage);
-  }
-};
+  };
 
-const handleAddSkill = async () => {
-  const newErrors = {};
-  if (!newSkillName) newErrors.skillName = 'Skill name is required';
+  const handleAddSkill = async () => {
+    const newErrors = {};
+    if (!newSkillName) newErrors.skillName = 'Skill name is required';
 
-  setErrors(newErrors);
-  if (Object.keys(newErrors).length > 0) return;
-  
-  try {
-    const response = await SkillService.createSkill(
-      1, // Replace 1 with a dynamic company ID if needed
-      newSkillName
-    );
-    
-    if (!response) {
-      throw new Error('No response received from server');
-    }
-    
-    // Adjust based on actual response structure
-    if (response.data?.success === true || response.success === true) {
-      // SUCCESS case - Using toast for success
-      toast.success('Skill added successfully');
-      
-      // Reset form field
-      setNewSkillName('');
-      
-      // Reset pagination and refresh data
-      setCurrentSkillPage(1);
-      await fetchEntities();
-      
-    } else {
-      // ERROR case: success is false or not true
-      const errorMessage = response.data?.errors?.join(', ') || 
-                          response.errors?.join(', ') || 
-                          response.data?.message || 
-                          response.message || 
-                          'Failed to add skill';
-      
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      const response = await SkillService.createSkill(
+        1, // Replace 1 with a dynamic company ID if needed
+        newSkillName
+      );
+
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+
+      // Adjust based on actual response structure
+      if (response.data?.success === true || response.success === true) {
+        // SUCCESS case - Using toast for success
+        toast.success('Skill added successfully');
+
+        // Reset form field
+        setNewSkillName('');
+
+        // Reset pagination and refresh data
+        setCurrentSkillPage(1);
+        await fetchEntities();
+
+      } else {
+        // ERROR case: success is false or not true
+        const errorMessage = response.data?.errors?.join(', ') ||
+          response.errors?.join(', ') ||
+          response.data?.message ||
+          response.message ||
+          'Failed to add skill';
+
+        toast.error(errorMessage);
+      }
+
+    } catch (error) {
+      console.error('Error adding skill:', error);
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to add skill';
+
       toast.error(errorMessage);
     }
-    
-  } catch (error) {
-    console.error('Error adding skill:', error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'Failed to add skill';
-    
-    toast.error(errorMessage);
-  }
-};
+  };
 
   const indexOfLastSkill = currentSkillPage * skillsPerPage;
   const indexOfFirstSkill = indexOfLastSkill - skillsPerPage;
@@ -824,19 +821,31 @@ const handleAddSkill = async () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.roleId} onValueChange={(value) => setFormData({ ...formData, roleId: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getFilteredRoles(formData.companyId).map(role => (
-                        <SelectItem key={role.roleId} value={role.roleId.toString()}>
+                  <Label>Role(s) *</Label>
+                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto border p-3 rounded-md">
+                    {getFilteredRoles(formData.companyId).map(role => (
+                      <div key={role.roleId} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`role-${role.roleId}`} 
+                          checked={formData.roleIds.includes(role.roleId.toString())}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFormData({ ...formData, roleIds: [...formData.roleIds, role.roleId.toString()] });
+                            } else {
+                              setFormData({ ...formData, roleIds: formData.roleIds.filter(id => id !== role.roleId.toString()) });
+                            }
+                          }}
+                        />
+                        <label htmlFor={`role-${role.roleId}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                           {role.roleName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </label>
+                      </div>
+                    ))}
+                    {getFilteredRoles(formData.companyId).length === 0 && (
+                      <div className="text-sm text-gray-500 italic">Please select a company first</div>
+                    )}
+                  </div>
+                  {errors.roleIds && <p className="text-xs text-red-500 mt-1">{errors.roleIds}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="status">Status</Label>
@@ -940,18 +949,18 @@ const handleAddSkill = async () => {
                       </div>
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
-<TableCell>
-  <div className="flex flex-wrap gap-1">
-    {user.roles.map((role, index) => (
-      <Badge 
-        key={`${user.id}-${role.roleId}-${index}`}
-        className={getRoleBadgeColor(getRoleCode(role.roleName))}
-      >
-        {role.roleName}
-      </Badge>
-    ))}
-  </div>
-</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role, index) => (
+                          <Badge
+                            key={`${user.id}-${role.roleId}-${index}`}
+                            className={getRoleBadgeColor(getRoleCode(role.roleName))}
+                          >
+                            {role.roleName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>{user.companyName}</TableCell>
                     <TableCell>
                       <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
@@ -1076,19 +1085,31 @@ const handleAddSkill = async () => {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-role">Role *</Label>
-              <Select value={formData.roleId} onValueChange={(value) => setFormData({ ...formData, roleId: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getFilteredRoles(formData.companyId).map(role => (
-                    <SelectItem key={role.roleId} value={role.roleId.toString()}>
+              <Label>Role(s) *</Label>
+              <div className="flex flex-col gap-2 max-h-48 overflow-y-auto border p-3 rounded-md">
+                {getFilteredRoles(formData.companyId).map(role => (
+                  <div key={role.roleId} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`edit-role-${role.roleId}`} 
+                      checked={formData.roleIds.includes(role.roleId.toString())}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData({ ...formData, roleIds: [...formData.roleIds, role.roleId.toString()] });
+                        } else {
+                          setFormData({ ...formData, roleIds: formData.roleIds.filter(id => id !== role.roleId.toString()) });
+                        }
+                      }}
+                    />
+                    <label htmlFor={`edit-role-${role.roleId}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       {role.roleName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+                {getFilteredRoles(formData.companyId).length === 0 && (
+                  <div className="text-sm text-gray-500 italic">Please select a company first</div>
+                )}
+              </div>
+              {errors.roleIds && <p className="text-xs text-red-500 mt-1">{errors.roleIds}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-status">Status</Label>
@@ -1131,24 +1152,24 @@ const handleAddSkill = async () => {
                   <div className="space-y-4 mb-6">
                     <Label>Add New Company</Label>
                     <div className="space-y-1">
-                      <Input 
-                        placeholder="Company Name *" 
-                        value={newCompanyName} 
-                        onChange={(e) => setNewCompanyName(e.target.value)} 
+                      <Input
+                        placeholder="Company Name *"
+                        value={newCompanyName}
+                        onChange={(e) => setNewCompanyName(e.target.value)}
                         aria-invalid={!!errors.companyName}
                         className={errors.companyName ? "border-red-500" : ""}
                       />
                       {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
                     </div>
-                    <Input 
-                      placeholder="Company Email" 
-                      value={newCompanyEmail} 
-                      onChange={(e) => setNewCompanyEmail(e.target.value)} 
+                    <Input
+                      placeholder="Company Email"
+                      value={newCompanyEmail}
+                      onChange={(e) => setNewCompanyEmail(e.target.value)}
                     />
-                    <Input 
-                      placeholder="Address" 
-                      value={newCompanyAddress} 
-                      onChange={(e) => setNewCompanyAddress(e.target.value)} 
+                    <Input
+                      placeholder="Address"
+                      value={newCompanyAddress}
+                      onChange={(e) => setNewCompanyAddress(e.target.value)}
                     />
                     <Button onClick={handleAddCompany} className="bg-red-600 hover:bg-red-700">Add Company</Button>
                   </div>
@@ -1195,10 +1216,10 @@ const handleAddSkill = async () => {
                       {errors.roleCompanyId && <p className="text-red-500 text-xs mt-1">{errors.roleCompanyId}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Input 
-                        placeholder="Role Name *" 
-                        value={newRoleName} 
-                        onChange={(e) => setNewRoleName(e.target.value)} 
+                      <Input
+                        placeholder="Role Name *"
+                        value={newRoleName}
+                        onChange={(e) => setNewRoleName(e.target.value)}
                         aria-invalid={!!errors.roleName}
                         className={errors.roleName ? "border-red-500" : ""}
                       />
@@ -1247,10 +1268,10 @@ const handleAddSkill = async () => {
                       {errors.deptCompanyId && <p className="text-red-500 text-xs mt-1">{errors.deptCompanyId}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Input 
-                        placeholder="Department Name *" 
-                        value={newDeptName} 
-                        onChange={(e) => setNewDeptName(e.target.value)} 
+                      <Input
+                        placeholder="Department Name *"
+                        value={newDeptName}
+                        onChange={(e) => setNewDeptName(e.target.value)}
                         aria-invalid={!!errors.deptName}
                         className={errors.deptName ? "border-red-500" : ""}
                       />
@@ -1276,7 +1297,7 @@ const handleAddSkill = async () => {
                         <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Company</TableHead>
-                  
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1285,7 +1306,7 @@ const handleAddSkill = async () => {
                           <TableCell>{d.departmentId}</TableCell>
                           <TableCell>{d.departmentName}</TableCell>
                           <TableCell>{companies.find(c => c.companyId === d.companyId)?.companyName || 'No Company'}</TableCell>
-                          
+
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1298,10 +1319,10 @@ const handleAddSkill = async () => {
                   <div className="space-y-4 mb-6">
                     <Label>Add New Skill</Label>
                     <div className="space-y-1">
-                      <Input 
-                        placeholder="Skill Name *" 
-                        value={newSkillName} 
-                        onChange={(e) => setNewSkillName(e.target.value)} 
+                      <Input
+                        placeholder="Skill Name *"
+                        value={newSkillName}
+                        onChange={(e) => setNewSkillName(e.target.value)}
                         aria-invalid={!!errors.skillName}
                         className={errors.skillName ? "border-red-500" : ""}
                       />

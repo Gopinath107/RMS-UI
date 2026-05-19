@@ -13,9 +13,10 @@ export const RoleService = {
     });
   },
 
-  updateRole: async function (id) {
+  updateRole: async function (id, companyId, roleName) {
     return api.put(`/roles/Update/${id}`, {
-           
+      companyId: companyId,
+      roleName: roleName
     });
   },
   deleteRole: async function (id) {

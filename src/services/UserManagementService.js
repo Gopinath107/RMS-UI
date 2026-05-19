@@ -5,23 +5,25 @@ export const UserManagementService = {
     return api.get('/user-accounts/list');
   },
 
-  createUser: async function (companyId, employeeId, roleId, email, passwordHash, isActive) {
+  createUser: async function (companyId, employeeId, roleIds, email, passwordHash, isActive) {
     return api.post('/user-accounts/create', {
       companyId,
       employeeId,
-      roleId,
+      roleIds,
+      roleId: roleIds && roleIds.length > 0 ? roleIds[0] : null,
       email,
       passwordHash,
       isActive
     });
   },
 
-  updateUser: async function (id, companyId, employeeId, roleId, email, passwordHash, isActive) {
+  updateUser: async function (id, companyId, employeeId, roleIds, email, passwordHash, isActive) {
     return api.put('/user-accounts/update', {
       userId: id,
       companyId,
       employeeId,
-      roleId,
+      roleIds,
+      roleId: roleIds && roleIds.length > 0 ? roleIds[0] : null,
       email,
       passwordHash,
       isActive
