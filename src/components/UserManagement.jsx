@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { Search, Plus, Edit, Trash2, Eye, EyeOff, Shield } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, EyeOff, Shield, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { UserManagementService } from '../services/UserManagementService';
 import { EmployeeService } from '../services/EmployeeManagementService';
@@ -38,6 +38,11 @@ const UserManagement = ({ setCurrentPage }) => {
   const [currentSkillPage, setCurrentSkillPage] = useState(1);
   const skillsPerPage = 5;
 
+  // Pagination states for users
+  const [currentPage, setLocalCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   // Track the selected employee to restrict email choices
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
@@ -66,6 +71,20 @@ const UserManagement = ({ setCurrentPage }) => {
   useEffect(() => {
     fetchEntities();
   }, []);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setLocalCurrentPage(1);
+    if (setCurrentPage) setCurrentPage(1); // Call prop if passed
+  }, [debouncedSearchTerm, filterRole, filterStatus, setCurrentPage]);
 
   const fetchUsers = async () => {
     try {
@@ -179,9 +198,14 @@ const UserManagement = ({ setCurrentPage }) => {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    const matchesSearch =
+      (user.name && user.name.toLowerCase().includes(searchLower)) ||
+      (user.email && user.email.toLowerCase().includes(searchLower)) ||
+      (user.username && user.username.toLowerCase().includes(searchLower)) ||
+      (user.companyName && user.companyName.toLowerCase().includes(searchLower)) ||
+      (user.status && user.status.toLowerCase().includes(searchLower)) ||
+      (user.roles && user.roles.some(role => role.roleName.toLowerCase().includes(searchLower)));
 
     // Check if any of the user's roles match the filter
     const matchesRole = filterRole === 'all' ||
@@ -191,6 +215,15 @@ const UserManagement = ({ setCurrentPage }) => {
 
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  // Pagination calculation
+  const totalUsers = filteredUsers.length;
+  const totalPages = Math.ceil(totalUsers / rowsPerPage) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  
+  const startIndex = (safeCurrentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   const getRoleCode = (roleName) => {
     return roleName ? roleName.toLowerCase().replace(/ /g, '-') : '';
@@ -943,11 +976,21 @@ const UserManagement = ({ setCurrentPage }) => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search users..."
+                placeholder="Search by name, email, username, role, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                  onClick={() => setSearchTerm('')}
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </Button>
+              )}
             </div>
             <Select value={filterRole} onValueChange={setFilterRole}>
               <SelectTrigger className="w-full sm:w-48">
@@ -999,66 +1042,127 @@ const UserManagement = ({ setCurrentPage }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-500">@{user.username}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((role, index) => (
-                          <Badge
-                            key={`${user.id}-${role.roleId}-${index}`}
-                            className={getRoleBadgeColor(getRoleCode(role.roleName))}
+                {paginatedUsers.length > 0 ? (
+                  paginatedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-gray-500">@{user.username}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map((role, index) => (
+                            <Badge
+                              key={`${user.id}-${role.roleId}-${index}`}
+                              className={getRoleBadgeColor(getRoleCode(role.roleName))}
+                            >
+                              {role.roleName}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.companyName}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">{user.lastLogin}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
                           >
-                            {role.roleName}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.companyName}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">{user.lastLogin}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(user)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(user.id)}
-                          className={user.status === 'Active' ? 'text-red-600' : 'text-green-600'}
-                        >
-                          {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleStatus(user.id)}
+                            className={user.status === 'Active' ? 'text-red-600' : 'text-green-600'}
+                          >
+                            {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-500">
+                        <p className="text-lg font-medium text-gray-900">No users found</p>
+                        <p className="text-sm mt-1">Try changing search or filters.</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalUsers > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-4 mt-2">
+              <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4 sm:mb-0">
+                <p>
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalUsers)} of {totalUsers} users
+                </p>
+                <Select
+                  value={rowsPerPage.toString()}
+                  onValueChange={(val) => {
+                    setRowsPerPage(Number(val));
+                    setLocalCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[5, 10, 25, 50].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocalCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center justify-center text-sm font-medium w-32">
+                  Page {safeCurrentPage} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocalCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
