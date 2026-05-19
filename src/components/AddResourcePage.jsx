@@ -1699,7 +1699,14 @@ export default function AddResourcePage() {
     appendDocumentsToPayload(payload);
     try {
       console.log("Submitting new employee:", Object.fromEntries(payload));
-      const response = await EmployeeService.createEmployee(payload);
+      const draftId = formData.employeeId || sessionStorage.getItem(`${draftKey}_autoSaveId`);
+      let response;
+      if (draftId) {
+        payload.append('employeeId', String(draftId));
+        response = await EmployeeService.updateEmployee(payload);
+      } else {
+        response = await EmployeeService.createEmployee(payload);
+      }
       if (response.data.success) {
         toast.success("Resource added successfully!");
         clearDraft();
