@@ -19,6 +19,8 @@ import { SkillService } from '../services/SkillsService';
 import { toast } from 'sonner';
 import { Checkbox } from './ui/checkbox';
 
+const isUserInactive = (user) => user.status === "Inactive";
+
 const UserManagement = ({ setCurrentPage }) => {
   const [users, setUsers] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -543,7 +545,7 @@ const UserManagement = ({ setCurrentPage }) => {
         user.status !== 'Active'
       );
 
-      await Swal.fire({ icon: 'success', title: 'Success', text: 'User status updated successfully', confirmButtonText: 'OK' });
+      await Swal.fire({ icon: 'success', title: 'Success', text: user.status === 'Active' ? 'User deactivated successfully' : 'User activated successfully', confirmButtonText: 'OK' });
       await fetchUsers();
     } catch (error) {
       console.error('Error toggling user status:', error);
@@ -1044,7 +1046,7 @@ const UserManagement = ({ setCurrentPage }) => {
               <TableBody>
                 {paginatedUsers.length > 0 ? (
                   paginatedUsers.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className={isUserInactive(user) ? "opacity-60 bg-gray-50" : ""}>
                       <TableCell>
                         <div>
                           <div className="font-medium">{user.name}</div>
@@ -1076,7 +1078,9 @@ const UserManagement = ({ setCurrentPage }) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openEditDialog(user)}
+                            disabled={isUserInactive(user)}
+                            title={isUserInactive(user) ? "Activate user to edit" : ""}
+                            onClick={() => !isUserInactive(user) && openEditDialog(user)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -1084,15 +1088,17 @@ const UserManagement = ({ setCurrentPage }) => {
                             variant="outline"
                             size="sm"
                             onClick={() => handleToggleStatus(user.id)}
-                            className={user.status === 'Active' ? 'text-red-600' : 'text-green-600'}
+                            className={user.status === 'Active' ? 'text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700' : 'text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700'}
                           >
                             {user.status === 'Active' ? 'Deactivate' : 'Activate'}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-700"
+                            disabled={isUserInactive(user)}
+                            title={isUserInactive(user) ? "Activate user to delete" : ""}
+                            onClick={() => !isUserInactive(user) && handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-700 disabled:text-gray-400"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
