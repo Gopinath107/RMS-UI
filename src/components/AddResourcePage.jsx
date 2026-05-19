@@ -2141,7 +2141,45 @@ export default function AddResourcePage() {
     payload.append("noticePeriod", formData.noticePeriod || "");
     payload.append("preferredLocation", formData.preferredLocation || "");
     payload.append("comments", formData.comments || "");
-    if (formData.role) payload.append("currentJobTitle", formData.role);
+    // New fields for update
+    if (formData.middleName) payload.append("middleName", formData.middleName);
+    if (formData.dateOfBirth) payload.append("dateOfBirth", formData.dateOfBirth);
+    if (formData.primaryCountryCode) payload.append("primaryCountryCode", formData.primaryCountryCode);
+    if (formData.primaryContactNo) payload.append("primaryContactNo", formData.primaryContactNo);
+    if (formData.secondaryCountryCode) payload.append("secondaryCountryCode", formData.secondaryCountryCode);
+    if (formData.secondaryContactNo) payload.append("secondaryContactNo", formData.secondaryContactNo);
+    if (formData.countryOfCitizenship) payload.append("countryOfCitizenship", formData.countryOfCitizenship);
+    if (formData.documentType) payload.append("documentType", formData.documentType);
+    if (formData.documentNumber) payload.append("documentNumber", formData.documentNumber);
+    if (formData.securityClearance) payload.append("securityClearance", formData.securityClearance);
+    if (formData.visa) payload.append("visa", formData.visa);
+    if (formData.visaType) payload.append("visaType", formData.visaType);
+    if (formData.country) payload.append("country", formData.country);
+    if (formData.state) payload.append("state", formData.state);
+    if (formData.city) payload.append("city", formData.city);
+    if (formData.zipCode) payload.append("zipCode", formData.zipCode);
+    if (formData.street) payload.append("street", formData.street);
+    if (formData.availabilityToJoin) payload.append("availabilityToJoin", formData.availabilityToJoin);
+    if (formData.interviewAvailability) payload.append("interviewAvailability", formData.interviewAvailability);
+    if (formData.highestQualification) payload.append("highestQualification", formData.highestQualification);
+    if (formData.universityName) payload.append("universityName", formData.universityName);
+    if (formData.dateOfQualification) payload.append("dateOfQualification", formData.dateOfQualification);
+    if (formData.usaDegree) payload.append("usaDegree", formData.usaDegree);
+    if (formData.currentJobTitle) payload.append("currentJobTitle", formData.currentJobTitle);
+    if (formData.mostRecentEmployer) payload.append("mostRecentEmployer", formData.mostRecentEmployer);
+    if (formData.totalExperience) payload.append("totalExperience", Number(formData.totalExperience));
+    if (formData.relocate) payload.append("relocate", formData.relocate);
+    if (formData.currency) payload.append("currency", formData.currency);
+    if (formData.frequency) payload.append("frequency", formData.frequency);
+    if (formData.sourcingRate) payload.append("sourcingRate", Number(formData.sourcingRate));
+    if (formData.resumeSummary) payload.append("resumeSummary", formData.resumeSummary);
+    if (formData.suggestedKeywords) payload.append("suggestedKeywords", formData.suggestedKeywords);
+    payload.append("primarySkills", JSON.stringify(Array.isArray(formData.primarySkills) ? formData.primarySkills : []));
+    payload.append("secondarySkills", JSON.stringify(Array.isArray(formData.secondarySkills) ? formData.secondarySkills : []));
+    if (Array.isArray(socialLinks) && socialLinks.length > 0)
+      payload.append("socialLinks", JSON.stringify(socialLinks));
+    if (formData.currentAccountId) payload.append("currentAccountId", formData.currentAccountId.toString());
+    if (formData.currentJobTitle) payload.append("currentJobTitle", formData.currentJobTitle);
     if (resumeFile) {
       payload.append("resume", resumeFile);
       payload.append("storageType", storageType || "aws");
@@ -2443,8 +2481,6 @@ export default function AddResourcePage() {
         {/* Breadcrumb */}
         <div className="add-resource-breadcrumb-row flex items-center justify-between px-6 lg:px-8 py-3 border-b border-gray-100">
           <div className="flex items-center text-sm text-gray-500 font-medium space-x-2">
-            <span className="hover:text-gray-900 cursor-pointer" onClick={handleClose}>Dashboard</span>
-            <span>/</span>
             <span className="hover:text-gray-900 cursor-pointer" onClick={handleClose}>Resources</span>
             <span>/</span>
             <span className="text-gray-900 font-bold">
