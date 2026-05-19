@@ -430,7 +430,8 @@ const ResourceTable = ({
     getStatusColor,
     formatDate,
     uniqueRoles,
-    resourceType = "internal" // "internal" or "external"
+    resourceType = "internal", // "internal" or "external"
+    hideActionCols = false, // hide resumeActions & actions columns (e.g. for system-admin)
 }) => {
     const totalPages = Math.ceil(filteredResources.length / itemsPerPage);
     const startIndex = (currentPageNum - 1) * itemsPerPage;
@@ -468,8 +469,10 @@ const ResourceTable = ({
         actions: 'Actions',
     };
 
-    // Only show cols relevant to current resource type
-    const visibleCols = columnOrder.filter(c => defaultCols.includes(c));
+    // Only show cols relevant to current resource type; hide action cols for system-admin
+    const visibleCols = columnOrder
+        .filter(c => defaultCols.includes(c))
+        .filter(c => !(hideActionCols && (c === 'resumeActions' || c === 'actions')));
 
     return (
         <motion.div
@@ -3740,6 +3743,7 @@ export default function ResourceManagement() {
                         formatDate={formatDate}
                         uniqueRoles={activeTab === "internal" ? uniqueInternalRoles : uniqueExternalRoles}
                         resourceType={activeTab}
+                        hideActionCols={userRole === 'system-admin'}
                     />
                 </>
             )}
