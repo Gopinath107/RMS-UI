@@ -970,51 +970,54 @@ const UserManagement = ({ setCurrentPage }) => {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+      <Card className="rounded-2xl shadow-sm border border-gray-100">
+        <CardContent className="p-5">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search by name, email, username, role, or company..."
+                placeholder="Search by name, email, username, role, or company"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-10"
+                className="pl-10 pr-10 h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white"
               />
               {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-                  onClick={() => setSearchTerm('')}
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-4 h-4 text-gray-500" />
-                </Button>
+                  <X className="w-4 h-4" />
+                </button>
               )}
             </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map(role => (
-                  <SelectItem key={role.roleId} value={role.roleName}>
-                    {role.roleName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-32">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="flex flex-col sm:flex-row gap-3 lg:w-auto">
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl bg-gray-50 border-gray-200">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {roles.map(role => (
+                    <SelectItem key={role.roleId} value={role.roleName}>
+                      {role.roleName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-11 w-full sm:w-44 rounded-xl bg-gray-50 border-gray-200">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
