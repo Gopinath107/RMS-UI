@@ -90,13 +90,13 @@ function SectionHeader({ title }) {
 
 // ── DOB helpers (shared) ─────────────────────────────────────────────────────
 /** Returns the max allowed DOB date string: today minus minimumAge years */
-function maxDobDateStr(minimumAge = 5) {
+function maxDobDateStr(minimumAge = 16) {
   const d = new Date();
   d.setFullYear(d.getFullYear() - minimumAge);
   return d.toISOString().split('T')[0];
 }
 /** Validates a DOB value string; returns an error message or empty string */
-function validateDobValue(value, minimumAge = 5) {
+function validateDobValue(value, minimumAge = 16) {
   if (!value) return '';
   const selected = new Date(value);
   const today = new Date();
@@ -169,8 +169,8 @@ const ProfileTab = React.memo(({
               set('currentAccountId', selectedId);
               set('client', client ? (client.accountName || client.name) : '');
             }}
-            options={clients.map(c => ({ 
-              value: (c.accountId || c.id)?.toString(), 
+            options={clients.map(c => ({
+              value: (c.accountId || c.id)?.toString(),
               label: c.accountName || c.name || 'Unknown Client'
             }))}
             placeholder="Select client"
@@ -240,13 +240,13 @@ const ProfileTab = React.memo(({
             <Input
               type="date"
               value={v('dateOfBirth')}
-              max={maxDobDateStr(5)}
+              max={maxDobDateStr(16)}
               min="1900-01-01"
               onChange={e => {
                 const val = e.target.value;
                 set('dateOfBirth', val);
                 // Inline DOB validation — errors are passed down via the errors prop
-                const err = validateDobValue(val, 5);
+                const err = validateDobValue(val, 16);
                 if (errors !== undefined && typeof set === 'function') {
                   // Signal error up via a synthetic errors key update if handler is available
                   // We store it on the formData side via a dedicated callback prop if provided
@@ -669,10 +669,10 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData, onSave
   const handleAdd = () => {
     if (!newDoc.documentType) { setErr('Please select a document type.'); return; }
     if (!newDoc.file) { setErr('Please choose a file to upload.'); return; }
-    
+
     // Capture the client name at the time of addition to ensure it's preserved in the table
     const currentClient = formData?.client || '-';
-    
+
     setDocs(prev => [...prev, {
       ...newDoc,
       documentName: newDoc.file.name,
@@ -1255,7 +1255,7 @@ export default function AddResourcePage() {
   useEffect(() => {
     if (formData.client && !formData.currentAccountId && clients.length > 0) {
       const trimmedClient = formData.client.trim().toLowerCase();
-      const match = clients.find(c => 
+      const match = clients.find(c =>
         (c.accountName || '').trim().toLowerCase() === trimmedClient
       );
       if (match) {
@@ -1435,10 +1435,16 @@ export default function AddResourcePage() {
           payload.append('location', formData.location || '');
           payload.append('employmentType', formData.employmentType || 'Regular');
           payload.append('status', formData.status || 'Bench');
+          // Inside your handleAutoSave function for Employees
           const res = await EmployeeService.createEmployee(payload);
           if (res?.data?.success) {
-            const createdId = res.data.result?.employeeId || res.data.result?.id;
-            if (createdId) return { id: createdId };
+            const createdId = res.data.result?.employeeId;
+            if (createdId) {
+              // 🔴 VITAL FIX: Tell React state we have an ID now!
+              // This forces all future autosaves to use PUT /update
+              setFormData(prev => ({ ...prev, employeeId: createdId }));
+              return { id: createdId };
+            }
           }
         } else {
           const companyId = formData.companyId || companies[0]?.companyId || 1;
@@ -1447,10 +1453,15 @@ export default function AddResourcePage() {
           payload.append('experienceYears', String(Number(formData.experienceYears) || 0));
           payload.append('location', formData.location || '');
           payload.append('status', 'notAvailable');
+          // Inside your handleAutoSave function for Candidates
           const res = await CandidateService.createCandidate(payload);
           if (res?.data?.success) {
-            const createdId = res.data.result?.candidateId || res.data.result?.id;
-            if (createdId) return { id: createdId };
+            const createdId = res.data.result?.candidateId;
+            if (createdId) {
+              // 🔴 VITAL FIX: Tell React state we have an ID now!
+              setFormData(prev => ({ ...prev, candidateId: createdId }));
+              return { id: createdId };
+            }
           }
         }
       }
@@ -1591,7 +1602,7 @@ export default function AddResourcePage() {
 
     // Date of Birth
     if (formData.dateOfBirth) {
-      const dobErr = validateDobValue(formData.dateOfBirth, 5);
+      const dobErr = validateDobValue(formData.dateOfBirth, 16);
       if (dobErr) {
         newErrors.dateOfBirth = dobErr;
         isValid = false;
@@ -1599,11 +1610,11 @@ export default function AddResourcePage() {
     }
 
     setErrors(newErrors);
-    
+
     if (!isValid) {
       toast.error("Please correct the highlighted errors before submitting");
     }
-    
+
     return isValid;
   };
 
@@ -2088,7 +2099,7 @@ export default function AddResourcePage() {
     setFormData(prev => ({ ...prev, [key]: val }));
     // Live DOB validation — show/clear error immediately as user picks a date
     if (key === 'dateOfBirth') {
-      const dobErr = validateDobValue(val, 5);
+      const dobErr = validateDobValue(val, 16);
       setErrors(prev => ({ ...prev, dateOfBirth: dobErr || undefined }));
     }
   }, []);
