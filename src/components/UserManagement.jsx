@@ -38,6 +38,9 @@ const UserManagement = ({ setCurrentPage }) => {
   const [currentSkillPage, setCurrentSkillPage] = useState(1);
   const skillsPerPage = 5;
 
+  // Track the selected employee to restrict email choices
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -128,57 +131,51 @@ const UserManagement = ({ setCurrentPage }) => {
   };
 
   const mapToUi = (apiUsers) => {
-    // Create a map to group users by userId
+    // Backend now returns ONE row per user with a full `roles` array.
+    // We still guard against legacy flattened responses by de-duplicating on userId.
     const userMap = {};
 
     apiUsers.forEach(user => {
-      const userId = user.userId.toString();
+      const userId = String(user.userId);
 
-      // If this user doesn't exist in our map yet, create an entry
       if (!userMap[userId]) {
+        // Build the roles list from the rich `roles` field if present,
+        // otherwise fall back to single roleId/roleName for backward compat.
+        const richRoles = Array.isArray(user.roles) && user.roles.length > 0
+          ? user.roles
+          : (user.roleId ? [{ roleId: user.roleId, roleName: user.roleName || 'Unknown' }] : []);
+
         userMap[userId] = {
           id: userId,
           name: user.employeeName,
           email: user.email,
-          username: user.email.split('@')[0],
-          roles: [], // This will store all role objects
+          username: user.email ? user.email.split('@')[0] : '',
+          roles: richRoles,
+          roleIds: Array.isArray(user.roleIds) ? user.roleIds : richRoles.map(r => r.roleId),
           status: user.isActive ? 'Active' : 'Inactive',
           lastLogin: user.lastLogin || 'N/A',
           createdAt: user.createdAt || 'N/A',
           companyId: user.companyId,
           employeeId: user.employeeId,
-          companyName: user.companyName
+          companyName: user.companyName,
+          // Backward-compat single-role convenience fields
+          role: richRoles.length > 0 ? richRoles[0].roleName : 'unknown',
+          roleId: richRoles.length > 0 ? richRoles[0].roleId : '',
+          allRoles: richRoles.map(r => r.roleName).join(', ')
         };
-      }
-
-      // Add the role to the user's roles array
-      // Check if role already exists to avoid duplicates
-      const roleExists = userMap[userId].roles.some(r => r.roleId === user.roleId);
-      if (!roleExists && user.roleId) {
-        userMap[userId].roles.push({
-          roleId: user.roleId,
-          roleName: user.roleName || 'unknown'
-        });
+      } else {
+        // Legacy: same userId appeared twice (one row per role) — merge roles
+        if (user.roleId) {
+          const exists = userMap[userId].roles.some(r => r.roleId === user.roleId);
+          if (!exists) {
+            userMap[userId].roles.push({ roleId: user.roleId, roleName: user.roleName || 'Unknown' });
+            userMap[userId].roleIds.push(user.roleId);
+          }
+        }
       }
     });
 
-    // Convert the map back to array and set primary role (first role)
-    return Object.values(userMap).map(user => {
-      // Determine primary role (first role in array or 'unknown')
-      const primaryRole = user.roles.length > 0
-        ? user.roles[0].roleName
-        : 'unknown';
-
-      // Create a comma-separated string of all role names
-      const allRoleNames = user.roles.map(r => r.roleName).join(', ');
-
-      return {
-        ...user,
-        role: primaryRole, // Keep for backward compatibility
-        allRoles: allRoleNames, // New property for displaying all roles
-        roleId: user.roles.length > 0 ? user.roles[0].roleId : '' // Primary role ID
-      };
-    });
+    return Object.values(userMap);
   };
 
   const filteredUsers = users.filter(user => {
@@ -220,7 +217,40 @@ const UserManagement = ({ setCurrentPage }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  /**
+   * Called when the employee name select changes.
+   * Auto-fills email (work first, then personal) and username.
+   */
+  const handleEmployeeSelect = (empFullName) => {
+    const emp = employees.find(e => (e.firstName + ' ' + e.lastName) === empFullName);
+    setSelectedEmployee(emp || null);
+
+    const workEmail = emp?.email || '';
+    const personalEmail = emp?.personalEmailId || '';
+    const autoEmail = workEmail || personalEmail;
+    const autoUsername = autoEmail ? autoEmail.split('@')[0] : '';
+
+    setFormData(prev => ({
+      ...prev,
+      name: empFullName,
+      email: autoEmail,
+      username: autoUsername,
+    }));
+  };
+
+  /**
+   * Returns the set of valid emails for the currently selected employee.
+   * Both work email and personal email are accepted.
+   */
+  const getAllowedEmails = () => {
+    if (!selectedEmployee) return null; // null = no restriction (edit mode fallback)
+    const emails = [];
+    if (selectedEmployee.email) emails.push(selectedEmployee.email.toLowerCase());
+    if (selectedEmployee.personalEmailId) emails.push(selectedEmployee.personalEmailId.toLowerCase());
+    return emails;
   };
 
   const validateUserForm = (isEdit = false) => {
@@ -229,7 +259,16 @@ const UserManagement = ({ setCurrentPage }) => {
     if (!formData.companyId) { newErrors.companyId = 'Company is required'; isValid = false; }
     if (!formData.name) { newErrors.name = 'Full Name is required'; isValid = false; }
     if (!formData.email) { newErrors.email = 'Email is required'; isValid = false; }
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = 'Invalid email format'; isValid = false;
+    } else {
+      // Validate email is one of the allowed employee emails
+      const allowed = getAllowedEmails();
+      if (allowed !== null && allowed.length > 0 && !allowed.includes(formData.email.trim().toLowerCase())) {
+        newErrors.email = "Email must be the selected employee's work email or personal email.";
+        isValid = false;
+      }
+    }
     if (!formData.username) { newErrors.username = 'Username is required'; isValid = false; }
     if (!isEdit && !formData.password) { newErrors.password = 'Password is required'; isValid = false; }
     if (!formData.roleIds || formData.roleIds.length === 0) { newErrors.roleIds = 'At least one role is required'; isValid = false; }
@@ -481,6 +520,9 @@ const UserManagement = ({ setCurrentPage }) => {
 
   const openEditDialog = (user) => {
     setSelectedUser(user);
+    // Find employee so email validation can work in edit mode
+    const emp = employees.find(e => e.employeeId === user.employeeId);
+    setSelectedEmployee(emp || null);
     setFormData({
       name: user.name,
       email: user.email,
@@ -758,14 +800,14 @@ const UserManagement = ({ setCurrentPage }) => {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="name">Full Name *</Label>
-                  <Select value={formData.name} onValueChange={(value) => setFormData({ ...formData, name: value })}>
+                  <Select value={formData.name} onValueChange={handleEmployeeSelect}>
                     <SelectTrigger aria-invalid={!!errors.name}>
                       <SelectValue placeholder="Select employee name" />
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map(emp => (
-                        <SelectItem key={emp.employeeId} value={emp.firstName + " " + emp.lastName}>
-                          {emp.firstName + " " + emp.lastName}
+                        <SelectItem key={emp.employeeId} value={emp.firstName + ' ' + emp.lastName}>
+                          {emp.firstName + ' ' + emp.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -774,15 +816,32 @@ const UserManagement = ({ setCurrentPage }) => {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Enter email address"
-                    aria-invalid={!!errors.email}
-                  />
+                  {/* If employee has both emails, show a select; otherwise show input */}
+                  {selectedEmployee && (selectedEmployee.email || selectedEmployee.personalEmailId) ? (
+                    <Select value={formData.email} onValueChange={(val) => setFormData(prev => ({ ...prev, email: val, username: val.split('@')[0] }))}>
+                      <SelectTrigger aria-invalid={!!errors.email}>
+                        <SelectValue placeholder="Select employee email" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedEmployee.email && (
+                          <SelectItem value={selectedEmployee.email}>{selectedEmployee.email} (Work)</SelectItem>
+                        )}
+                        {selectedEmployee.personalEmailId && (
+                          <SelectItem value={selectedEmployee.personalEmailId}>{selectedEmployee.personalEmailId} (Personal)</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Select an employee first"
+                      aria-invalid={!!errors.email}
+                    />
+                  )}
                   {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                 </div>
                 <div className="grid gap-2">
@@ -1030,14 +1089,14 @@ const UserManagement = ({ setCurrentPage }) => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-name">Full Name *</Label>
-              <Select value={formData.name} onValueChange={(value) => setFormData({ ...formData, name: value })}>
+              <Select value={formData.name} onValueChange={handleEmployeeSelect}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select employee name" />
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map(emp => (
-                    <SelectItem key={emp.employeeId} value={emp.firstName + " " + emp.lastName}>
-                      {emp.firstName + " " + emp.lastName}
+                    <SelectItem key={emp.employeeId} value={emp.firstName + ' ' + emp.lastName}>
+                      {emp.firstName + ' ' + emp.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1045,13 +1104,30 @@ const UserManagement = ({ setCurrentPage }) => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-email">Email *</Label>
-              <Input
-                id="edit-email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
+              {selectedEmployee && (selectedEmployee.email || selectedEmployee.personalEmailId) ? (
+                <Select value={formData.email} onValueChange={(val) => setFormData(prev => ({ ...prev, email: val, username: val.split('@')[0] }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee email" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedEmployee.email && (
+                      <SelectItem value={selectedEmployee.email}>{selectedEmployee.email} (Work)</SelectItem>
+                    )}
+                    {selectedEmployee.personalEmailId && (
+                      <SelectItem value={selectedEmployee.personalEmailId}>{selectedEmployee.personalEmailId} (Personal)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="edit-email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                />
+              )}
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-username">Username *</Label>
