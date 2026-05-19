@@ -46,8 +46,11 @@ export const APP_ROUTES = [
   { path: '/pmo/interview-hub',      allowedRoles: ['pmo'] },
 
   // ── System Admin ────────────────────────────────────────────────
-  { path: '/admin',                  allowedRoles: ['system-admin'] },
-  { path: '/admin/system-settings',  allowedRoles: ['system-admin'] },
+  { path: '/admin',                    allowedRoles: ['system-admin'] },
+  { path: '/admin/resources',          allowedRoles: ['system-admin'] },
+  { path: '/admin/resources/add',      allowedRoles: ['system-admin'] },
+  { path: '/admin/interview-hub',      allowedRoles: ['system-admin'] },
+  { path: '/admin/system-settings',    allowedRoles: ['system-admin'] },
 
   // ── Portfolio Manager ────────────────────────────────────────────
   { path: '/portfolio',                    allowedRoles: ['portfolio-manager'] },

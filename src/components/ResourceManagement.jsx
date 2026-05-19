@@ -1048,6 +1048,9 @@ const ResourceTable = ({
 
 export default function ResourceManagement() {
     const navigate = useNavigate();
+    const userRole = localStorage.getItem('userRole');
+    const resourceBasePath = userRole === 'system-admin' ? '/admin/resources' : '/hr/resources';
+    const projectsPath = userRole === 'system-admin' ? '/admin' : '/hr/projects';
     const [activeTab, setActiveTab] = useState("internal");
 
     // Internal Resources State
@@ -3235,7 +3238,7 @@ export default function ResourceManagement() {
             skillName: skill
         }));
 
-        navigate(`/hr/resources/add?type=${activeTab}`, {
+        navigate(`${resourceBasePath}/add?type=${activeTab}`, {
             state: {
                 editResource: {
                     id: resource.id,
@@ -3540,14 +3543,14 @@ export default function ResourceManagement() {
                             </div>
                             <div className="flex flex-wrap justify-end gap-2">
                                 <Button
-                                    onClick={() => navigate('/hr/resources/add?type=' + activeTab)}
+                                    onClick={() => navigate(`${resourceBasePath}/add?type=${activeTab}`)}
                                     className="h-10 px-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add {activeTab === "internal" ? "Internal Resource" : "External Resource"}
                                 </Button>
                                 <Button
-                                    onClick={() => navigate('/hr/projects')}
+                                    onClick={() => navigate(projectsPath)}
                                     className="h-10 px-4 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg"
                                 >
                                     <Search className="w-4 h-4 mr-2" />

@@ -56,9 +56,9 @@ export default function SystemAdminSidebar({
   }, [userName]);
 
   const menuItems = [
-    { id: 'user-management',     label: 'User Management',     icon: Users,    description: 'Manage Users',     path: '/admin',               badge: userCount > 0 ? userCount : null },
-    { id: 'resource-management', label: 'Resource Management', icon: Database,  description: 'System Resources', path: '/admin' },
-    { id: 'interview-hub',       label: 'Interview Hub',       icon: MessageSquare, description: 'My Assigned Interviews', path: '/admin', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    { id: 'user-management',     label: 'User Management',     icon: Users,         description: 'Manage Users',          path: '/admin',               badge: userCount > 0 ? userCount : null },
+    { id: 'resource-management', label: 'Resource Management', icon: Database,       description: 'System Resources',      path: '/admin/resources' },
+    { id: 'interview-hub',       label: 'Interview Hub',       icon: MessageSquare,  description: 'My Assigned Interviews', path: '/admin/interview-hub', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
   ];
 
 
@@ -127,7 +127,10 @@ export default function SystemAdminSidebar({
         <div className="space-y-2 pb-20">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive =
+              item.path === '/admin'
+                ? location.pathname === '/admin'
+                : location.pathname.startsWith(item.path);
             
             return (
               <motion.div

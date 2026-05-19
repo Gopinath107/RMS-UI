@@ -922,6 +922,7 @@ const EMPTY_EXTERNAL = {
 export default function AddResourcePage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const resourceBasePath = localStorage.getItem('userRole') === 'system-admin' ? '/admin/resources' : '/hr/resources';
   const queryParams = new URLSearchParams(location.search);
   const editResource = location.state?.editResource || null;
   const isEditMode = Boolean(editResource?.id);
@@ -1561,7 +1562,7 @@ export default function AddResourcePage() {
 
   const handleClose = () => {
     clearDraft();
-    navigate('/hr/resources');
+    navigate(resourceBasePath);
   };
 
   const handleResumeParsed = (parsedData, file, isPartial) => {
@@ -1779,7 +1780,7 @@ export default function AddResourcePage() {
       if (response.data.success) {
         toast.success("Resource added successfully!");
         clearDraft();
-        navigate("/hr/resources");
+        navigate(resourceBasePath);
 
         setFormData({ ...EMPTY_INTERNAL });
         setSelectedSkills([]);
@@ -1948,7 +1949,7 @@ export default function AddResourcePage() {
         toast.success("External candidate added successfully!");
         Swal.close();
         clearDraft();
-        navigate("/hr/resources");
+        navigate(resourceBasePath);
 
         // Reset form
         setFormData({ ...EMPTY_EXTERNAL });
@@ -2080,7 +2081,7 @@ export default function AddResourcePage() {
       if (response?.data?.success) {
         toast.success("Resource updated successfully!");
         clearDraft();
-        navigate("/hr/resources");
+        navigate(resourceBasePath);
       } else {
         toast.error(response?.data?.errors?.[0] || "Failed to update resource.");
       }
@@ -2152,7 +2153,7 @@ export default function AddResourcePage() {
       if (response?.data?.success) {
         toast.success("External resource updated successfully!");
         clearDraft();
-        navigate("/hr/resources");
+        navigate(resourceBasePath);
       } else {
         toast.error(response?.data?.errors?.[0] || "Failed to update external resource.");
       }

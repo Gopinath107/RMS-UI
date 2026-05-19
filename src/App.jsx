@@ -207,6 +207,9 @@ function AppShell({ userRole, onLogout }) {
 
                 {/* ── System Admin ── */}
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['system-admin']}><UserManagement /></ProtectedRoute>} />
+                <Route path="/admin/resources" element={<ProtectedRoute allowedRoles={['system-admin']}><ResourceManagement /></ProtectedRoute>} />
+                <Route path="/admin/resources/add" element={<ProtectedRoute allowedRoles={['system-admin']}><AddResourcePage /></ProtectedRoute>} />
+                <Route path="/admin/interview-hub" element={<ProtectedRoute allowedRoles={['system-admin']}><InterviewHub /></ProtectedRoute>} />
                 <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={['system-admin']}><Placeholder title="System Settings" color="text-red-600" /></ProtectedRoute>} />
 
                 {/* ── Portfolio Manager ── */}
