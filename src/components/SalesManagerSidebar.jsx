@@ -54,8 +54,8 @@ function SalesManagerSidebar({
 
   const menuItems = [
     { id: 'opportunity-requests', label: 'Opportunity Requests', icon: Target,       description: 'Create & Track Opportunities', path: '/sales' },
-    { id: 'client-list',          label: 'Clients',              icon: Building2,    description: 'Client Information',           path: '/sales' },
-    { id: 'interview-hub',        label: 'Interview Hub',        icon: MessageSquare,description: 'My Assigned Interviews',       path: '/sales', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    { id: 'client-list',          label: 'Clients',              icon: Building2,    description: 'Client Information',           path: '/sales/clients' },
+    { id: 'interview-hub',        label: 'Interview Hub',        icon: MessageSquare,description: 'My Assigned Interviews',       path: '/sales/interview-hub', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
   ];
 
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -44,6 +44,7 @@ const staticSkillOptions = [
   "Python","SQL","PHP","Spring Boot","AIML","Node JS","TypeScript",
   "HTML/CSS","C++"
 ];
+const noop = () => {};
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -55,7 +56,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
+const OpportunityRequests = ({ setCurrentPage = noop }) => {
   const [opportunityRequests, setOpportunityRequests] = useState([]);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);               // <-- NEW
@@ -69,8 +70,12 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
   const [secondarySkillInput, setSecondarySkillInput] = useState("");
   const [filteredPrimary, setFilteredPrimary] = useState([]);
   const [filteredSecondary, setFilteredSecondary] = useState([]);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [errors, setErrors] = useState({});
+  const isLoadingRequestsRef = useRef(false);
+  const hasShownLoadRequestsErrorRef = useRef(false);
+  const hasShownFetchProjectsErrorRef = useRef(false);
+  const hasShownFetchClientsErrorRef = useRef(false);
+  const hasShownFetchSkillsErrorRef = useRef(false);
 
   const [opportunityForm, setOpportunityForm] = useState({
     projectId: "",
@@ -94,27 +99,22 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
 
   const skillOptions = useMemo(() => skills.map(s => s.skillName), [skills]);
 
-  useEffect(() => {
-    setCurrentPage("opportunity-requests");
-    fetchProjects();
-    fetchClients();               // <-- NEW
-    fetchSkills();
-    loadOpportunityRequests();
-  }, [setCurrentPage, refreshKey]);
-
   /* ------------------- FETCH DATA ------------------- */
   const fetchProjects = async () => {
     try {
       const res = await ProjectService.fetchProjectList();
       if (res.data.success && Array.isArray(res.data.result)) {
         setProjects(res.data.result);
+        hasShownFetchProjectsErrorRef.current = false;
       } else {
         setProjects([]);
-        toast.error("No projects available.");
       }
     } catch (err) {
       console.error("Fetch projects error:", err);
-      toast.error("Failed to fetch projects.");
+      if (!hasShownFetchProjectsErrorRef.current) {
+        toast.error("Failed to fetch projects.");
+        hasShownFetchProjectsErrorRef.current = true;
+      }
     }
   };
 
@@ -122,9 +122,13 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
     try {
       const list = await ClientService.fetchClientList();
       setClients(Array.isArray(list) ? list : []);
+      hasShownFetchClientsErrorRef.current = false;
     } catch (err) {
       console.error("Fetch clients error:", err);
-      toast.error("Failed to fetch clients.");
+      if (!hasShownFetchClientsErrorRef.current) {
+        toast.error("Failed to fetch clients.");
+        hasShownFetchClientsErrorRef.current = true;
+      }
     }
   };
 
@@ -141,6 +145,7 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
       setSkills(combined);
       setFilteredPrimary(combined.slice(0, 12).map(s => s.skillName));
       setFilteredSecondary(combined.slice(12, 24).map(s => s.skillName));
+      hasShownFetchSkillsErrorRef.current = false;
     } catch (error) {
       console.error(error);
       const staticSkills = staticSkillOptions
@@ -149,7 +154,10 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
       setSkills(staticSkills);
       setFilteredPrimary(staticSkills.slice(0, 15).map(s => s.skillName));
       setFilteredSecondary(staticSkills.slice(15, 30).map(s => s.skillName));
-      toast.error("Failed to fetch skills, using static list");
+      if (!hasShownFetchSkillsErrorRef.current) {
+        toast.error("Failed to fetch skills, using static list");
+        hasShownFetchSkillsErrorRef.current = true;
+      }
     }
   };
 
@@ -243,6 +251,8 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
 
   /* ------------------- LOAD REQUESTS ------------------- */
   const loadOpportunityRequests = async () => {
+    if (isLoadingRequestsRef.current) return;
+    isLoadingRequestsRef.current = true;
     try {
       const response = await OpportunityService.fetchResourceRequestGroups();
       if (response.data.success && Array.isArray(response.data.result)) {
@@ -251,14 +261,13 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
           .filter(g => g.createdBy == userId)
           .map(g => {
             const pd = g.projectDetails;
-            const proj = projects.find(p => p.projectId === pd?.projectId);
             return {
               groupId: g.groupId,
               requestId: `OPP-${String(g.groupId).padStart(3, "0")}`,
               companyId: g.companyId,
-              companyName: proj?.accountName || g.companyName || pd?.companyName || "Unknown",
+              companyName: g.companyName || pd?.companyName || "Unknown",
               projectId: pd?.projectId,
-              projectName: pd?.projectName || proj?.projectName || "N/A",
+              projectName: pd?.projectName || "N/A",
               createdBy: g.createdBy,
               createdByName: g.createdByName || "N/A",
               createdByEmail: g.createdByEmail || "N/A",
@@ -269,18 +278,29 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
             };
           });
         setOpportunityRequests(groups);
+        hasShownLoadRequestsErrorRef.current = false;
       } else {
         setOpportunityRequests([]);
-        toast.error("No opportunity requests.");
       }
     } catch (e) {
       console.error(e);
       setOpportunityRequests([]);
-      toast.error("Failed to load requests.");
+      if (!hasShownLoadRequestsErrorRef.current) {
+        toast.error("Failed to load requests.");
+        hasShownLoadRequestsErrorRef.current = true;
+      }
+    } finally {
+      isLoadingRequestsRef.current = false;
     }
   };
 
-  useEffect(() => { if (projects.length) loadOpportunityRequests(); }, [projects]);
+  useEffect(() => {
+    setCurrentPage("opportunity-requests");
+    fetchProjects();
+    fetchClients();
+    fetchSkills();
+    loadOpportunityRequests();
+  }, [setCurrentPage]);
 
   /* ------------------- MODAL HANDLERS ------------------- */
   const handleCreateOpportunity = () => {
@@ -404,7 +424,6 @@ const OpportunityRequests = ({ setCurrentPage = () => {} }) => {
 
       if (oppResp.data?.success) {
         await loadOpportunityRequests();
-        setRefreshKey(k => k + 1);
         Swal.close();
         Swal.fire({
           title: "Success!",

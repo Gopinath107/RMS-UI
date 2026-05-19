@@ -144,8 +144,7 @@ const ProfileTab = React.memo(({
             validationError={errors?.companyId}
           />
         </F>
-        {resourceType === 'internal' && (
-          <F label="Department" required error={errors?.departmentId}>
+        <F label="Department" required={resourceType === 'internal'} error={errors?.departmentId}>
             <SearchableSelect
               value={v('departmentId')}
               onValueChange={val => set('departmentId', Number(val))}
@@ -159,7 +158,6 @@ const ProfileTab = React.memo(({
               onCreate={onCreateDepartment}
             />
           </F>
-        )}
         <F label="Client">
           <SearchableSelect
             value={formData.currentAccountId?.toString()}
@@ -885,9 +883,10 @@ const EMPTY_INTERNAL = {
 };
 
 const EMPTY_EXTERNAL = {
-  firstName: "", middleName: "", lastName: "",
-  email: "", phoneNumber: "",
+  companyId: null, firstName: "", middleName: "", lastName: "",
+  email: "", phoneNumber: "", departmentId: null,
   role: "", experienceYears: "", location: "",
+  currentProjectId: null, currentAccountId: null,
   currentProject: "", client: "",
   joiningDate: "", status: "Not Allocated",
   employmentType: "Contract",
@@ -1268,32 +1267,85 @@ export default function AddResourcePage() {
             ...prev,
             employeeId: source.candidateId ?? prev.employeeId,
             companyId: source.companyId ?? prev.companyId,
+            departmentId: source.departmentId ?? prev.departmentId,
+            // Name
             firstName: source.firstName ?? prev.firstName,
+            middleName: source.middleName ?? prev.middleName,
             lastName: source.lastName ?? prev.lastName,
+            // Contact
             email: source.email ?? prev.email,
+            personalEmailId: source.personalEmailId ?? prev.personalEmailId,
             phoneNumber: source.phoneNumber ?? prev.phoneNumber,
-            location: source.location ?? prev.location,
-            experienceYears: source.experienceYears ?? prev.experienceYears,
-            status: source.status ?? prev.status,
+            primaryCountryCode: source.primaryCountryCode ?? prev.primaryCountryCode,
+            primaryContactNo: source.primaryContactNo ?? prev.primaryContactNo,
+            secondaryCountryCode: source.secondaryCountryCode ?? prev.secondaryCountryCode,
+            secondaryContactNo: source.secondaryContactNo ?? prev.secondaryContactNo,
+            dateOfBirth: source.dateOfBirth ?? prev.dateOfBirth,
             gender: source.gender ?? prev.gender,
+            // Identity & Citizenship
+            countryOfCitizenship: source.countryOfCitizenship ?? prev.countryOfCitizenship,
+            documentType: source.documentType ?? prev.documentType,
+            documentNumber: source.documentNumber ?? prev.documentNumber,
+            visa: source.visa ?? prev.visa,
+            visaType: source.visaType ?? prev.visaType,
+            securityClearance: source.securityClearance ?? prev.securityClearance,
+            // Address
+            country: source.country ?? prev.country,
+            state: source.state ?? prev.state,
+            city: source.city ?? prev.city,
+            zipCode: source.zipCode ?? prev.zipCode,
+            street: source.street ?? prev.street,
+            location: source.location ?? prev.location,
+            // Availability
+            availabilityToJoin: source.availabilityToJoin ?? prev.availabilityToJoin,
+            interviewAvailability: source.interviewAvailability ?? prev.interviewAvailability,
+            // Education
+            highestQualification: source.highestQualification ?? prev.highestQualification,
+            universityName: source.universityName ?? prev.universityName,
+            dateOfQualification: source.dateOfQualification ?? prev.dateOfQualification,
+            usaDegree: source.usaDegree ?? prev.usaDegree,
             degrees: source.degrees ?? prev.degrees,
             specialization: source.specialization ?? prev.specialization,
             yearOfPassing: source.yearOfPassing ?? prev.yearOfPassing,
-            profileSummary: source.profileSummary ?? prev.profileSummary,
-            trainingSummary: source.trainingSummary ?? prev.trainingSummary,
-            certificationSummary: source.certificationSummary ?? prev.certificationSummary,
+            // Professional
+            currentJobTitle: source.currentJobTitle ?? prev.currentJobTitle,
+            mostRecentEmployer: source.mostRecentEmployer ?? prev.mostRecentEmployer,
+            totalExperience: source.totalExperience ?? prev.totalExperience,
+            experienceYears: source.experienceYears ?? prev.experienceYears,
+            employmentType: source.employmentType ?? prev.employmentType,
+            relocate: source.relocate ?? prev.relocate,
+            status: source.status ?? prev.status,
+            // Compensation
+            currency: source.currency ?? prev.currency,
+            frequency: source.frequency ?? prev.frequency,
+            sourcingRate: source.sourcingRate ?? prev.sourcingRate,
+            // External-specific
             currentCompany: source.currentCompany ?? prev.currentCompany,
             currentCtc: source.currentCtc ?? prev.currentCtc,
             expectedCtc: source.expectedCtc ?? prev.expectedCtc,
             noticePeriod: source.noticePeriod ?? prev.noticePeriod,
             preferredLocation: source.preferredLocation ?? prev.preferredLocation,
             comments: source.comments ?? prev.comments,
+            vendorName: source.vendorName ?? prev.vendorName,
+            vendorContact: source.vendorContact ?? prev.vendorContact,
+            // Client
+            currentAccountId: source.currentAccountId ?? prev.currentAccountId,
+            client: source.currentClient ?? prev.client,
+            // Summaries & Skills
+            profileSummary: source.profileSummary ?? prev.profileSummary,
+            trainingSummary: source.trainingSummary ?? prev.trainingSummary,
+            certificationSummary: source.certificationSummary ?? prev.certificationSummary,
+            resumeSummary: source.resumeSummary ?? prev.resumeSummary,
+            suggestedKeywords: source.suggestedKeywords ?? prev.suggestedKeywords,
             primarySkills: incomingPrimarySkills.length > 0
               ? incomingPrimarySkills
               : (incomingSkillNames.length > 0 ? incomingSkillNames : prev.primarySkills),
             secondarySkills: incomingSecondarySkills.length > 0 ? incomingSecondarySkills : prev.secondarySkills,
           }));
           if (Array.isArray(source.socialLinks)) setSocialLinks(source.socialLinks);
+          else if (source.socialLinksJson) {
+            try { setSocialLinks(JSON.parse(source.socialLinksJson)); } catch { /* ignore */ }
+          }
           if (Array.isArray(source.skillIds) || Array.isArray(source.skillNames)) {
             const ids = source.skillIds || [];
             const names = source.skillNames || [];
@@ -1368,7 +1420,7 @@ export default function AddResourcePage() {
     // Company / Department
     if (fd.companyId) payload.append('companyId', String(fd.companyId));
     else if (companies[0]?.companyId) payload.append('companyId', String(companies[0].companyId));
-    if (resourceType === 'internal' && fd.departmentId) payload.append('departmentId', String(fd.departmentId));
+    if (fd.departmentId) payload.append('departmentId', String(fd.departmentId));
 
     // Core identity
     if (fd.firstName?.trim()) payload.append('firstName', fd.firstName.trim());
@@ -1525,8 +1577,8 @@ export default function AddResourcePage() {
           if (res?.data?.success) {
             const createdId = res.data.result?.candidateId;
             if (createdId) {
-              // 🔴 VITAL FIX: Tell React state we have an ID now!
-              setFormData(prev => ({ ...prev, candidateId: createdId }));
+              // Store as employeeId so all subsequent code paths (autosave, final submit) work identically to internal
+              setFormData(prev => ({ ...prev, employeeId: createdId }));
               return { id: createdId };
             }
           }
@@ -1643,16 +1695,15 @@ export default function AddResourcePage() {
       isValid = false;
     }
 
-    // Specific to internal
-    if (resourceType === 'internal') {
-      if (!formData.companyId) {
-        newErrors.companyId = "Company is required";
-        isValid = false;
-      }
-      if (!formData.departmentId) {
-        newErrors.departmentId = "Department is required";
-        isValid = false;
-      }
+    // Company required for both internal and external
+    if (!formData.companyId) {
+      newErrors.companyId = "Company is required";
+      isValid = false;
+    }
+    // Department required only for internal
+    if (resourceType === 'internal' && !formData.departmentId) {
+      newErrors.departmentId = "Department is required";
+      isValid = false;
     }
 
     // Additional validations
@@ -1847,6 +1898,7 @@ export default function AddResourcePage() {
     payload.append("experienceYears", Number(formData.experienceYears) || 0);
     payload.append("location", formData.location || "");
     payload.append("joiningDate", formData.joiningDate || new Date().toISOString().split("T")[0]);
+    if (formData.departmentId) payload.append("departmentId", String(formData.departmentId));
 
     // FIXED: Map the selected status to API expected value
     const statusMapping = {
@@ -1944,7 +1996,15 @@ export default function AddResourcePage() {
     });
 
     try {
-      const response = await CandidateService.createCandidate(payload);
+      // Check if a draft already exists — if so, update it instead of creating a new record
+      const draftId = formData.employeeId || sessionStorage.getItem(`${draftKey}_autoSaveId`);
+      let response;
+      if (draftId) {
+        payload.append('candidateId', String(draftId));
+        response = await CandidateService.updateCandidate(payload);
+      } else {
+        response = await CandidateService.createCandidate(payload);
+      }
       if (response.data.success) {
         toast.success("External candidate added successfully!");
         Swal.close();
@@ -2114,6 +2174,7 @@ export default function AddResourcePage() {
     payload.append("location", formData.location || "");
     payload.append("joiningDate", formData.joiningDate || new Date().toISOString().split('T')[0]);
     payload.append("status", mapStatusToCandidate(formData.status));
+    if (formData.departmentId) payload.append("departmentId", String(formData.departmentId));
     selectedSkills.forEach((s) => {
       if (s.skillId > 0) payload.append("skillIds", String(s.skillId));
     });
@@ -2141,7 +2202,44 @@ export default function AddResourcePage() {
     payload.append("noticePeriod", formData.noticePeriod || "");
     payload.append("preferredLocation", formData.preferredLocation || "");
     payload.append("comments", formData.comments || "");
-    if (formData.role) payload.append("currentJobTitle", formData.role);
+    // New fields for update
+    if (formData.middleName) payload.append("middleName", formData.middleName);
+    if (formData.dateOfBirth) payload.append("dateOfBirth", formData.dateOfBirth);
+    if (formData.primaryCountryCode) payload.append("primaryCountryCode", formData.primaryCountryCode);
+    if (formData.primaryContactNo) payload.append("primaryContactNo", formData.primaryContactNo);
+    if (formData.secondaryCountryCode) payload.append("secondaryCountryCode", formData.secondaryCountryCode);
+    if (formData.secondaryContactNo) payload.append("secondaryContactNo", formData.secondaryContactNo);
+    if (formData.countryOfCitizenship) payload.append("countryOfCitizenship", formData.countryOfCitizenship);
+    if (formData.documentType) payload.append("documentType", formData.documentType);
+    if (formData.documentNumber) payload.append("documentNumber", formData.documentNumber);
+    if (formData.securityClearance) payload.append("securityClearance", formData.securityClearance);
+    if (formData.visa) payload.append("visa", formData.visa);
+    if (formData.visaType) payload.append("visaType", formData.visaType);
+    if (formData.country) payload.append("country", formData.country);
+    if (formData.state) payload.append("state", formData.state);
+    if (formData.city) payload.append("city", formData.city);
+    if (formData.zipCode) payload.append("zipCode", formData.zipCode);
+    if (formData.street) payload.append("street", formData.street);
+    if (formData.availabilityToJoin) payload.append("availabilityToJoin", formData.availabilityToJoin);
+    if (formData.interviewAvailability) payload.append("interviewAvailability", formData.interviewAvailability);
+    if (formData.highestQualification) payload.append("highestQualification", formData.highestQualification);
+    if (formData.universityName) payload.append("universityName", formData.universityName);
+    if (formData.dateOfQualification) payload.append("dateOfQualification", formData.dateOfQualification);
+    if (formData.usaDegree) payload.append("usaDegree", formData.usaDegree);
+    if (formData.currentJobTitle) payload.append("currentJobTitle", formData.currentJobTitle);
+    if (formData.mostRecentEmployer) payload.append("mostRecentEmployer", formData.mostRecentEmployer);
+    if (formData.totalExperience) payload.append("totalExperience", Number(formData.totalExperience));
+    if (formData.relocate) payload.append("relocate", formData.relocate);
+    if (formData.currency) payload.append("currency", formData.currency);
+    if (formData.frequency) payload.append("frequency", formData.frequency);
+    if (formData.sourcingRate) payload.append("sourcingRate", Number(formData.sourcingRate));
+    if (formData.resumeSummary) payload.append("resumeSummary", formData.resumeSummary);
+    if (formData.suggestedKeywords) payload.append("suggestedKeywords", formData.suggestedKeywords);
+    payload.append("primarySkills", JSON.stringify(Array.isArray(formData.primarySkills) ? formData.primarySkills : []));
+    payload.append("secondarySkills", JSON.stringify(Array.isArray(formData.secondarySkills) ? formData.secondarySkills : []));
+    if (Array.isArray(socialLinks) && socialLinks.length > 0)
+      payload.append("socialLinks", JSON.stringify(socialLinks));
+    if (formData.currentAccountId) payload.append("currentAccountId", formData.currentAccountId.toString());
     if (resumeFile) {
       payload.append("resume", resumeFile);
       payload.append("storageType", storageType || "aws");
@@ -2443,8 +2541,6 @@ export default function AddResourcePage() {
         {/* Breadcrumb */}
         <div className="add-resource-breadcrumb-row flex items-center justify-between px-6 lg:px-8 py-3 border-b border-gray-100">
           <div className="flex items-center text-sm text-gray-500 font-medium space-x-2">
-            <span className="hover:text-gray-900 cursor-pointer" onClick={handleClose}>Dashboard</span>
-            <span>/</span>
             <span className="hover:text-gray-900 cursor-pointer" onClick={handleClose}>Resources</span>
             <span>/</span>
             <span className="text-gray-900 font-bold">
