@@ -937,6 +937,12 @@ export default function AddResourcePage() {
   const [step, setStep] = useState(isEditMode ? 'form' : (restoredDraft?.formData ? 'form' : 'upload')); // 'upload' | 'form'
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [errors, setErrors] = useState({});
+  // Saved resume from backend (edit mode)
+  const [savedResumeUrl, setSavedResumeUrl] = useState(null);
+  const [savedResumeMimeType, setSavedResumeMimeType] = useState(null);
+  const [savedResumeFileName, setSavedResumeFileName] = useState(null);
+  const [isLoadingSavedResume, setIsLoadingSavedResume] = useState(false);
+  const replaceResumeInputRef = useRef(null);
 
   const [formData, setFormData] = useState(() => ({
     ...(initialType === 'internal' ? EMPTY_INTERNAL : EMPTY_EXTERNAL),
@@ -2000,7 +2006,10 @@ export default function AddResourcePage() {
       payload.append("secondarySkills", JSON.stringify(formData.secondarySkills));
     if (Array.isArray(socialLinks) && socialLinks.length > 0)
       payload.append("socialLinks", JSON.stringify(socialLinks));
-    if (resumeFile) payload.append("resume", resumeFile);
+    if (resumeFile) {
+      payload.append("resume", resumeFile);
+      payload.append("storageType", storageType || "aws");
+    }
     appendDocumentsToPayload(payload);
 
     try {
@@ -2069,7 +2078,10 @@ export default function AddResourcePage() {
     payload.append("preferredLocation", formData.preferredLocation || "");
     payload.append("comments", formData.comments || "");
     if (formData.role) payload.append("currentJobTitle", formData.role);
-    if (resumeFile) payload.append("resume", resumeFile);
+    if (resumeFile) {
+      payload.append("resume", resumeFile);
+      payload.append("storageType", storageType || "aws");
+    }
     appendDocumentsToPayload(payload);
 
     try {
@@ -2121,9 +2133,60 @@ export default function AddResourcePage() {
     if (resumeFile) return URL.createObjectURL(resumeFile);
     return null;
   }, [resumeFile]);
-  const isPdfResume = resumeFile?.type === "application/pdf" || resumeFile?.name?.toLowerCase().endsWith(".pdf");
-  const isDocxResume = resumeFile?.name?.toLowerCase().endsWith('.docx');
-  const isLegacyDocResume = resumeFile?.name?.toLowerCase().endsWith('.doc');
+  const activePreviewUrl = previewUrl || savedResumeUrl;
+  const activePreviewMime = resumeFile?.type || savedResumeMimeType || 'application/octet-stream';
+  const activePreviewName = resumeFile?.name || savedResumeFileName || 'resume';
+  const isPdfResume = activePreviewMime === 'application/pdf' || activePreviewName?.toLowerCase().endsWith('.pdf');
+  const isDocxResume = (resumeFile?.name || '').toLowerCase().endsWith('.docx');
+  const isLegacyDocResume = (resumeFile?.name || '').toLowerCase().endsWith('.doc');
+
+  // Fetch saved resume from backend when opening modal in edit mode (no local file)
+  const handleOpenResumePreview = useCallback(async () => {
+    setShowResumeModal(true);
+    if (resumeFile || savedResumeUrl) return; // already have what we need
+    if (!isEditMode || !formData.employeeId) return;
+    setIsLoadingSavedResume(true);
+    try {
+      const resp = resourceType === 'internal'
+        ? await EmployeeService.viewResume(formData.employeeId)
+        : await CandidateService.viewResume(formData.employeeId);
+      const blob = resp.data;
+      const mime = blob.type || 'application/pdf';
+      const url = URL.createObjectURL(blob);
+      const disposition = resp.headers?.['content-disposition'] || '';
+      const nameMatch = disposition.match(/filename="?([^"]+)"?/);
+      setSavedResumeUrl(url);
+      setSavedResumeMimeType(mime);
+      setSavedResumeFileName(nameMatch?.[1] || 'resume.pdf');
+    } catch {
+      toast.error('Could not load saved resume from server.');
+    } finally {
+      setIsLoadingSavedResume(false);
+    }
+  }, [resumeFile, savedResumeUrl, isEditMode, formData.employeeId, resourceType]);
+
+  // Cleanup saved resume blob URL on unmount
+  useEffect(() => {
+    return () => { if (savedResumeUrl) URL.revokeObjectURL(savedResumeUrl); };
+  }, [savedResumeUrl]);
+
+  // Handler for Replace Resume hidden input
+  const handleReplaceResumeChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i)) {
+      toast.error('Only PDF, DOC, or DOCX files are allowed.');
+      return;
+    }
+    setResumeFile(file);
+    // revoke old saved URL since we now have a fresh local file
+    if (savedResumeUrl) { URL.revokeObjectURL(savedResumeUrl); setSavedResumeUrl(null); }
+    toast.success(`Resume replaced: ${file.name}`);
+    e.target.value = '';
+  }, [savedResumeUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2179,6 +2242,7 @@ export default function AddResourcePage() {
   useEffect(() => {
     return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
   }, [previewUrl]);
+
 
   const handleResumeDownload = useCallback(() => {
     if (!resumeFile) {
@@ -2345,6 +2409,14 @@ export default function AddResourcePage() {
             </div>
           </div>
           <div className="add-resource-resume-actions flex items-center gap-3 self-end md:self-auto">
+            {/* Hidden input for replacing resume */}
+            <input
+              ref={replaceResumeInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              onChange={handleReplaceResumeChange}
+            />
             <Button
               type="button"
               variant="outline"
@@ -2354,11 +2426,23 @@ export default function AddResourcePage() {
             >
               {isEditMode ? 'Update' : 'Save'} Resource
             </Button>
+            {isEditMode && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => replaceResumeInputRef.current?.click()}
+                className="bg-white hover:bg-amber-50 border-amber-300 text-amber-700"
+              >
+                <Upload className="w-3.5 h-3.5 mr-2" />
+                Replace Resume
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowResumeModal(true)}
+              onClick={handleOpenResumePreview}
               className="bg-white hover:bg-indigo-50 border-indigo-200 text-indigo-600"
             >
               <Eye className="w-3.5 h-3.5 mr-2" />
@@ -2404,8 +2488,8 @@ export default function AddResourcePage() {
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-lg font-bold text-gray-900">Resume Preview</h3>
-                {resumeFile && (
-                  <span className="text-sm text-gray-500 font-medium truncate max-w-xs">{resumeFile.name}</span>
+                {activePreviewName && activePreviewName !== 'resume' && (
+                  <span className="text-sm text-gray-500 font-medium truncate max-w-xs">{activePreviewName}</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -2429,21 +2513,26 @@ export default function AddResourcePage() {
 
             {/* Modal Body — full-space preview */}
             <div className="flex-1 overflow-hidden bg-gray-100 rounded-b-xl">
-              {previewUrl ? (
+              {isLoadingSavedResume ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <div className="w-10 h-10 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mb-4" />
+                  <p className="text-sm text-gray-500">Loading resume from server…</p>
+                </div>
+              ) : activePreviewUrl ? (
                 isPdfResume ? (
                   <object
-                    data={previewUrl}
-                    type={resumeFile?.type || 'application/octet-stream'}
+                    data={activePreviewUrl}
+                    type={activePreviewMime}
                     className="w-full h-full"
                   >
-                    <embed src={previewUrl} type={resumeFile?.type || 'application/octet-stream'} className="w-full h-full" />
+                    <embed src={activePreviewUrl} type={activePreviewMime} className="w-full h-full" />
                     <p className="p-8 text-center text-gray-500">This browser does not support PDF preview. Please download to view.</p>
                   </object>
                 ) : (
                   <div className="h-full overflow-y-auto p-6 text-gray-700">
                     <div className="rounded-md border border-blue-200 bg-blue-50 p-4 mb-4">
                       <p className="font-semibold text-blue-900">Document Preview</p>
-                      <p className="text-xs text-blue-700 mt-1 break-all">File: {resumeFile?.name}</p>
+                      <p className="text-xs text-blue-700 mt-1 break-all">File: {activePreviewName}</p>
                     </div>
                     {isDocPreviewLoading && (
                       <div className="bg-white border border-gray-200 rounded-md p-4 text-sm text-gray-600">Rendering DOCX preview...</div>
@@ -2464,8 +2553,8 @@ export default function AddResourcePage() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
                   <FileText className="w-20 h-20 mb-4 text-gray-300" />
-                  <p className="text-xl font-medium text-gray-500">No Resume Uploaded</p>
-                  <p className="text-sm mt-1">Upload a resume to preview here</p>
+                  <p className="text-xl font-medium text-gray-500">No Resume Available</p>
+                  <p className="text-sm mt-1">{isEditMode ? 'No resume uploaded for this resource' : 'Upload a resume to preview here'}</p>
                 </div>
               )}
             </div>
