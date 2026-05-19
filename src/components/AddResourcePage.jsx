@@ -883,9 +883,10 @@ const EMPTY_INTERNAL = {
 };
 
 const EMPTY_EXTERNAL = {
-  firstName: "", middleName: "", lastName: "",
-  email: "", phoneNumber: "",
+  companyId: null, firstName: "", middleName: "", lastName: "",
+  email: "", phoneNumber: "", departmentId: null,
   role: "", experienceYears: "", location: "",
+  currentProjectId: null, currentAccountId: null,
   currentProject: "", client: "",
   joiningDate: "", status: "Not Allocated",
   employmentType: "Contract",
@@ -1419,7 +1420,7 @@ export default function AddResourcePage() {
     // Company / Department
     if (fd.companyId) payload.append('companyId', String(fd.companyId));
     else if (companies[0]?.companyId) payload.append('companyId', String(companies[0].companyId));
-    if (resourceType === 'internal' && fd.departmentId) payload.append('departmentId', String(fd.departmentId));
+    if (fd.departmentId) payload.append('departmentId', String(fd.departmentId));
 
     // Core identity
     if (fd.firstName?.trim()) payload.append('firstName', fd.firstName.trim());
@@ -1576,8 +1577,8 @@ export default function AddResourcePage() {
           if (res?.data?.success) {
             const createdId = res.data.result?.candidateId;
             if (createdId) {
-              // 🔴 VITAL FIX: Tell React state we have an ID now!
-              setFormData(prev => ({ ...prev, candidateId: createdId }));
+              // Store as employeeId so all subsequent code paths (autosave, final submit) work identically to internal
+              setFormData(prev => ({ ...prev, employeeId: createdId }));
               return { id: createdId };
             }
           }
@@ -1694,16 +1695,15 @@ export default function AddResourcePage() {
       isValid = false;
     }
 
-    // Specific to internal
-    if (resourceType === 'internal') {
-      if (!formData.companyId) {
-        newErrors.companyId = "Company is required";
-        isValid = false;
-      }
-      if (!formData.departmentId) {
-        newErrors.departmentId = "Department is required";
-        isValid = false;
-      }
+    // Company required for both internal and external
+    if (!formData.companyId) {
+      newErrors.companyId = "Company is required";
+      isValid = false;
+    }
+    // Department required only for internal
+    if (resourceType === 'internal' && !formData.departmentId) {
+      newErrors.departmentId = "Department is required";
+      isValid = false;
     }
 
     // Additional validations
@@ -1996,7 +1996,15 @@ export default function AddResourcePage() {
     });
 
     try {
-      const response = await CandidateService.createCandidate(payload);
+      // Check if a draft already exists — if so, update it instead of creating a new record
+      const draftId = formData.employeeId || sessionStorage.getItem(`${draftKey}_autoSaveId`);
+      let response;
+      if (draftId) {
+        payload.append('candidateId', String(draftId));
+        response = await CandidateService.updateCandidate(payload);
+      } else {
+        response = await CandidateService.createCandidate(payload);
+      }
       if (response.data.success) {
         toast.success("External candidate added successfully!");
         Swal.close();
