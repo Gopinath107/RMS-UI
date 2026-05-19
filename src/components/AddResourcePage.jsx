@@ -815,14 +815,17 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData, onSave
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {docs.map((doc, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                  <tr key={i} className={`hover:bg-gray-50 transition-colors ${doc.fromBackend ? 'bg-emerald-50/30' : ''}`}>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 whitespace-nowrap">
                         {doc.documentType}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[180px]">
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px]">
                       <span className="block truncate" title={doc.documentName}>{doc.documentName || '-'}</span>
+                      {doc.fromBackend && (
+                        <span className="inline-block mt-0.5 text-[10px] font-semibold text-emerald-600 bg-emerald-100 rounded px-1">Saved</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{doc.client || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{doc.expiryDate || '-'}</td>
@@ -832,7 +835,7 @@ const DocumentsTab = React.memo(({ docs, setDocs, resourceType, formData, onSave
                         type="button"
                         onClick={() => handleRemove(i)}
                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        title="Remove document"
+                        title={doc.fromBackend ? 'Remove from view (already saved on server)' : 'Remove document'}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1130,7 +1133,50 @@ export default function AddResourcePage() {
   useEffect(() => {
     if (!isEditMode || !editResource?.id) return;
 
-    const hydrateEditData = async () => {
+     // ── Map API docs → resourceDocuments format ─────────────────────────
+     const mapApiDocumentsToResourceDocuments = (docs, resumeObj, clientName) => {
+       const result = [];
+       // Add non-resume documents
+       if (Array.isArray(docs)) {
+         docs.forEach(d => {
+           const type = (d.documentType || '').toLowerCase();
+           if (type === 'resume') return; // resume handled separately below
+           result.push({
+             documentType: d.documentType || 'Other',
+             documentName: d.documentName || d.fileName || d.storagePath?.split('/').pop() || 'document',
+             uploadedDate: d.uploadedAt ? d.uploadedAt.split('T')[0] : (d.uploadedDate || ''),
+             expiryDate: d.expiryDate || '',
+             renewalDate: d.renewalDate || '',
+             client: clientName || '',
+             file: null, // backend doc — no local file
+             fromBackend: true,
+           });
+         });
+       }
+       // Add resume as a document entry if it exists
+       if (resumeObj) {
+         const alreadyHasResume = Array.isArray(docs) && docs.some(d => (d.documentType || '').toLowerCase() === 'resume');
+         if (!alreadyHasResume) {
+           result.unshift({
+             documentType: 'Resume',
+             documentName: resumeObj.documentName || resumeObj.fileName || resumeObj.storagePath?.split('/').pop() || 'resume',
+             uploadedDate: resumeObj.uploadedAt ? resumeObj.uploadedAt.split('T')[0] : (resumeObj.uploadedDate || ''),
+             expiryDate: '',
+             renewalDate: '',
+             client: clientName || '',
+             file: null,
+             fromBackend: true,
+           });
+         } else {
+           // resume already in docs list — just normalise its entry at the front
+           const idx = result.findIndex(r => r.documentType === 'Resume');
+           if (idx > 0) { const [r] = result.splice(idx, 1); result.unshift(r); }
+         }
+       }
+       return result;
+     };
+
+     const hydrateEditData = async () => {
       try {
         if (resourceType === 'internal') {
           const response = await EmployeeService.getEmployeeById(editResource.id);
@@ -1204,6 +1250,13 @@ export default function AddResourcePage() {
               skillName,
             })));
           }
+          // Map backend documents into the Documents table
+          {
+            const clientName = source.currentClient || '';
+            const resume = source.resume || source.resumeDocument || null;
+            const mapped = mapApiDocumentsToResourceDocuments(source.documents, resume, clientName);
+            if (mapped.length > 0) setResourceDocuments(mapped);
+          }
         } else {
           const response = await CandidateService.getCandidateById(editResource.id);
           const source = response?.data?.result || {};
@@ -1247,6 +1300,13 @@ export default function AddResourcePage() {
               skillId: ids[idx] ?? -1,
               skillName,
             })));
+          }
+          // Map backend documents into the Documents table
+          {
+            const clientName = '';
+            const resume = source.resume || source.resumeDocument || null;
+            const mapped = mapApiDocumentsToResourceDocuments(source.documents, resume, clientName);
+            if (mapped.length > 0) setResourceDocuments(mapped);
           }
         }
       } catch (error) {
@@ -1525,20 +1585,23 @@ export default function AddResourcePage() {
 
   const appendDocumentsToPayload = (payload) => {
     if (resourceDocuments && resourceDocuments.length > 0) {
-      resourceDocuments.forEach((doc) => {
-        if (doc.file) {
-          payload.append('documentFiles', doc.file);
-        }
+      // Only upload file binary for NEW documents (doc.file exists + not fromBackend)
+      const newDocs = resourceDocuments.filter(doc => doc.file && !doc.fromBackend);
+      newDocs.forEach((doc) => {
+        payload.append('documentFiles', doc.file);
       });
-      const documentData = resourceDocuments.map(doc => ({
-        documentType: doc.documentType,
-        expiryDate: doc.expiryDate,
-        renewalDate: doc.renewalDate,
-        documentName: doc.documentName,
-        uploadedDate: doc.uploadedDate,
-        client: doc.client
-      }));
-      payload.append('documentData', JSON.stringify(documentData));
+      // Only send documentData for newly uploaded docs to avoid re-processing existing
+      if (newDocs.length > 0) {
+        const documentData = newDocs.map(doc => ({
+          documentType: doc.documentType,
+          expiryDate: doc.expiryDate || '',
+          renewalDate: doc.renewalDate || '',
+          documentName: doc.documentName,
+          uploadedDate: doc.uploadedDate,
+          client: doc.client || '',
+        }));
+        payload.append('documentData', JSON.stringify(documentData));
+      }
     }
   };
 
