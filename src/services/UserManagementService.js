@@ -9,7 +9,7 @@ export const UserManagementService = {
     return api.post('/user-accounts/create', {
       companyId,
       employeeId,
-      roleIds,           // send the full array — backend reads roleIds list
+      roleIds,          // backend reads List<Long> roleIds
       email,
       passwordHash,
       isActive
@@ -21,9 +21,9 @@ export const UserManagementService = {
       userId: id,
       companyId,
       employeeId,
-      roleIds,           // send the full array — backend REPLACES stored roleIds
+      roleIds,          // backend REPLACES stored roleIds with this list
       email,
-      passwordHash,
+      passwordHash: passwordHash || null,   // null = don't change password
       isActive
     });
   },
