@@ -39,13 +39,4 @@ export const PortfolioReportService = {
         const response = await api.post('/demands/generateEmail', payload);
         return response.data;
     },
-
-    // ── NEW: Detailed resource & interview report export ──
-    exportDetailedResourceReport: async (payload) => {
-        return api.post('/demands/exportDetailedReport', payload, {
-            ...APIConfigurations.getConfig(),
-            responseType: 'blob',
-            timeout: 30000
-        });
-    },
 };
