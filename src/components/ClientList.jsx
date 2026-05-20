@@ -314,44 +314,53 @@ const ClientList = () => {
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
+              <div className="relative w-full lg:flex-1 lg:min-w-[420px]">
+                <Label className="block text-sm font-semibold text-gray-700 mb-2">Search</Label>
+                <Search className="absolute left-3 bottom-3 w-4 h-4 text-gray-400 pointer-events-none" />
                 <Input
-                  placeholder="Search by client name, company, contact…"
+                  placeholder="Search by client name, company, contact..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  className="pl-10 w-full bg-white/80 backdrop-blur-sm border-purple-200 focus:border-purple-400 transition-all duration-300"
+                  className="h-10 pl-10 w-full bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                 />
               </div>
-              <Select value={industryFilter} onValueChange={handleIndustryChange}>
-                <SelectTrigger className="w-44 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <SelectValue placeholder="All Industries" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Industries">All Industries</SelectItem>
-                  {[...new Set(clients.map((c) => c.industry || ""))].filter(Boolean).map(
-                    (industry, index) => (
-                      <SelectItem key={index} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={fetchClients}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                onClick={resetFilters}
-                className="bg-gray-500 hover:bg-gray-600 text-white"
-              >
-                Reset Filters
-              </Button>
+
+              <div className="w-full lg:w-[220px] lg:flex-none">
+                <Label className="block text-sm font-semibold text-gray-700 mb-2">Industry</Label>
+                <Select value={industryFilter} onValueChange={handleIndustryChange}>
+                  <SelectTrigger className="h-10 w-full bg-white border-gray-200">
+                    <SelectValue placeholder="All Industries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Industries">All Industries</SelectItem>
+                    {[...new Set(clients.map((c) => c.industry || ""))]
+                      .filter(Boolean)
+                      .map((industry, index) => (
+                        <SelectItem key={index} value={industry}>
+                          {industry}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3 lg:flex-none">
+                <Button
+                  onClick={fetchClients}
+                  className="h-10 px-5 bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh
+                </Button>
+
+                <Button
+                  onClick={resetFilters}
+                  className="h-10 px-5 bg-gray-500 hover:bg-gray-600 text-white"
+                >
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

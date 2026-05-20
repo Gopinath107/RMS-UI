@@ -783,39 +783,37 @@ const handleSendEmail = async () => {
     return (
         <div className="min-h-screen bg-transparent p-6 md:p-8">
             {/* Page Header */}
-            <div className="mb-6">
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <div className="w-10 h-10 rounded-xl bg-white border-2 border-orange-400 flex items-center justify-center shadow-md flex-shrink-0">
-                                <FileText className="w-5 h-5 text-orange-500" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-extrabold text-white tracking-tight">Demand Reports</h1>
-                                <p className="text-sm font-medium text-white drop-shadow">Detailed resource &amp; interview breakdown per demand</p>
-                            </div>
+            <div className="relative z-20 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="w-10 h-10 rounded-xl bg-white border-2 border-orange-400 flex items-center justify-center shadow-md flex-shrink-0">
+                            <FileText className="w-5 h-5 text-orange-500" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-extrabold text-white tracking-tight">Demand Reports</h1>
+                            <p className="text-sm font-medium text-white drop-shadow">Detailed resource &amp; interview breakdown per demand</p>
                         </div>
                     </div>
-                    {/* Action buttons */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleOpenEmailModal}
-                                disabled={loading}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-xl shadow-sm hover:bg-emerald-100 hover:border-emerald-400 transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                                Generate Email
-                            </button>
+                </div>
+                {/* Action buttons */}
+                <div className="flex items-center gap-3 flex-wrap justify-start lg:justify-end">
+                    <button
+                        onClick={handleOpenEmailModal}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-white text-emerald-700 border border-emerald-300 shadow-lg hover:bg-emerald-50 hover:border-emerald-400 hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                        Generate Email
+                    </button>
 
-                            <button
-                                onClick={handleDetailedExport}
-                                disabled={detailedExporting}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-orange-500 border border-orange-500 rounded-xl shadow-sm hover:bg-orange-600 hover:border-orange-600 transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-                                {detailedExporting ? "Generating…" : "Export Report"}
-                            </button>
-                        </div>
+                    <button
+                        onClick={handleDetailedExport}
+                        disabled={detailedExporting}
+                        className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-orange-500 text-white border border-orange-500 shadow-lg hover:bg-orange-600 hover:border-orange-600 hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                        {detailedExporting ? "Generating…" : "Export Report"}
+                    </button>
                 </div>
             </div>
 
@@ -1018,7 +1016,7 @@ const handleSendEmail = async () => {
 {isEmailModalOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
-        <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{maxHeight: '85vh'}}>
+        <div className="relative bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{maxHeight: '85vh'}}>
 
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-orange-50 to-white">
@@ -1028,7 +1026,7 @@ const handleSendEmail = async () => {
                     </div>
                     <div>
                         <h3 className="text-base font-bold text-gray-900">Share Demand Report</h3>
-                        <p className="text-xs text-gray-500">Send report via email</p>
+                        <p className="text-xs text-gray-500">Send generated demand report via email</p>
                     </div>
                 </div>
                 <button onClick={() => setIsEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
@@ -1039,10 +1037,10 @@ const handleSendEmail = async () => {
             {/* Body */}
             <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
                 <EmailChipInput
-                    label="Recipients"
+                    label="To"
                     emails={toEmail}
                     setEmails={setToEmails}
-                    placeholder="Add email addresses…"
+                    placeholder="Type email and press Enter"
                     autoFocus={true}
                     rightLabelAction={
                         !showCc && (
@@ -1065,17 +1063,28 @@ const handleSendEmail = async () => {
                 )}
 
                 {/* Attachment preview */}
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3.5 flex items-center gap-3">
-                    <div className="w-9 h-9 bg-white rounded-lg border border-orange-200 flex items-center justify-center shadow-sm flex-shrink-0">
-                        <FileText className="w-4 h-4 text-orange-500" />
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 bg-white rounded-lg border border-orange-200 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+                        <FileText className="w-5 h-5 text-orange-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">
                             Demand_Report_{startDate || 'All'}_to_{endDate || 'All'}.pdf
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">Generated Report • PDF</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Generated report • PDF</p>
+                        <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-orange-100/50 pt-2 text-xs text-gray-600">
+                            <div>
+                                <span className="font-semibold text-gray-700">Client:</span> {selectedClient}
+                            </div>
+                            <div>
+                                <span className="font-semibold text-gray-700">From:</span> {startDate || 'All'}
+                            </div>
+                            <div>
+                                <span className="font-semibold text-gray-700">To:</span> {endDate || 'All'}
+                            </div>
+                        </div>
                     </div>
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0" />
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-2" />
                 </div>
             </div>
 
@@ -1086,14 +1095,16 @@ const handleSendEmail = async () => {
                 </p>
                 <div className="flex gap-2.5">
                     <button onClick={() => setIsEmailModalOpen(false)}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm">
+                        className="h-10 px-4 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium shadow-sm">
                         Cancel
                     </button>
                     <button onClick={handleSendEmail} disabled={isSending || toEmail.length === 0}
-                        className="px-5 py-2 text-sm font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2 active:scale-95">
-                        {isSending
-                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Sending…</span></>
-                            : <><span>Send</span><Send className="w-3.5 h-3.5" /></>}
+                        className="h-10 px-5 rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 shadow-sm">
+                        {isSending ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Sending…</span></>
+                        ) : (
+                            <><span>Send Email</span><Send className="w-3.5 h-3.5" /></>
+                        )}
                     </button>
                 </div>
             </div>
