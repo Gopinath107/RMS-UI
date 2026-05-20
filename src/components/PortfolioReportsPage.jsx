@@ -930,22 +930,24 @@ const handleSendEmail = async () => {
             </div>
 
             {/* Results header */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-1">
                 <div className="flex items-center gap-3">
-                    <p className="text-sm text-gray-600">
-                        Showing <span className="font-bold text-gray-900">{paginated.length}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> demands
+                    <p className="text-base font-semibold text-white">
+                        Showing <span className="font-extrabold text-orange-300">{paginated.length}</span>
+                        {" "}of <span className="font-extrabold text-orange-300">{filtered.length}</span>
+                        {" "}<span className="text-white/80">demands</span>
                     </p>
                     {hasActiveFilters && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Filtered</span>
+                        <span className="text-xs bg-orange-400 text-white px-2.5 py-1 rounded-full font-semibold shadow-sm">Filtered</span>
                     )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span>Show</span>
+                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                    <span className="text-sm font-semibold text-gray-700">Show</span>
                     <select value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        className="border border-orange-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
                         {ITEMS_PER_PAGE_OPTIONS.map(n => <option key={n}>{n}</option>)}
                     </select>
-                    <span>per page</span>
+                    <span className="text-sm font-semibold text-gray-700">per page</span>
                 </div>
             </div>
 
