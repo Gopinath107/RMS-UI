@@ -313,28 +313,28 @@ const ClientList = () => {
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="space-y-4">
               <div className="relative w-full">
                 <Label className="block text-sm font-semibold text-gray-700 mb-2">
                   Search
                 </Label>
-                <Search className="absolute left-3 bottom-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Search className="absolute left-3 bottom-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                 <Input
                   placeholder="Search by client name, company, contact..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  className="h-11 pl-10 w-full bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                  className="h-11 pl-10 w-full bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400 rounded-xl"
                 />
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-end gap-3">
-                <div className="w-full md:w-[260px] md:flex-none">
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div className="w-full" style={{ minWidth: '280px', maxWidth: '280px' }}>
                   <Label className="block text-sm font-semibold text-gray-700 mb-2">
                     Industry
                   </Label>
                   <Select value={industryFilter} onValueChange={handleIndustryChange}>
-                    <SelectTrigger className="h-11 w-full bg-white border-gray-200">
+                    <SelectTrigger className="h-11 w-full bg-white border-gray-200 rounded-xl">
                       <SelectValue placeholder="All Industries" />
                     </SelectTrigger>
                     <SelectContent>
@@ -350,21 +350,23 @@ const ClientList = () => {
                   </Select>
                 </div>
 
-                <div className="flex gap-3 flex-wrap">
-                  <Button
+                <div className="flex items-center gap-3 flex-wrap justify-start md:justify-end">
+                  <button
                     onClick={fetchClients}
-                    className="h-11 px-5 bg-blue-500 hover:bg-blue-600 text-white"
+                    style={{ backgroundColor: '#3b82f6', color: '#ffffff' }}
+                    className="inline-flex items-center justify-center h-11 px-5 hover:bg-blue-600 rounded-xl shadow-sm whitespace-nowrap font-semibold transition-all duration-200"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Refresh
-                  </Button>
+                  </button>
 
-                  <Button
+                  <button
                     onClick={resetFilters}
-                    className="h-11 px-5 bg-gray-500 hover:bg-gray-600 text-white"
+                    style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+                    className="inline-flex items-center justify-center h-11 px-5 hover:bg-gray-700 rounded-xl shadow-sm whitespace-nowrap font-semibold transition-all duration-200"
                   >
                     Reset Filters
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>

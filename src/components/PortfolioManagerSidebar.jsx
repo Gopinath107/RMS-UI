@@ -12,7 +12,8 @@ import {
   TrendingUp,
   PieChart,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 import { Button } from './ui/button.jsx';
 import { hasAssignedInterviews, getPendingInterviewsCount } from './utils/interviewUtils.js';
@@ -56,9 +57,36 @@ export default function PortfolioManagerSidebar({
   }, [userName]);
 
   const menuItems = [
-    { id: 'dashboard',        label: 'Portfolio Dashboard', icon: LayoutDashboard, description: 'Strategic Overview',      path: '/portfolio' },
-    { id: 'client-portfolio', label: 'Client Portfolio',    icon: Building2,       description: 'Client Relations',       path: '/portfolio/clients', badge: projectCount > 0 ? projectCount : null },
-    { id: 'interview-hub',   label: 'Interview Hub',       icon: MessageSquare,   description: 'My Assigned Interviews', path: '/portfolio', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    {
+      id: 'dashboard',
+      label: 'Portfolio Dashboard',
+      icon: LayoutDashboard,
+      description: 'Strategic Overview',
+      path: '/portfolio'
+    },
+    {
+      id: 'client-portfolio',
+      label: 'Client Portfolio',
+      icon: Building2,
+      description: 'Client Relations',
+      path: '/portfolio/clients',
+      badge: projectCount > 0 ? projectCount : null
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: FileText,
+      description: 'Demand & Resource Report',
+      path: '/portfolio/reports'
+    },
+    {
+      id: 'interview-hub',
+      label: 'Interview Hub',
+      icon: MessageSquare,
+      description: 'My Assigned Interviews',
+      path: '/portfolio/interview-hub',
+      badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null
+    }
   ];
 
 
