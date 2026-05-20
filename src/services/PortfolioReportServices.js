@@ -39,4 +39,13 @@ export const PortfolioReportService = {
         const response = await api.post('/demands/generateEmail', payload);
         return response.data;
     },
+
+    // ── NEW: detailed 3-sheet Excel export (Resource Comparison, Interview Details, Summary) ──
+    exportDetailedResourceReport: async (payload) => {
+        return api.post('/demands/exportDetailedReport', payload, {
+            ...APIConfigurations.getConfig(),
+            responseType: 'blob',
+            timeout: 60000
+        });
+    },
 };

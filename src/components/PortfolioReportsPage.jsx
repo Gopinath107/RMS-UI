@@ -792,7 +792,7 @@ const handleSendEmail = async () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-extrabold text-white tracking-tight">Demand Reports</h1>
-                                <p className="text-sm text-white/70">Detailed resource & interview breakdown per demand</p>
+                                <p className="text-sm font-medium text-white drop-shadow">Detailed resource &amp; interview breakdown per demand</p>
                             </div>
                         </div>
                     </div>
@@ -811,7 +811,7 @@ const handleSendEmail = async () => {
                         <button
                             onClick={handleDetailedExport}
                             disabled={detailedExporting}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-orange-600 bg-white border-2 border-orange-400 rounded-xl shadow-md hover:bg-orange-50 hover:border-orange-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 border-2 border-orange-500 rounded-xl shadow-md hover:bg-orange-600 hover:border-orange-600 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
                             {detailedExporting ? "Generating…" : "Export Report"}
