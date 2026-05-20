@@ -1,11 +1,13 @@
 import api from "./api";
 
 export const ClientService = {
-  fetchClientList: async function () {
+  fetchClientList: async function (page = 0, size = 10) {
     try {
-      const response = await api.get('/accounts/list');
-      // Return only the array of clients
-      return response.data.result;
+      const response = await api.get('/accounts/list', {
+        params: { page, size }
+      });
+      // Return the full response so caller can access result + pagination metadata
+      return response;
     } catch (error) {
       console.error("Error fetching clients:", error);
       throw error;
