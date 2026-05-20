@@ -796,26 +796,25 @@ const handleSendEmail = async () => {
                             </div>
                         </div>
                     </div>
-                    {/* Export button — wired to API 5 */}
                     {/* Action buttons */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             <button
-                            onClick={handleOpenEmailModal}
-                            disabled={loading}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-green-600 bg-white border-2 border-green-400 rounded-xl shadow-md hover:bg-green-50 hover:border-green-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                            Generate Report
-                        </button>
+                                onClick={handleOpenEmailModal}
+                                disabled={loading}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-xl shadow-sm hover:bg-emerald-100 hover:border-emerald-400 transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                                Generate Email
+                            </button>
 
-                        <button
-                            onClick={handleDetailedExport}
-                            disabled={detailedExporting}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 border-2 border-orange-500 rounded-xl shadow-md hover:bg-orange-600 hover:border-orange-600 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-                            {detailedExporting ? "Generating…" : "Export Report"}
-                        </button>
+                            <button
+                                onClick={handleDetailedExport}
+                                disabled={detailedExporting}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-orange-500 border border-orange-500 rounded-xl shadow-sm hover:bg-orange-600 hover:border-orange-600 transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                                {detailedExporting ? "Generating…" : "Export Report"}
+                            </button>
                         </div>
                 </div>
             </div>
@@ -932,22 +931,22 @@ const handleSendEmail = async () => {
             {/* Results header */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-1">
                 <div className="flex items-center gap-3">
-                    <p className="text-base font-semibold text-white">
-                        Showing <span className="font-extrabold text-orange-300">{paginated.length}</span>
-                        {" "}of <span className="font-extrabold text-orange-300">{filtered.length}</span>
-                        {" "}<span className="text-white/80">demands</span>
+                    <p className="text-sm font-semibold text-gray-800">
+                        Showing <span className="font-bold text-orange-600">{paginated.length}</span>
+                        {" "}of <span className="font-bold text-orange-600">{filtered.length}</span>
+                        {" "}<span className="text-gray-500">demands</span>
                     </p>
                     {hasActiveFilters && (
-                        <span className="text-xs bg-orange-400 text-white px-2.5 py-1 rounded-full font-semibold shadow-sm">Filtered</span>
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-semibold border border-orange-200">Filtered</span>
                     )}
                 </div>
-                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-                    <span className="text-sm font-semibold text-gray-700">Show</span>
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                    <span className="text-sm font-semibold text-gray-600">Show</span>
                     <select value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                         className="border border-orange-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
                         {ITEMS_PER_PAGE_OPTIONS.map(n => <option key={n}>{n}</option>)}
                     </select>
-                    <span className="text-sm font-semibold text-gray-700">per page</span>
+                    <span className="text-sm font-semibold text-gray-600">per page</span>
                 </div>
             </div>
 
@@ -1018,31 +1017,36 @@ const handleSendEmail = async () => {
 {/* ── EMAIL MODAL ── */}
 {isEmailModalOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
-        <div className="relative bg-white w-full max-w-[500px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
+        <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{maxHeight: '85vh'}}>
 
             {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900">Share Demand Report</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Send via email</p>
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-orange-50 to-white">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
+                        <Mail className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-bold text-gray-900">Share Demand Report</h3>
+                        <p className="text-xs text-gray-500">Send report via email</p>
+                    </div>
                 </div>
-                <button onClick={() => setIsEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-50 transition-all">
-                    <X className="w-5 h-5" />
+                <button onClick={() => setIsEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
+                    <X className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 space-y-6 overflow-y-auto">
+            <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
                 <EmailChipInput
                     label="Recipients"
                     emails={toEmail}
                     setEmails={setToEmails}
-                    placeholder="Add people..."
+                    placeholder="Add email addresses…"
                     autoFocus={true}
                     rightLabelAction={
                         !showCc && (
-                            <button onClick={() => setShowCc(true)} className="text-xs font-semibold text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-2 py-1 rounded transition-colors">
+                            <button onClick={() => setShowCc(true)} className="text-xs font-semibold text-orange-500 hover:text-orange-700 hover:bg-orange-50 px-2 py-0.5 rounded transition-colors">
                                 + CC
                             </button>
                         )
@@ -1053,37 +1057,43 @@ const handleSendEmail = async () => {
                         label="CC"
                         emails={ccEmail}
                         setEmails={setCcEmails}
-                        placeholder="Add CC..."
+                        placeholder="Add CC addresses…"
                         rightLabelAction={
-                            <button onClick={() => setShowCc(false)} className="text-xs text-gray-400 hover:text-gray-600">Remove</button>
+                            <button onClick={() => setShowCc(false)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
                         }
                     />
                 )}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
-                        <FileText className="w-5 h-5 text-orange-500" />
+
+                {/* Attachment preview */}
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3.5 flex items-center gap-3">
+                    <div className="w-9 h-9 bg-white rounded-lg border border-orange-200 flex items-center justify-center shadow-sm flex-shrink-0">
+                        <FileText className="w-4 h-4 text-orange-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
                             Demand_Report_{startDate || 'All'}_to_{endDate || 'All'}.pdf
-                        </h4>
+                        </p>
                         <p className="text-xs text-gray-500 mt-0.5">Generated Report • PDF</p>
                     </div>
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0" />
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                <p className="text-xs text-gray-500 font-medium">{toEmail.length + ccEmail.length} recipient(s)</p>
-                <div className="flex gap-3">
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+                <p className="text-xs text-gray-500">
+                    <span className="font-semibold text-gray-700">{toEmail.length + ccEmail.length}</span> recipient(s)
+                </p>
+                <div className="flex gap-2.5">
                     <button onClick={() => setIsEmailModalOpen(false)}
-                        className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm">
+                        className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm">
                         Cancel
                     </button>
                     <button onClick={handleSendEmail} disabled={isSending || toEmail.length === 0}
-                        className="px-6 py-2.5 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all flex items-center gap-2 active:scale-95">
-                        {isSending ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Sending...</span></> : <><span>Send</span><Send className="w-3.5 h-3.5" /></>}
+                        className="px-5 py-2 text-sm font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2 active:scale-95">
+                        {isSending
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Sending…</span></>
+                            : <><span>Send</span><Send className="w-3.5 h-3.5" /></>}
                     </button>
                 </div>
             </div>
