@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { PortfolioReportService } from '../services/PortfolioReportServices';
 import {
     Search, Filter, ChevronDown, ChevronRight, Calendar, Users, Target,
-    CheckCircle, XCircle, Clock, AlertTriangle, Download, RefreshCw,
+    CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw,
     TrendingUp, Award, UserCheck, UserX, Briefcase, BarChart2,
     ChevronLeft, ChevronRight as ChevronRightIcon, FileText, X, Circle,
     Building2, Mail, Phone, MapPin, Star, Send, Loader2, History,
@@ -498,7 +498,6 @@ export default function PortfolioReportsPage() {
     const [clientList,  setClientList]  = useState(["All Clients"]);
     const [loading,     setLoading]     = useState(false);
     const [error,       setError]       = useState(null);
-    const [exporting,   setExporting]   = useState(false);
     const [detailedExporting, setDetailedExporting] = useState(false);
 
     /* ── email modal state ── */
@@ -615,45 +614,7 @@ export default function PortfolioReportsPage() {
         setSearchTerm(""); setStatusFilter("All"); setPriorityFilter("All"); setCurrentPage(1);
     };
 
-    /* ── Export (existing summary) ── */
-    const handleExport = useCallback(async () => {
-        setExporting(true);
-        try {
-            const payload = {
-                userId: localStorage.getItem('userId'),
-                fromDate: startDate || null,
-                toDate: endDate || null,
-                accountId: selectedClient !== "All Clients"
-                    ? (filtered.find(d => d.client === selectedClient)?._accountId ?? null)
-                    : null,
-                demandStatus: statusFilter !== "All" ? statusFilter : null,
-                priority: priorityFilter !== "All" ? priorityFilter : null,
-                candidateSearch: searchTerm || null,
-                demandIds: filtered.map(d => d._demandId).filter(Boolean),
-            };
-            const response = await PortfolioReportService.exportDemandReport(payload);
-            const blob = new Blob([response.data], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-            const url  = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href  = url;
-            const from = startDate ? startDate.replace(/-/g, '') : 'all';
-            const to   = endDate   ? endDate.replace(/-/g, '')   : 'all';
-            link.download = `demand_report_${from}_to_${to}.xlsx`;
-            document.body.appendChild(link);
-            link.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(link);
-        } catch (err) {
-            console.error("Export failed:", err);
-            alert("Export failed. Please try again.");
-        } finally {
-            setExporting(false);
-        }
-    }, [selectedClient, filtered, startDate, endDate, statusFilter, priorityFilter, searchTerm]);
-
-    /* ── NEW: Detailed Export ── */
+    /* ── Detailed Export ── */
     const handleDetailedExport = useCallback(async () => {
         setDetailedExporting(true);
         try {
@@ -766,16 +727,6 @@ export default function PortfolioReportsPage() {
                                 : <Mail className="w-4 h-4 text-gray-500" />
                             }
                             Generate Report
-                        </button>
-
-                        {/* Export Report (summary) */}
-                        <button
-                            onClick={handleExport}
-                            disabled={exporting}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Download className={`w-4 h-4 text-gray-500 ${exporting ? "animate-pulse" : ""}`} />
-                            {exporting ? "Exporting…" : "Export Report"}
                         </button>
 
                         {/* Export Detailed Report (NEW) */}
