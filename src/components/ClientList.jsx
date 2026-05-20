@@ -314,52 +314,58 @@ const ClientList = () => {
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
-              <div className="relative w-full lg:flex-1 lg:min-w-[420px]">
-                <Label className="block text-sm font-semibold text-gray-700 mb-2">Search</Label>
+            <div className="space-y-4">
+              <div className="relative w-full">
+                <Label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Search
+                </Label>
                 <Search className="absolute left-3 bottom-3 w-4 h-4 text-gray-400 pointer-events-none" />
                 <Input
                   placeholder="Search by client name, company, contact..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  className="h-10 pl-10 w-full bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                  className="h-11 pl-10 w-full bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                 />
               </div>
 
-              <div className="w-full lg:w-[220px] lg:flex-none">
-                <Label className="block text-sm font-semibold text-gray-700 mb-2">Industry</Label>
-                <Select value={industryFilter} onValueChange={handleIndustryChange}>
-                  <SelectTrigger className="h-10 w-full bg-white border-gray-200">
-                    <SelectValue placeholder="All Industries" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All Industries">All Industries</SelectItem>
-                    {[...new Set(clients.map((c) => c.industry || ""))]
-                      .filter(Boolean)
-                      .map((industry, index) => (
-                        <SelectItem key={index} value={industry}>
-                          {industry}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="flex flex-col md:flex-row md:items-end gap-3">
+                <div className="w-full md:w-[260px] md:flex-none">
+                  <Label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Industry
+                  </Label>
+                  <Select value={industryFilter} onValueChange={handleIndustryChange}>
+                    <SelectTrigger className="h-11 w-full bg-white border-gray-200">
+                      <SelectValue placeholder="All Industries" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All Industries">All Industries</SelectItem>
+                      {[...new Set(clients.map((c) => c.industry || ""))]
+                        .filter(Boolean)
+                        .map((industry, index) => (
+                          <SelectItem key={index} value={industry}>
+                            {industry}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="flex gap-3 lg:flex-none">
-                <Button
-                  onClick={fetchClients}
-                  className="h-10 px-5 bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
+                <div className="flex gap-3 flex-wrap">
+                  <Button
+                    onClick={fetchClients}
+                    className="h-11 px-5 bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
 
-                <Button
-                  onClick={resetFilters}
-                  className="h-10 px-5 bg-gray-500 hover:bg-gray-600 text-white"
-                >
-                  Reset Filters
-                </Button>
+                  <Button
+                    onClick={resetFilters}
+                    className="h-11 px-5 bg-gray-500 hover:bg-gray-600 text-white"
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
