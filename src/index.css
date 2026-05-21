@@ -6560,3 +6560,63 @@ TabsTrigger:hover:not([data-state="active"]) {
     font-size: 15px;
   }
 }
+
+/* Client Management Search UI Layout */
+.client-search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.client-search-input-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.client-search-controls-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+.client-search-dropdown-container {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.client-search-btn-refresh {
+  flex-shrink: 0 !important;
+  width: 128px !important;
+  justify-content: center !important;
+}
+
+.client-search-btn-reset {
+  flex-shrink: 0 !important;
+  width: 128px !important;
+  justify-content: center !important;
+}
+
+@media (min-width: 768px) {
+  .client-search-container {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .client-search-input-wrapper {
+    width: auto;
+  }
+
+  .client-search-controls-wrapper {
+    width: auto;
+    justify-content: flex-end;
+  }
+}
+
