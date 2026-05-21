@@ -32,6 +32,8 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Plus,
   RefreshCw,
 } from "lucide-react";
@@ -43,15 +45,17 @@ import { Label } from "./ui/label";
 const ClientList = () => {
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [industryFilter, setIndustryFilter] = useState("All Industries");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5); // Changed default to 5
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Changed default to 10
+  const [totalCount, setTotalCount] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [companies, setCompanies] = useState([]); // State for companies list
+  const [allIndustries, setAllIndustries] = useState([]);
   const [newClient, setNewClient] = useState({
     companyId: "",
     accountName: "",
@@ -61,6 +65,9 @@ const ClientList = () => {
     relationshipStartDate: "",
     status: "Active",
   });
+
+  const timeoutRef = React.useRef(null);
+  const lastFetchedRef = React.useRef({ page: null, size: null, q: null, industry: null });
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -73,8 +80,13 @@ const ClientList = () => {
   };
 
   useEffect(() => {
-    fetchClients();
     fetchCompanies();
+    fetchIndustries();
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   const fetchCompanies = async () => {
@@ -93,27 +105,62 @@ const ClientList = () => {
     }
   };
 
-  const fetchClients = async () => {
-    setIsLoading(true);
+  const fetchIndustries = async () => {
     try {
       const res = await ClientService.fetchClientList();
+      if (Array.isArray(res)) {
+        const uniqueIndustries = [...new Set(res.map((c) => c.industry || ""))].filter(Boolean);
+        setAllIndustries(uniqueIndustries);
+      }
+    } catch (err) {
+      console.error("Failed to fetch industries:", err);
+    }
+  };
+
+  const fetchClients = async (page = currentPage, pageSize = rowsPerPage, query = searchText, industry = industryFilter) => {
+    // Avoid double fetching same parameters
+    if (
+      lastFetchedRef.current.page === page &&
+      lastFetchedRef.current.size === pageSize &&
+      lastFetchedRef.current.q === query &&
+      lastFetchedRef.current.industry === industry
+    ) {
+      return;
+    }
+    lastFetchedRef.current = { page, size: pageSize, q: query, industry };
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    setIsLoading(true);
+    try {
+      // API page parameter is 0-indexed
+      const res = await ClientService.fetchClientList(page - 1, pageSize, query, industry);
       console.log("Full API Response:", res);
       if (res) {
         let clientData = [];
+        let total = 0;
         if (res.data && res.data.success === true && Array.isArray(res.data.result)) {
           clientData = res.data.result;
+          total = res.data.totalElements || 0;
         } else if (Array.isArray(res.data)) {
           clientData = res.data;
+          total = res.data.length;
         } else if (Array.isArray(res)) {
           clientData = res;
+          total = res.length;
         } else {
           throw new Error("Unexpected API response structure");
         }
         console.log("Processed Client Data:", clientData);
         setClients(clientData);
-        const filtered = applyFilter(clientData, searchTerm, industryFilter);
+        
+        // Still apply client-side filtering on the returned slice just in case
+        const filtered = applyFilter(clientData, query, industry);
         setFilteredClients(filtered);
-        console.log("Filtered Clients Set To:", filtered);
+        setTotalCount(total);
         setError("");
       } else {
         throw new Error("No data received from API");
@@ -123,6 +170,7 @@ const ClientList = () => {
       setError(`Failed to fetch clients. Please check API connection. Details: ${err.message || "Unknown error"}`);
       setClients([]);
       setFilteredClients([]);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -133,9 +181,9 @@ const ClientList = () => {
     if (searchValue) {
       filtered = filtered.filter(
         (client) =>
-          (client.accountName || "").toLowerCase().includes(searchValue) ||
-          (client.companyName || "").toLowerCase().includes(searchValue) ||
-          (client.contactPersonName || "").toLowerCase().includes(searchValue)
+          (client.accountName || "").toLowerCase().includes(searchValue.toLowerCase()) ||
+          (client.companyName || "").toLowerCase().includes(searchValue.toLowerCase()) ||
+          (client.contactPersonName || "").toLowerCase().includes(searchValue.toLowerCase())
       );
     }
     if (industryValue !== "All Industries") {
@@ -147,17 +195,45 @@ const ClientList = () => {
     return filtered;
   };
 
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTerm(value);
-    const filtered = applyFilter(clients, value, industryFilter);
-    setFilteredClients(filtered);
+  // Immediate fetch on page or rowsPerPage changes
+  useEffect(() => {
+    fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
+  }, [currentPage, rowsPerPage]);
+
+  // Debounced search text and industry changes
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
+    }, 300);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [searchText, industryFilter]);
+
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchText(value);
+    setCurrentPage(1);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
+    }
   };
 
   const handleIndustryChange = (value) => {
     setIndustryFilter(value);
-    const filtered = applyFilter(clients, searchTerm, value);
-    setFilteredClients(filtered);
+    setCurrentPage(1);
   };
 
   const handleSort = (key) => {
@@ -188,10 +264,25 @@ const ClientList = () => {
     );
   };
 
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentClients = filteredClients.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages = Math.ceil(filteredClients.length / rowsPerPage);
+  const totalPages = Math.ceil(totalCount / rowsPerPage);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const currentClients = filteredClients;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -239,8 +330,12 @@ const ClientList = () => {
       );
 
       if (result) {
-        await fetchClients();
-        setCurrentPage(1); // Reset to first page after adding
+        fetchIndustries();
+        if (currentPage === 1) {
+          fetchClients(1, rowsPerPage, searchText, industryFilter);
+        } else {
+          setCurrentPage(1);
+        }
         setIsModalOpen(false);
         setNewClient({
           companyId: "",
@@ -277,11 +372,13 @@ const ClientList = () => {
   };
 
   const resetFilters = () => {
-    setSearchTerm("");
+    setSearchText("");
     setIndustryFilter("All Industries");
-    const filtered = applyFilter(clients, "", "All Industries");
-    setFilteredClients(filtered);
-    setCurrentPage(1); // Reset pagination to first page
+    if (currentPage === 1) {
+      fetchClients(1, rowsPerPage, "", "All Industries");
+    } else {
+      setCurrentPage(1);
+    }
   };
 
   return (
@@ -306,41 +403,42 @@ const ClientList = () => {
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
+            <div className="flex flex-col md:flex-row gap-4 items-center w-full">
+              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search"
-                  value={searchTerm}
-                  onChange={handleSearch}
+                  placeholder="Search by client name, company..."
+                  value={searchText}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleKeyDown}
                   className="pl-10 w-full bg-white/80 backdrop-blur-sm border-purple-200 focus:border-purple-400 transition-all duration-300"
                 />
               </div>
-              <Select value={industryFilter} onValueChange={handleIndustryChange}>
-                <SelectTrigger className="flex-1 bg-white/80 backdrop-blur-sm">
-                  <SelectValue placeholder="All Industries" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  <SelectItem value="All Industries">All Industries</SelectItem>
-                  {[...new Set(clients.map((c) => c.industry || ""))].filter(Boolean).map(
-                    (industry, index) => (
+              <div className="w-full md:w-[220px] flex-shrink-0">
+                <Select value={industryFilter} onValueChange={handleIndustryChange}>
+                  <SelectTrigger className="w-full bg-white/80 backdrop-blur-sm">
+                    <SelectValue placeholder="All Industries" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="All Industries">All Industries</SelectItem>
+                    {allIndustries.map((industry, index) => (
                       <SelectItem key={index} value={industry}>
                         {industry}
                       </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
-                onClick={fetchClients}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => fetchClients(currentPage, rowsPerPage, searchText, industryFilter)}
+                className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0 w-full md:w-auto"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh
               </Button>
               <Button
                 onClick={resetFilters}
-                className="bg-gray-500 hover:bg-gray-600 text-white"
+                className="bg-gray-500 hover:bg-gray-600 text-white flex-shrink-0 w-full md:w-auto"
               >
                 Reset Filters
               </Button>
@@ -358,7 +456,7 @@ const ClientList = () => {
           <CardHeader>
   <div className="flex flex-row justify-between items-center gap-3 flex-wrap">
     <CardTitle className="text-2xl font-bold">
-      Client List ({filteredClients.length})
+      Client List ({totalCount})
     </CardTitle>
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -456,46 +554,70 @@ const ClientList = () => {
               </Table>
             </div>
 
-            <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="hover:bg-purple-50 disabled:opacity-50"
-              >
-                First
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => prev - 1)}
-                disabled={currentPage === 1}
-                className="hover:bg-purple-50 disabled:opacity-50"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="mx-2 text-sm font-medium text-gray-700">
-                {currentPage} / {totalPages || 1}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="hover:bg-purple-50 disabled:opacity-50"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="hover:bg-purple-50 disabled:opacity-50"
-              >
-                Last
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-4 px-6 bg-white border-t border-purple-100">
+              <div className="text-sm text-gray-500 font-medium">
+                Showing {totalCount === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1} to{" "}
+                {Math.min(currentPage * rowsPerPage, totalCount)} of {totalCount} results
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="w-9 h-9 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50 transition-colors"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="w-9 h-9 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50 transition-colors"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                {getPageNumbers().map((page) => (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-9 h-9 text-sm font-semibold transition-all duration-200 ${
+                      page === currentPage
+                        ? "bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-200"
+                        : "hover:bg-purple-50 hover:text-purple-600"
+                    }`}
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="w-9 h-9 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50 transition-colors"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="w-9 h-9 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50 transition-colors"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
