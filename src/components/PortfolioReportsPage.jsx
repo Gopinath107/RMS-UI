@@ -829,7 +829,7 @@ export default function PortfolioReportsPage() {
             const s = colFilters.status;
             list = list.filter(d => d.status === s || (s === 'In Progress' && (d.status === 'InProgress' || d.status === 'In Progress')));
         }
-        if (colFilters.interviewLevel !== 'All') list = list.filter(d => (d.interviewLevel || 'Not Started') === colFilters.interviewLevel);
+
 
         return list;
     }, [allDemands, priorityFilter, searchTerm, colFilters]);
