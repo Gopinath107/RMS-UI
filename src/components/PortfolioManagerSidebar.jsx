@@ -12,7 +12,8 @@ import {
   TrendingUp,
   PieChart,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+   FileBarChart2
 } from 'lucide-react';
 import { Button } from './ui/button.jsx';
 import { hasAssignedInterviews, getPendingInterviewsCount } from './utils/interviewUtils.js';
@@ -59,6 +60,7 @@ export default function PortfolioManagerSidebar({
     { id: 'dashboard',        label: 'Portfolio Dashboard', icon: LayoutDashboard, description: 'Strategic Overview',      path: '/portfolio' },
     { id: 'client-portfolio', label: 'Client Portfolio',    icon: Building2,       description: 'Client Relations',       path: '/portfolio/clients', badge: projectCount > 0 ? projectCount : null },
     { id: 'interview-hub',   label: 'Interview Hub',       icon: MessageSquare,   description: 'My Assigned Interviews', path: '/portfolio', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    { id: 'reports',          label: 'Reports',             icon: FileBarChart2,   description: 'Demand & Resource Report', path: '/portfolio/reports' },  
   ];
 
 
@@ -112,17 +114,11 @@ export default function PortfolioManagerSidebar({
 
       {/* Navigation Menu */}
       <nav
-        className={`mt-4 ${isExpanded ? 'px-3' : 'px-2'} overflow-y-auto flex-1`}
-        style={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
+        className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+          ? 'px-3 overflow-y-auto overflow-x-hidden'
+          : 'px-2 overflow-visible'
+          }`}
       >
-        <style jsx>{`
-          nav::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
         <div className="space-y-2 pb-20">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
@@ -134,6 +130,7 @@ export default function PortfolioManagerSidebar({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="relative overflow-visible"
               >
                 <motion.button
                   onClick={() => navigate(item.path)}
@@ -146,13 +143,39 @@ export default function PortfolioManagerSidebar({
                   whileTap={{ scale: 0.98 }}
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-orange-300' : ''}`} />
-                  {/* Collapsed: hover label pill */}
+                  
+                  {/* ── COLLAPSED TOOLTIP (ChatGPT-style dark) ── */}
                   {!isExpanded && (
-                    <span className="pointer-events-none absolute left-full ml-2 z-50 flex items-center gap-1 bg-orange-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl border border-orange-400/30 whitespace-nowrap opacity-0 translate-x-[-6px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out">
+                    <span
+                      className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+                      style={{
+                        backgroundColor: '#1f1f1f',
+                        color: '#fff',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                      }}
+                    >
+                      {/* Left arrow */}
+                      <span
+                        className="absolute top-1/2 -translate-y-1/2"
+                        style={{
+                          left: '-6px',
+                          width: 0,
+                          height: 0,
+                          borderTop: '6px solid transparent',
+                          borderBottom: '6px solid transparent',
+                          borderRight: '6px solid #1f1f1f',
+                        }}
+                      />
                       {item.label}
-                      {item.badge && <span className="ml-1 bg-blue-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{item.badge}</span>}
+                      {item.badge && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
                     </span>
                   )}
+
+                  {/* EXPANDED: label + description inline */}
                   {isExpanded && (
                     <>
                       <motion.div
@@ -175,18 +198,13 @@ export default function PortfolioManagerSidebar({
                       )}
                     </>
                   )}
+
+                  {/* Active indicator bar (collapsed only) */}
                   {isActive && !isExpanded && (
                     <motion.div
                       layoutId="activeIndicatorPortfolio"
                       className="absolute right-1 w-1 h-8 bg-orange-300 rounded-full"
                     />
-                  )}
-                  {!isExpanded && item.badge && (
-                    <motion.div
-                      className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    >
-                      {item.badge}
-                    </motion.div>
                   )}
                 </motion.button>
               </motion.div>

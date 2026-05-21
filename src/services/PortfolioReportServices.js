@@ -25,27 +25,16 @@ export const PortfolioReportService = {
         });
     },
 
-    // ── UPDATED: matches dashboard payload exactly, downloads as .xlsx ──
-    exportDemandReport: async (payload) => {
-        return api.post('/demands/exportReport', payload, {
-            ...APIConfigurations.getConfig(),
-            responseType: 'blob',
-            timeout: 30000
-        });
-    },
 
+    exportDemandReport: async (payload) => {
+    return api.post('/demands/exportDetailedReport', payload, {
+        responseType: 'blob',
+        timeout: 30000
+    });
+},
     // ── NEW: email report, same as dashboard ──
     generateEmailReport: async (payload) => {
         const response = await api.post('/demands/generateEmail', payload);
         return response.data;
-    },
-
-    // ── NEW: detailed 3-sheet Excel export (Resource Comparison, Interview Details, Summary) ──
-    exportDetailedResourceReport: async (payload) => {
-        return api.post('/demands/exportDetailedReport', payload, {
-            ...APIConfigurations.getConfig(),
-            responseType: 'blob',
-            timeout: 60000
-        });
     },
 };

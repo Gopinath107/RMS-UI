@@ -47,6 +47,7 @@ import HRSidebar from './components/HRSidebar.jsx';
 import SystemAdminSidebar from './components/SystemAdminSidebar.jsx';
 import PMOSidebar from './components/PMOSidebar.jsx';
 import PortfolioManagerSidebar from './components/PortfolioManagerSidebar.jsx';
+import PortfolioReportsPage from './components/PortfolioReportsPage.jsx';
 import SalesManagerSidebar from './components/SalesManagerSidebar.jsx';
 import InterviewPanelSidebar from './components/InterviewPanelSidebar.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -216,7 +217,7 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioManagerDashboard /></ProtectedRoute>} />
                 <Route path="/portfolio/projects" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ProjectPortfolio /></ProtectedRoute>} />
                 <Route path="/portfolio/clients" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ClientList /></ProtectedRoute>} />
-                <Route path="/portfolio/reports" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ReportsAnalytics /></ProtectedRoute>} />
+               <Route path="/portfolio/reports" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioReportsPage /></ProtectedRoute>} />
                 <Route path="/portfolio/strategic-planning" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Strategic Planning" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/financial-overview" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Financial Overview" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/resource-strategy" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Resource Strategy" color="text-orange-600" /></ProtectedRoute>} />

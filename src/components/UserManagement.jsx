@@ -972,29 +972,31 @@ const UserManagement = ({ setCurrentPage }) => {
       {/* Filters */}
       <Card className="rounded-2xl shadow-sm border border-gray-100">
         <CardContent className="p-5">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search by name, email, username, role, or company"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-10 h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+          <div className="flex flex-col md:flex-row gap-4 w-full">
+            <div className="flex-1 min-w-0 w-full">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search by name, email, username, role, or company"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white w-full"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 lg:w-auto">
-              <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl bg-gray-50 border-gray-200">
+            <div className="flex-1 min-w-0 w-full">
+              <Select value={filterRole} onValueChange={setFilterRole} className="w-full">
+                <SelectTrigger className="!h-11 w-full rounded-xl bg-gray-50 border-gray-200">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1006,9 +1008,11 @@ const UserManagement = ({ setCurrentPage }) => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-11 w-full sm:w-44 rounded-xl bg-gray-50 border-gray-200">
+            <div className="flex-1 min-w-0 w-full">
+              <Select value={filterStatus} onValueChange={setFilterStatus} className="w-full">
+                <SelectTrigger className="!h-11 w-full rounded-xl bg-gray-50 border-gray-200">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>

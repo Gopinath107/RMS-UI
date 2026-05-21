@@ -1372,9 +1372,11 @@ const InterviewsManagement = ({ setCurrentPage }) => {
                                               <Select value={currentResult} onValueChange={(val) => openLevelStatusModal(i, level, val)}>
                                                 <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Update" /></SelectTrigger>
                                                 <SelectContent>
-                                                  {interviewStatusOptions.map((opt) => (
-                                                    <SelectItem key={opt.code} value={opt.code} className="text-xs">{opt.label || opt.code}</SelectItem>
-                                                  ))}
+                                                  {interviewStatusOptions
+                                                    .filter((opt) => opt.code !== 'Hold' && opt.label !== 'Interview Hold')
+                                                    .map((opt) => (
+                                                      <SelectItem key={opt.code} value={opt.code} className="text-xs">{opt.label || opt.code}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                               </Select>
                                             ) : (
