@@ -32,7 +32,7 @@ import ClientsManagement from './components/ClientsManagement.jsx';
 import ClientList from './components/ClientList.jsx';
 import ProjectsManagement from './components/ProjectsManagement.jsx';
 import ProjectPortfolio from './components/ProjectPortfolio.jsx';
-import PortfolioReportsPage from './components/PortfolioReportsPage.jsx';
+import ReportsAnalytics from './components/ReportsAnalytics.jsx';
 import Notifications from './components/Notifications.jsx';
 import Timesheets from './components/Timesheets.jsx';
 import UserManagement from './components/UserManagement.jsx';
@@ -47,6 +47,7 @@ import HRSidebar from './components/HRSidebar.jsx';
 import SystemAdminSidebar from './components/SystemAdminSidebar.jsx';
 import PMOSidebar from './components/PMOSidebar.jsx';
 import PortfolioManagerSidebar from './components/PortfolioManagerSidebar.jsx';
+import PortfolioReportsPage from './components/PortfolioReportsPage.jsx';
 import SalesManagerSidebar from './components/SalesManagerSidebar.jsx';
 import InterviewPanelSidebar from './components/InterviewPanelSidebar.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -216,15 +217,7 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioManagerDashboard /></ProtectedRoute>} />
                 <Route path="/portfolio/projects" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ProjectPortfolio /></ProtectedRoute>} />
                 <Route path="/portfolio/clients" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ClientList /></ProtectedRoute>} />
-                <Route
-                  path="/portfolio/reports"
-                  element={
-                    <ProtectedRoute allowedRoles={['portfolio-manager']}>
-                      <PortfolioReportsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/portfolio/interview-hub" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><InterviewHub /></ProtectedRoute>} />
+               <Route path="/portfolio/reports" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioReportsPage /></ProtectedRoute>} />
                 <Route path="/portfolio/strategic-planning" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Strategic Planning" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/financial-overview" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Financial Overview" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/resource-strategy" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Resource Strategy" color="text-orange-600" /></ProtectedRoute>} />

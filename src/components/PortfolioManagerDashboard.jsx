@@ -1907,21 +1907,20 @@ const PortfolioManagerDashboard = ({ setCurrentPage, currentUser }) => {
             <Calendar className="w-5 h-5" /> Allocation Start-Date Filter
           </CardTitle>
           {activeTab === "demand" && (
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-2">
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Demand Overview</p>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap justify-start lg:justify-end">
-                <button
-                  onClick={handleOpenEmailModal}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white text-emerald-700 border border-emerald-200 shadow-sm hover:bg-emerald-50 hover:border-emerald-300 font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                  Generate Email
-                </button>
-              </div>
-            </div>
+            <Button
+              variant="outline"
+              onClick={handleOpenEmailModal}
+              size="sm"
+              className="border-green-200 text-green-600 hover:bg-green-50"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4 mr-2" />
+              )}
+              Generate Report
+            </Button>
           )}
         </CardHeader>
         <CardContent className="p-6">
@@ -3707,14 +3706,14 @@ const PortfolioManagerDashboard = ({ setCurrentPage, currentUser }) => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setIsEmailModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium text-sm transition-all"
+                  className="px-5 py-5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSendEmail}
                   disabled={isSending || toEmail.length === 0}
-                  className="h-10 px-5 rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm flex items-center gap-2 shadow-sm transition-all active:scale-95"
+                  className="px-6 py-5 text-sm font-medium text-white bg-blue-500 rounded-xl hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
                 >
                   {isSending ? (
                     <>

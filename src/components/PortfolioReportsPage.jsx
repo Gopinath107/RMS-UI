@@ -2,10 +2,10 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { PortfolioReportService } from '../services/PortfolioReportServices';
 import {
     Search, Filter, ChevronDown, ChevronRight, Calendar, Users, Target,
-    CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw,
+    CheckCircle, XCircle, Clock, AlertTriangle, Download, RefreshCw,
     TrendingUp, Award, UserCheck, UserX, Briefcase, BarChart2,
     ChevronLeft, ChevronRight as ChevronRightIcon, FileText, X, Circle,
-    Building2, Mail, Phone, MapPin, Star, Send, Loader2, History, FileSpreadsheet
+    Building2, Mail, Phone, MapPin, Star,Send, Loader2, History 
 } from "lucide-react";
 
 const DUMMY_CLIENTS = ["All Clients"];  // populated dynamically from API data
@@ -248,7 +248,7 @@ const CandidateCard = ({ resource, isOpen, onToggle }) => {
                             {isInternal ? "Internal" : "External"}
                         </span>
                     </div>
-                    <p className="text-xs text-gray-500 font-mono">{resource.resourceId}</p>
+                    {/* <p className="text-xs text-gray-500 font-mono">{resource.resourceId}</p> */}
                 </div>
 
                 <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end max-w-[240px]">
@@ -369,7 +369,7 @@ const DemandRow = ({ demand, isExpanded, onToggle }) => {
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-mono text-xs text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-100">{demand.id}</span>
+                        {/* <span className="font-mono text-xs text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-100">{demand.id}</span> */}
                         <h3 className="text-base font-bold text-gray-900 leading-snug">{demand.name}</h3>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
@@ -433,7 +433,7 @@ const DemandRow = ({ demand, isExpanded, onToggle }) => {
                     </div>
 
                     {/* Resource List */}
-                    <div className="p-5 pl-10">
+                   <div className="p-5 pl-10 pb-8 pr-8">
                         {/* Header + search */}
                         <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
                             <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -480,9 +480,9 @@ const DemandRow = ({ demand, isExpanded, onToggle }) => {
                             </div>
                         ) : (
                             <div
-                                className="space-y-3 overflow-y-auto max-h-[420px]"
-                                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                            >
+                                    className="space-y-3 overflow-y-auto max-h-[420px] pb-4"
+                                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                                >
                                 {filteredResources.map((r) => (
                                     <CandidateCard
                                         key={r.id}
@@ -567,7 +567,7 @@ export default function PortfolioReportsPage() {
     const [clientList, setClientList] = useState(["All Clients"]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [detailedExporting, setDetailedExporting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     // ── Email modal state (same as dashboard) ──
 const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -699,36 +699,41 @@ const [showSuccess, setShowSuccess] = useState(false);
 
     const hasActiveFilters = selectedClient !== "All Clients" || startDate || endDate || searchTerm || statusFilter !== "All" || priorityFilter !== "All";
 
-// ── Detailed Export — new 3-sheet Excel ──
-const handleDetailedExport = useCallback(async () => {
-    setDetailedExporting(true);
+    // ── 4 + 5: Export via API — falls back to search scope then PDF export ──
+    // ── Export — same payload as dashboard ──
+const handleExport = useCallback(async () => {
+    setExporting(true);
     try {
-        const payload = {
-            userId: localStorage.getItem('userId'),
-            fromDate: startDate || null,
-            toDate: endDate || null,
-            accountId: selectedClient !== "All Clients"
-                ? (filtered.find(d => d.client === selectedClient)?._accountId ?? null)
-                : null,
-            demandIds: filtered.map(d => d._demandId).filter(Boolean),
-        };
-        const response = await PortfolioReportService.exportDetailedResourceReport(payload);
+       const payload = {
+           userId: localStorage.getItem('userId'),
+           fromDate: startDate || null,
+           toDate: endDate || null,
+           accountId: selectedClient !== "All Clients"
+               ? (filtered.find(d => d.client === selectedClient)?._accountId ?? null)
+               : null,
+           demandIds: filtered.map(d => d._demandId).filter(Boolean),
+       };
+
+        const response = await PortfolioReportService.exportDemandReport(payload);
         const blob = new Blob([response.data], {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `detailed_resource_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const fromStr = startDate ? startDate.replace(/-/g, '') : 'all';
+        const toStr = endDate ? endDate.replace(/-/g, '') : 'all';
+        const clientStr = selectedClient !== "All Clients" ? `_${selectedClient.replace(/\s+/g, '_')}` : '';
+        link.download = `demand_report_${fromStr}_to_${toStr}${clientStr}.xlsx`;
         document.body.appendChild(link);
         link.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(link);
     } catch (err) {
-        console.error("Detailed export failed:", err);
-        alert("Detailed export failed. Please try again.");
+        console.error("Export failed:", err);
+        alert("Export failed. Please try again.");
     } finally {
-        setDetailedExporting(false);
+        setExporting(false);
     }
 }, [selectedClient, filtered, startDate, endDate]);
 
@@ -783,42 +788,41 @@ const handleSendEmail = async () => {
     return (
         <div className="min-h-screen bg-transparent p-6 md:p-8">
             {/* Page Header */}
-            <div className="relative z-20 mb-8">
-              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-white border border-orange-200 flex items-center justify-center shadow-md flex-shrink-0">
-                    <FileText className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight drop-shadow">
-                      Demand Reports
-                    </h1>
-                    <p className="text-sm md:text-base font-medium text-white/90 drop-shadow">
-                      Detailed resource & interview breakdown per demand
-                    </p>
-                  </div>
-                </div>
+            <div className="mb-6">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="w-10 h-10 rounded-xl bg-white border-2 border-orange-400 flex items-center justify-center shadow-md flex-shrink-0">
+                                <FileText className="w-5 h-5 text-orange-500" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-extrabold text-white tracking-tight">Demand Reports</h1>
+                                <p className="text-sm text-white/70">Detailed resource & interview breakdown per demand</p>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Export button — wired to API 5 */}
+                    {/* Action buttons */}
+                        <div className="flex items-center gap-3">
+                            <button
+                            onClick={handleOpenEmailModal}
+                            disabled={loading}
+                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-green-600 bg-white border-2 border-green-400 rounded-xl shadow-md hover:bg-green-50 hover:border-green-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                            Generate Report
+                        </button>
 
-                <div className="flex items-center gap-3 flex-wrap justify-start xl:justify-end xl:ml-auto">
-                  <button
-                    onClick={handleOpenEmailModal}
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-white text-emerald-700 border border-emerald-300 shadow-lg hover:bg-emerald-50 hover:border-emerald-400 hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                    Generate Email
-                  </button>
-
-                  <button
-                    onClick={handleDetailedExport}
-                    disabled={detailedExporting}
-                    className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-orange-500 text-white border border-orange-500 shadow-lg hover:bg-orange-600 hover:border-orange-600 hover:shadow-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {detailedExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-                    {detailedExporting ? "Generating..." : "Export Report"}
-                  </button>
+                        <button
+                            onClick={handleExport}
+                            disabled={exporting}
+                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-orange-600 bg-white border-2 border-orange-400 rounded-xl shadow-md hover:bg-orange-50 hover:border-orange-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            <Download className={`w-4 h-4 ${exporting ? "animate-spin" : ""}`} />
+                            {exporting ? "Exporting…" : "Export Report"}
+                        </button>
+                        </div>
                 </div>
-              </div>
             </div>
 
             {/* Loading / Error states */}
@@ -931,24 +935,22 @@ const handleSendEmail = async () => {
             </div>
 
             {/* Results header */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-1">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                    <p className="text-sm font-semibold text-gray-800">
-                        Showing <span className="font-bold text-orange-600">{paginated.length}</span>
-                        {" "}of <span className="font-bold text-orange-600">{filtered.length}</span>
-                        {" "}<span className="text-gray-500">demands</span>
+                    <p className="text-sm text-gray-600">
+                        Showing <span className="font-bold text-gray-900">{paginated.length}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> demands
                     </p>
                     {hasActiveFilters && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-semibold border border-orange-200">Filtered</span>
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Filtered</span>
                     )}
                 </div>
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-                    <span className="text-sm font-semibold text-gray-600">Show</span>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Show</span>
                     <select value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="border border-orange-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer">
+                        className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
                         {ITEMS_PER_PAGE_OPTIONS.map(n => <option key={n}>{n}</option>)}
                     </select>
-                    <span className="text-sm font-semibold text-gray-600">per page</span>
+                    <span>per page</span>
                 </div>
             </div>
 
@@ -1019,36 +1021,31 @@ const handleSendEmail = async () => {
 {/* ── EMAIL MODAL ── */}
 {isEmailModalOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
-        <div className="relative bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+        <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
+        <div className="relative bg-white w-full max-w-[500px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-orange-50 to-white">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
-                        <Mail className="w-4 h-4 text-orange-600" />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-gray-900">Share Demand Report</h3>
-                        <p className="text-xs text-gray-500">Send generated demand report via email</p>
-                    </div>
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900">Share Demand Report</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Send via email</p>
                 </div>
-                <button onClick={() => setIsEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
-                    <X className="w-4 h-4" />
+                <button onClick={() => setIsEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-50 transition-all">
+                    <X className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Body */}
-            <div className="px-6 py-6 space-y-5 overflow-y-auto flex-1">
+            <div className="p-6 space-y-6 overflow-y-auto">
                 <EmailChipInput
-                    label="To"
+                    label="Recipients"
                     emails={toEmail}
                     setEmails={setToEmails}
-                    placeholder="Type email and press Enter"
+                    placeholder="Add people..."
                     autoFocus={true}
                     rightLabelAction={
                         !showCc && (
-                            <button onClick={() => setShowCc(true)} className="text-xs font-semibold text-orange-500 hover:text-orange-700 hover:bg-orange-50 px-2 py-0.5 rounded transition-colors">
+                            <button onClick={() => setShowCc(true)} className="text-xs font-semibold text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-2 py-1 rounded transition-colors">
                                 + CC
                             </button>
                         )
@@ -1059,56 +1056,37 @@ const handleSendEmail = async () => {
                         label="CC"
                         emails={ccEmail}
                         setEmails={setCcEmails}
-                        placeholder="Add CC addresses…"
+                        placeholder="Add CC..."
                         rightLabelAction={
-                            <button onClick={() => setShowCc(false)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                            <button onClick={() => setShowCc(false)} className="text-xs text-gray-400 hover:text-gray-600">Remove</button>
                         }
                     />
                 )}
-
-                {/* Attachment preview */}
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-9 h-9 bg-white rounded-lg border border-orange-200 flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
                         <FileText className="w-5 h-5 text-orange-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">
                             Demand_Report_{startDate || 'All'}_to_{endDate || 'All'}.pdf
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">Generated report • PDF</p>
-                        <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-orange-100/50 pt-2 text-xs text-gray-600">
-                            <div>
-                                <span className="font-semibold text-gray-700">Client:</span> {selectedClient}
-                            </div>
-                            <div>
-                                <span className="font-semibold text-gray-700">From:</span> {startDate || 'All'}
-                            </div>
-                            <div>
-                                <span className="font-semibold text-gray-700">To:</span> {endDate || 'All'}
-                            </div>
-                        </div>
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-0.5">Generated Report • PDF</p>
                     </div>
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-2" />
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                <p className="text-xs text-gray-500">
-                    <span className="font-semibold text-gray-700">{toEmail.length + ccEmail.length}</span> recipient(s)
-                </p>
-                <div className="flex gap-2.5">
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <p className="text-xs text-gray-500 font-medium">{toEmail.length + ccEmail.length} recipient(s)</p>
+                <div className="flex gap-3">
                     <button onClick={() => setIsEmailModalOpen(false)}
-                        className="h-10 px-4 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium shadow-sm">
+                        className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm">
                         Cancel
                     </button>
                     <button onClick={handleSendEmail} disabled={isSending || toEmail.length === 0}
-                        className="h-10 px-5 rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 shadow-sm">
-                        {isSending ? (
-                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Sending…</span></>
-                        ) : (
-                            <><span>Send Email</span><Send className="w-3.5 h-3.5" /></>
-                        )}
+                        className="px-6 py-2.5 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all flex items-center gap-2 active:scale-95">
+                        {isSending ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Sending...</span></> : <><span>Send</span><Send className="w-3.5 h-3.5" /></>}
                     </button>
                 </div>
             </div>

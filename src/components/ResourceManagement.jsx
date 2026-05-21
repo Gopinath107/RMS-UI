@@ -396,6 +396,20 @@ const PersonalInfoCard = ({ resource, resourceType, onEditResource }) => {
     );
 };
 
+const isSystemAdminUser = () => {
+    const userRole = localStorage.getItem("userRole");
+    const roleName = localStorage.getItem("roleName");
+    const roleNames = JSON.parse(localStorage.getItem("roleNames") || "[]");
+    const roles = JSON.parse(localStorage.getItem("roles") || "[]");
+
+    return (
+        userRole === "system-admin" ||
+        roleName === "system-admin" ||
+        roleNames.includes("system-admin") ||
+        roles.some(r => r.roleName === "system-admin")
+    );
+};
+
 // Resource Table Component to avoid code duplication
 const ResourceTable = ({
     resources,
@@ -469,7 +483,12 @@ const ResourceTable = ({
     };
 
     // Only show cols relevant to current resource type
-    const visibleCols = columnOrder.filter(c => defaultCols.includes(c));
+    const isSystemAdmin = isSystemAdminUser();
+    const visibleCols = columnOrder.filter(c => {
+        if (!defaultCols.includes(c)) return false;
+        if (isSystemAdmin && (c === "resumeActions" || c === "actions")) return false;
+        return true;
+    });
 
     return (
         <motion.div
@@ -553,6 +572,7 @@ const ResourceTable = ({
                                                     case 'experience':
                                                         return <TableCell key={colId} className="py-4 w-[58px] min-w-[58px]">{resource.experience}</TableCell>;
                                                     case 'resumeActions':
+                                                        if (isSystemAdmin) return null;
                                                         return (
                                                             <TableCell key={colId} className="w-[205px] min-w-[205px]" onClick={(e) => e.stopPropagation()}>
                                                                 <ResumeToggleSwitch
@@ -565,6 +585,7 @@ const ResourceTable = ({
                                                             </TableCell>
                                                         );
                                                     case 'actions':
+                                                        if (isSystemAdmin) return null;
                                                         return (
                                                             <TableCell key={colId} className="py-4 w-[160px]">
                                                                 <div className="flex gap-2">
@@ -591,7 +612,7 @@ const ResourceTable = ({
                                         </TableRow>
                                         {isExpanded && (
                                             <TableRow>
-                                                <TableCell colSpan={10} className="p-0">
+                                                <TableCell colSpan={visibleCols.length} className="p-0">
                                                     <Card className="m-4">
                                                         <CardContent className="p-4">
                                                             {/* ── 2-column responsive grid layout ── */}
@@ -949,7 +970,7 @@ const ResourceTable = ({
                                                                                                 </div>
 
                                                                                                 {/* Interview action */}
-                                                                                                {audit.status === 'Shared' && (
+                                                                                                {audit.status === 'Shared' && !isSystemAdmin && (
                                                                                                     activeInterview ? (
                                                                                                         <div className="flex items-center gap-2 mt-1">
                                                                                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">

@@ -31,7 +31,7 @@ export const InterviewService = {
     return api.post('/interviews/create', payload);
   },
 
-// ────── NEW: BATCH (Demand) ──────
+  // ────── NEW: BATCH (Demand) ──────
   createBatchInterview: async function (
     requestId,
     employeeId,     // For internal resources
@@ -120,15 +120,15 @@ export const InterviewService = {
     });
   },
 
-noShow: async function (interviewId, requestId, who, levels, feedback) {
-  return api.put(`/interviews/NoShow`, {
-    interviewId,
-    requestId,
-    who,
-    levels,
-    feedback
-  });
-},
+  noShow: async function (interviewId, requestId, who, levels, feedback) {
+    return api.put(`/interviews/NoShow`, {
+      interviewId,
+      requestId,
+      who,
+      levels,
+      feedback
+    });
+  },
 
   cancel: async function (interviewId, requestId, reason) {
     return api.put(`/interviews/Cancel`, {
