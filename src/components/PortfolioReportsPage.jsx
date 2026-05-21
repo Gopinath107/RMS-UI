@@ -94,15 +94,15 @@ const PRIORITY_CONFIG = {
 
 const PriorityBadge = ({ priority }) => {
     const config = {
-        High: "bg-red-500 text-white border-red-500 shadow-red-100",
-        Medium: "bg-orange-500 text-white border-orange-500 shadow-orange-100",
-        Low: "bg-emerald-500 text-white border-emerald-500 shadow-emerald-100"
+        High: "bg-red-500 text-white border-red-500",
+        Medium: "bg-orange-500 text-white border-orange-500",
+        Low: "bg-emerald-500 text-white border-emerald-500"
     };
     const classes = config[priority] || "bg-gray-500 text-white border-gray-500";
     return (
-        <span 
-            style={{ minWidth: '90px' }} 
-            className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
+        <span
+            style={{ whiteSpace: 'nowrap', minWidth: '68px' }}
+            className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
         >
             {priority}
         </span>
@@ -111,20 +111,20 @@ const PriorityBadge = ({ priority }) => {
 
 const StatusBadge = ({ status }) => {
     const config = {
-        Open: "bg-blue-50 text-blue-600 border-blue-200 shadow-blue-50/50",
-        InProgress: "bg-purple-50 text-purple-600 border-purple-200 shadow-purple-50/50",
-        "In Progress": "bg-purple-50 text-purple-600 border-purple-200 shadow-purple-50/50",
-        Completed: "bg-green-50 text-green-600 border-green-200 shadow-green-50/50",
-        Closed: "bg-gray-50 text-gray-600 border-gray-200 shadow-gray-50/50",
-        "On Hold": "bg-amber-50 text-amber-600 border-amber-200 shadow-amber-50/50",
-        Rejected: "bg-red-50 text-red-600 border-red-200 shadow-red-50/50"
+        Open: "bg-blue-50 text-blue-600 border-blue-200",
+        InProgress: "bg-purple-50 text-purple-600 border-purple-200",
+        "In Progress": "bg-purple-50 text-purple-600 border-purple-200",
+        Completed: "bg-green-50 text-green-600 border-green-200",
+        Closed: "bg-gray-50 text-gray-600 border-gray-200",
+        "On Hold": "bg-amber-50 text-amber-600 border-amber-200",
+        Rejected: "bg-red-50 text-red-600 border-red-200"
     };
-    const classes = config[status] || "bg-gray-50 text-gray-600 border-gray-200 shadow-sm";
+    const classes = config[status] || "bg-gray-50 text-gray-600 border-gray-200";
     const label = status === "InProgress" ? "In Progress" : status;
     return (
-        <span 
-            style={{ minWidth: '90px' }} 
-            className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
+        <span
+            style={{ whiteSpace: 'nowrap', minWidth: '80px' }}
+            className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
         >
             {label}
         </span>
@@ -252,14 +252,25 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-            {/* Transparent backdrop overlay */}
-            <div 
-                className="absolute inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity" 
-                onClick={onClose} 
+        <div className="fixed inset-0 z-[200] overflow-hidden flex justify-end">
+            {/* Dark semi-transparent backdrop — clicking closes drawer */}
+            <div
+                className="absolute inset-0 bg-black/50 transition-opacity"
+                onClick={onClose}
             />
-            {/* Slide-out Drawer Container */}
-            <div className="relative w-full md:w-[420px] h-screen bg-white shadow-2xl flex flex-col z-10 transform transition-transform duration-300 ease-in-out drawer-slide-in">
+            {/* Slide-in Drawer Panel — right side overlay, NEVER replaces page */}
+            <div
+                className="relative bg-white shadow-2xl flex flex-col z-10 drawer-slide-in overflow-hidden"
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: 0,
+                    height: '100vh',
+                    width: '480px',
+                    maxWidth: '100vw',
+                    zIndex: 201,
+                }}
+            >
                 
                 {/* Fixed Header */}
                 <div className="px-6 py-5 border-b border-gray-150 flex justify-between items-start bg-gray-50/50 flex-shrink-0">
@@ -407,7 +418,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                                     return (
                                         <div
                                             key={resource.id}
-                                            className={`border rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 ${isCardOpen ? "border-purple-400 ring-2 ring-purple-100" : "border-gray-200 hover:border-purple-300 hover:shadow"}`}
+                                            className={`rounded-xl bg-white overflow-hidden transition-all duration-200 ${isCardOpen ? "border border-purple-200 shadow-md" : "border border-gray-100 shadow-sm hover:border-purple-200 hover:shadow"}`}
                                         >
                                             {/* Header */}
                                             <button
@@ -480,18 +491,24 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                                                                     const cfg = LEVEL_STATUS_CONFIG[il.status] || LEVEL_STATUS_CONFIG.Scheduled;
                                                                     const Icon = cfg.icon;
                                                                     return (
-                                                                        <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] ${cfg.bg} ${cfg.text} border-current/10`}>
-                                                                            <Icon className="w-3 h-3 flex-shrink-0" />
-                                                                            <span className="font-extrabold w-12 flex-shrink-0 truncate">{il.level}</span>
-                                                                            <span className="font-extrabold px-1.5 py-0.2 rounded-full bg-white text-[9px] shadow-sm">{il.status}</span>
-                                                                            <span className="flex items-center gap-1 text-[10px] opacity-80 ml-auto truncate">
-                                                                                <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
-                                                                                <span className="truncate max-w-[65px]">{il.interviewer}</span>
-                                                                            </span>
-                                                                            <span className="flex items-center gap-1 text-[10px] opacity-80 font-mono flex-shrink-0">
-                                                                                <Calendar className="w-2.5 h-2.5 flex-shrink-0" />
-                                                                                {formatDrawerDate(il.date)}
-                                                                            </span>
+                                                                        <div key={i} className={`flex items-start gap-2 px-2.5 py-2 rounded-lg border text-[11px] ${cfg.bg} ${cfg.text} border-gray-100`}>
+                                                                            <Icon className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                    <span className="font-extrabold">{il.level}</span>
+                                                                                    <span className="font-extrabold px-1.5 py-0.5 rounded-full bg-white text-[9px] shadow-sm border border-gray-100">{il.status}</span>
+                                                                                </div>
+                                                                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                                                                    <span className="flex items-center gap-1 text-[10px] opacity-70">
+                                                                                        <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
+                                                                                        {il.interviewer}
+                                                                                    </span>
+                                                                                    <span className="flex items-center gap-1 text-[10px] opacity-70 font-mono">
+                                                                                        <Calendar className="w-2.5 h-2.5 flex-shrink-0" />
+                                                                                        {formatDrawerDate(il.date)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -508,15 +525,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                     </div>
                 </div>
 
-                {/* Fixed Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-all shadow-sm active:scale-95"
-                    >
-                        Close Details
-                    </button>
-                </div>
+                {/* No footer close button — close via X button in header or backdrop click */}
             </div>
         </div>
     );
@@ -527,17 +536,18 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
 /* ─────────────────────────────────────────────────────────────── */
 const InterviewLevelSelect = ({ demandId, value, onChange, isSaving, saveStatus }) => {
     return (
-        <div className="relative flex items-center justify-center min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex items-center justify-center w-full" onClick={(e) => e.stopPropagation()}>
             <select
                 value={value || "Not Started"}
                 onChange={(e) => onChange(demandId, e.target.value, value)}
                 disabled={isSaving}
-                className="w-full bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm hover:border-gray-400"
+                style={{ fontSize: '11px' }}
+                className="w-full bg-white border border-gray-300 rounded-lg px-1.5 py-1 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm hover:border-gray-400"
             >
                 <option value="Not Started">Not Started</option>
-                <option value="L1">L1 — Level 1 Interview</option>
-                <option value="L2">L2 — Level 2 Interview</option>
-                <option value="L3">L3 — Level 3 Interview</option>
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
                 <option value="HR Round">HR Round</option>
                 <option value="Final Round">Final Round</option>
                 <option value="Completed">Completed</option>
@@ -1234,24 +1244,31 @@ export default function PortfolioReportsPage() {
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+                    {/* Table container: allow horizontal scroll only below laptop, freeze cols 1+2 */}
                     <div className="overflow-x-auto w-full" style={{ scrollbarWidth: "thin" }}>
-                        <table className="table-fixed min-w-[1200px] w-full border-collapse">
+                        {/*
+                          Column width budget (100%):
+                          #=3%, Demand=18%, Client=8%, Project=8%, DueDate=7%,
+                          Priority=7%, Status=9%, Req=3%, Int=3%, Ext=3%,
+                          Sch=3%, Sel=3%, Rej=3%, InterviewLevel=11% = 100%
+                        */}
+                        <table className="table-fixed w-full border-collapse" style={{ minWidth: '900px' }}>
                             <thead>
-                                <tr className="bg-[#eae6f8] border-b border-purple-250 shadow-sm text-center">
-                                    <th style={{ width: '3%', minWidth: '48px', maxWidth: '48px' }} className="py-3 px-3 text-center text-slate-800 font-extrabold text-[12px] uppercase tracking-wider sticky-header-col-1 w-[48px] min-w-[48px] max-w-[48px]">#</th>
-                                    <SortableHeader label="Demand Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} style={{ width: '22%' }} className="sticky-header-col-2 min-w-[200px]" />
-                                    <SortableHeader label="Client" sortKey="client" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} />
-                                    <SortableHeader label="Project" sortKey="project" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} />
-                                    <SortableHeader label="Due Date" sortKey="due_date" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                <tr className="bg-[#eae6f8] border-b border-purple-200 shadow-sm text-center">
+                                    <th style={{ width: '3%' }} className="py-2.5 px-2 text-center text-slate-800 font-extrabold text-[11px] uppercase tracking-wider sticky-header-col-1" >#</th>
+                                    <SortableHeader label="Demand Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} style={{ width: '18%' }} className="sticky-header-col-2 text-left" />
+                                    <SortableHeader label="Client" sortKey="client" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                    <SortableHeader label="Project" sortKey="project" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                    <SortableHeader label="Due Date" sortKey="due_date" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} />
                                     <SortableHeader label="Priority" sortKey="priority" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} className="text-center" />
-                                    <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} className="text-center" />
-                                    <SortableHeader label="Req" sortKey="requested" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Int" sortKey="internal" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Ext" sortKey="external" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Sch" sortKey="scheduled" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Sel" sortKey="selected" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Rej" sortKey="rejected" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Interview Level" sortKey="interviewLevel" currentSort={sortConfig} onSort={handleSort} style={{ width: '10%' }} className="text-center min-w-[150px]" />
+                                    <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} className="text-center" />
+                                    <SortableHeader label="Req" sortKey="requested" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Int" sortKey="internal" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Ext" sortKey="external" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Sch" sortKey="scheduled" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Sel" sortKey="selected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Rej" sortKey="rejected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Interview Level" sortKey="interviewLevel" currentSort={sortConfig} onSort={handleSort} style={{ width: '11%' }} className="text-center" />
                                 </tr>
                             </thead>
                             <tbody>
@@ -1267,31 +1284,31 @@ export default function PortfolioReportsPage() {
                                         <tr
                                             key={demand.id}
                                             onClick={() => setDrawerDemand(demand)}
-                                            className="group border-b border-gray-100 transition-colors even:bg-white odd:bg-gray-50/50 hover:bg-purple-50/40 cursor-pointer text-center"
+                                            className="group border-b border-gray-100 transition-colors even:bg-white odd:bg-gray-50/40 hover:bg-purple-50/30 cursor-pointer"
                                         >
-                                            <td style={{ width: '3%', minWidth: '48px', maxWidth: '48px' }} className="py-3.5 px-3 text-center text-xs font-semibold text-gray-500 sticky-col-1 w-[48px] min-w-[48px] max-w-[48px]">{rowNum}</td>
-                                            <td style={{ width: '22%' }} className="py-3.5 px-3 text-xs font-bold text-gray-900 sticky-col-2 min-w-[200px]">
-                                                <div className="hover:text-purple-700 transition-colors text-left flex items-center justify-between">
-                                                    <span className="truncate max-w-[320px]">{demand.name}</span>
-                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 flex-shrink-0" />
+                                            <td style={{ width: '3%' }} className="py-2.5 px-2 text-center text-[11px] font-semibold text-gray-500 sticky-col-1">{rowNum}</td>
+                                            <td style={{ width: '18%' }} className="py-2.5 px-2 text-[11px] font-bold text-gray-900 sticky-col-2">
+                                                <div className="hover:text-purple-700 transition-colors text-left flex items-center gap-1">
+                                                    <span className="truncate">{demand.name}</span>
+                                                    <ChevronRight className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                                                 </div>
                                             </td>
-                                            <td style={{ width: '9%' }} className="py-3.5 px-3 text-xs font-medium text-gray-700 text-left truncate">{demand.client}</td>
-                                            <td style={{ width: '9%' }} className="py-3.5 px-3 text-xs text-gray-600 text-left truncate">{demand.project}</td>
-                                            <td style={{ width: '8%' }} className="py-3.5 px-3 text-xs text-gray-600 text-left font-mono truncate">{formatDemandDate(demand.fulfilmentDt)}</td>
-                                            <td style={{ width: '7%' }} className="py-3.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[11px] font-medium text-gray-700 text-left truncate">{demand.client}</td>
+                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[11px] text-gray-600 text-left truncate">{demand.project}</td>
+                                            <td style={{ width: '7%' }} className="py-2.5 px-2 text-[11px] text-gray-600 text-center font-mono">{formatDemandDate(demand.fulfilmentDt)}</td>
+                                            <td style={{ width: '7%' }} className="py-2.5 px-2 text-center" onClick={e => e.stopPropagation()}>
                                                 <PriorityBadge priority={demand.priority} />
                                             </td>
-                                            <td style={{ width: '8%' }} className="py-3.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                                            <td style={{ width: '9%' }} className="py-2.5 px-1 text-center" onClick={e => e.stopPropagation()}>
                                                 <StatusBadge status={demand.status} />
                                             </td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(demand.totalRequested, "text-gray-800")}`}>{demand.totalRequested}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(internalCount, "text-blue-700")}`}>{internalCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(externalCount, "text-purple-700")}`}>{externalCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(scheduledCount, "text-amber-700")}`}>{scheduledCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(selectedCount, "text-emerald-700")}`}>{selectedCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(rejectedCount, "text-red-650")}`}>{rejectedCount}</td>
-                                            <td style={{ width: '10%' }} className="py-3.5 px-3 text-center">
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(demand.totalRequested, "text-gray-800")}`}>{demand.totalRequested}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(internalCount, "text-blue-700")}`}>{internalCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(externalCount, "text-purple-700")}`}>{externalCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(scheduledCount, "text-amber-700")}`}>{scheduledCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(selectedCount, "text-emerald-700")}`}>{selectedCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[11px] font-mono ${getNumClass(rejectedCount, "text-red-700")}`}>{rejectedCount}</td>
+                                            <td style={{ width: '11%' }} className="py-2.5 px-1.5 text-center">
                                                 <InterviewLevelSelect
                                                     demandId={demand._demandId}
                                                     value={demand.interviewLevel}
