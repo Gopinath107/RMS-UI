@@ -142,9 +142,30 @@ const OVERALL_STATUS_CONFIG = {
     'In Progress':{ bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
 };
 
-/* ─────────────────────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────── */
+/*  EXCEL GRID — COLUMN DEFINITIONS (drag-drop order driven)       */
+/* ───────────────────────────────────────────────────────────────── */
+const COLUMN_DEFS = [
+    { key: '#',              label: '#',               minW: 36,   sortKey: null,            filter: null,                                      fixed: true  },
+    { key: 'name',           label: 'Demand Name',     minW: 140,  sortKey: 'name',           filter: 'text'                                                  },
+    { key: 'client',         label: 'Client',          minW: 80,   sortKey: 'client',         filter: 'text'                                                  },
+    { key: 'project',        label: 'Project',         minW: 80,   sortKey: 'project',        filter: 'text'                                                  },
+    { key: 'due_date',       label: 'Due Date',        minW: 80,   sortKey: 'due_date',       filter: null                                                    },
+    { key: 'priority',       label: 'Priority',        minW: 80,   sortKey: 'priority',       filter: 'select', opts: ['All','High','Medium','Low']           },
+    { key: 'status',         label: 'Status',          minW: 96,   sortKey: 'status',         filter: 'select', opts: ['All','Open','In Progress','Completed','On Hold'] },
+    { key: 'requested',      label: 'Req',             minW: 44,   sortKey: 'requested',      filter: null,     center: true                                 },
+    { key: 'internal',       label: 'Int',             minW: 40,   sortKey: 'internal',       filter: null,     center: true                                 },
+    { key: 'external',       label: 'Ext',             minW: 40,   sortKey: 'external',       filter: null,     center: true                                 },
+    { key: 'scheduled',      label: 'Sch',             minW: 40,   sortKey: 'scheduled',      filter: null,     center: true                                 },
+    { key: 'selected_cnt',   label: 'Sel',             minW: 40,   sortKey: 'selected',       filter: null,     center: true                                 },
+    { key: 'rejected_cnt',   label: 'Rej',             minW: 40,   sortKey: 'rejected',       filter: null,     center: true                                 },
+    { key: 'interviewLevel', label: 'Interview Level', minW: 110,  sortKey: 'interviewLevel', filter: 'select', opts: ['All','Not Started','L1','L2','L3','HR Round','Final Round','Completed'] },
+];
+const DEFAULT_COL_ORDER = COLUMN_DEFS.map(c => c.key);
+
+/* ───────────────────────────────────────────────────────────────── */
 /*  EMAIL CHIP INPUT                                               */
-/* ─────────────────────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────── */
 const EmailChipInput = ({ label, emails, setEmails, placeholder, autoFocus = false, rightLabelAction = null }) => {
     const [inputValue, setInputValue] = useState('');
     const [error, setError] = useState('');
@@ -620,6 +641,13 @@ export default function PortfolioReportsPage() {
     const [savingDropdowns, setSavingDropdowns] = useState({});
     const [saveStatus, setSaveStatus] = useState({});
 
+    // ── Excel Grid: column order (drag-drop), per-column filters ──
+    const [columnOrder, setColumnOrder] = useState(DEFAULT_COL_ORDER);
+    const [colFilters, setColFilters] = useState({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' });
+    const [showColFilters, setShowColFilters] = useState(false);
+    const [dragCol, setDragCol]         = useState(null);   // key being dragged
+    const [dragOverCol, setDragOverCol] = useState(null);   // key being hovered over
+
     // ── API data state ────────────────────────────────────────────
     const [allDemands, setAllDemands] = useState([]);
     const [clientList, setClientList] = useState(["All Clients"]);
@@ -765,34 +793,71 @@ export default function PortfolioReportsPage() {
     // ── Client-side filter mapping for local/extended filters (Search, Priority) ──
     const filtered = useMemo(() => {
         let list = allDemands;
-        
-        // Priority Filter
-        if (priorityFilter !== "All") {
-            list = list.filter(d => d.priority === priorityFilter);
-        }
-        
-        // Text Search
+
+        // Top-level Priority Filter
+        if (priorityFilter !== 'All') list = list.filter(d => d.priority === priorityFilter);
+
+        // Top-level Text Search
         if (searchTerm.trim()) {
-            const query = searchTerm.toLowerCase();
+            const q = searchTerm.toLowerCase();
             list = list.filter(d =>
-                d.name.toLowerCase().includes(query) ||
-                d.client.toLowerCase().includes(query) ||
-                d.project.toLowerCase().includes(query) ||
-                d.id.toLowerCase().includes(query)
+                d.name.toLowerCase().includes(q) ||
+                d.client.toLowerCase().includes(q) ||
+                d.project.toLowerCase().includes(q) ||
+                d.id.toLowerCase().includes(q)
             );
         }
-        
-        return list;
-    }, [allDemands, priorityFilter, searchTerm]);
 
-    // Header sort sorting logic
+        // Column-level filters
+        if (colFilters.name.trim())    list = list.filter(d => d.name.toLowerCase().includes(colFilters.name.toLowerCase()));
+        if (colFilters.client.trim())  list = list.filter(d => d.client.toLowerCase().includes(colFilters.client.toLowerCase()));
+        if (colFilters.project.trim()) list = list.filter(d => d.project.toLowerCase().includes(colFilters.project.toLowerCase()));
+        if (colFilters.priority !== 'All') list = list.filter(d => d.priority === colFilters.priority);
+        if (colFilters.status !== 'All') {
+            const s = colFilters.status;
+            list = list.filter(d => d.status === s || (s === 'In Progress' && (d.status === 'InProgress' || d.status === 'In Progress')));
+        }
+        if (colFilters.interviewLevel !== 'All') list = list.filter(d => (d.interviewLevel || 'Not Started') === colFilters.interviewLevel);
+
+        return list;
+    }, [allDemands, priorityFilter, searchTerm, colFilters]);
+
+    // Header sort handler
     const handleSort = (key) => {
         let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
+
+    // ── Drag-drop column reorder handlers ────────────────────────
+    const handleColDragStart = (e, key) => {
+        setDragCol(key);
+        e.dataTransfer.effectAllowed = 'move';
+        // ghost image: make almost invisible
+        const ghost = document.createElement('div');
+        ghost.style.position = 'absolute';
+        ghost.style.top = '-9999px';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 0, 0);
+        setTimeout(() => document.body.removeChild(ghost), 0);
+    };
+    const handleColDragOver = (e, key) => {
+        e.preventDefault();
+        if (key !== dragCol) setDragOverCol(key);
+    };
+    const handleColDrop = (e, targetKey) => {
+        e.preventDefault();
+        if (!dragCol || dragCol === targetKey || dragCol === '#') return;
+        const newOrder = [...columnOrder];
+        const fromIdx = newOrder.indexOf(dragCol);
+        const toIdx   = newOrder.indexOf(targetKey);
+        newOrder.splice(fromIdx, 1);
+        newOrder.splice(toIdx, 0, dragCol);
+        setColumnOrder(newOrder);
+        setDragCol(null);
+        setDragOverCol(null);
+    };
+    const handleColDragEnd = () => { setDragCol(null); setDragOverCol(null); };
 
     const sorted = useMemo(() => {
         let list = [...filtered];
@@ -1236,80 +1301,281 @@ export default function PortfolioReportsPage() {
                     <button onClick={clearFilters} className="mt-3 text-sm text-orange-500 hover:text-orange-700 font-semibold">Clear filters</button>
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-                    {/* overflow-x-auto only kicks in if viewport < laptop — table is sized to fill 100% */}
-                    <div className="overflow-x-auto w-full" style={{ scrollbarWidth: 'thin' }}>
-                        {/*
-                          14 columns × % widths = 100%
-                          #(2) + Name(17) + Client(8) + Project(8) + DueDate(7)
-                          + Priority(7) + Status(9) + Req(3) + Int(3) + Ext(3)
-                          + Sch(3) + Sel(3) + Rej(3) + InterviewLevel(11) = 100%
-                        */}
-                        <table className="table-fixed w-full border-collapse">
+                <div style={{ borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', background: '#fff', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginBottom: 24 }}>
+
+                    {/* ── Grid Toolbar ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(to right, #f8f7ff, #faf9ff)', flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {/* Column filter toggle */}
+                            <button
+                                onClick={() => setShowColFilters(v => !v)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: showColFilters ? '1px solid #8b5cf6' : '1px solid #e2e8f0', background: showColFilters ? '#f5f3ff' : '#fff', color: showColFilters ? '#7c3aed' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                                title="Toggle column filters"
+                            >
+                                <Filter style={{ width: 12, height: 12 }} />
+                                Column Filters
+                                {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
+                                    <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>
+                                        {Object.values(colFilters).filter(v => v !== '' && v !== 'All').length}
+                                    </span>
+                                )}
+                            </button>
+                            {/* Reset column filters */}
+                            {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
+                                <button
+                                    onClick={() => setColFilters({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 7, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    <X style={{ width: 10, height: 10 }} /> Clear column filters
+                                </button>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {/* Reset column order */}
+                            {JSON.stringify(columnOrder) !== JSON.stringify(DEFAULT_COL_ORDER) && (
+                                <button
+                                    onClick={() => setColumnOrder(DEFAULT_COL_ORDER)}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8f8f8', color: '#64748b', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                                    title="Reset column order"
+                                >
+                                    <RefreshCw style={{ width: 10, height: 10 }} /> Reset columns
+                                </button>
+                            )}
+                            <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                                ⋯ Drag column headers to reorder
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* ── Excel Grid ── */}
+                    <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 820 }}>
+                            <colgroup>
+                                {columnOrder.map(key => {
+                                    const col = COLUMN_DEFS.find(c => c.key === key);
+                                    return col ? <col key={key} style={{ minWidth: col.minW, width: col.key === 'name' ? '16%' : col.key === '#' ? 36 : undefined }} /> : null;
+                                })}
+                            </colgroup>
+
+                            {/* ── Header row ── */}
                             <thead>
-                                <tr className="bg-[#eae6f8] border-b border-purple-200 text-center">
-                                    <th style={{ width: '2%' }} className="py-2.5 px-2 text-center text-slate-700 font-black text-[10px] uppercase tracking-wider sticky-header-col-1">#</th>
-                                    <SortableHeader label="Demand Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} style={{ width: '17%' }} className="sticky-header-col-2 text-left" />
-                                    <SortableHeader label="Client" sortKey="client" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
-                                    <SortableHeader label="Project" sortKey="project" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
-                                    <SortableHeader label="Due Date" sortKey="due_date" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} />
-                                    <SortableHeader label="Priority" sortKey="priority" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} className="text-center" />
-                                    <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} className="text-center" />
-                                    <SortableHeader label="Req" sortKey="requested" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Int" sortKey="internal" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Ext" sortKey="external" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Sch" sortKey="scheduled" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Sel" sortKey="selected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Rej" sortKey="rejected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
-                                    <SortableHeader label="Interview Level" sortKey="interviewLevel" currentSort={sortConfig} onSort={handleSort} style={{ width: '11%' }} className="text-center" />
+                                <tr style={{ background: '#f0ecff', borderBottom: '2px solid #d8d0f0' }}>
+                                    {columnOrder.map((key, colIdx) => {
+                                        const col = COLUMN_DEFS.find(c => c.key === key);
+                                        if (!col) return null;
+                                        const isSorted = sortConfig.key === col.sortKey;
+                                        const isDragging  = dragCol === key;
+                                        const isDropTarget = dragOverCol === key && dragCol !== null && dragCol !== '#';
+                                        return (
+                                            <th
+                                                key={key}
+                                                draggable={!col.fixed}
+                                                onDragStart={!col.fixed ? (e) => handleColDragStart(e, key) : undefined}
+                                                onDragOver={!col.fixed ? (e) => handleColDragOver(e, key) : undefined}
+                                                onDrop={!col.fixed ? (e) => handleColDrop(e, key) : undefined}
+                                                onDragEnd={!col.fixed ? handleColDragEnd : undefined}
+                                                style={{
+                                                    padding: '9px 8px',
+                                                    textAlign: col.center ? 'center' : 'left',
+                                                    fontSize: 10,
+                                                    fontWeight: 700,
+                                                    color: isSorted ? '#6d28d9' : '#475569',
+                                                    letterSpacing: '0.04em',
+                                                    textTransform: 'uppercase',
+                                                    borderRight: '1px solid #ddd6f5',
+                                                    userSelect: 'none',
+                                                    cursor: col.fixed ? 'default' : 'grab',
+                                                    opacity: isDragging ? 0.45 : 1,
+                                                    background: isDropTarget ? '#ede9fe' : (isSorted ? '#e9e3fc' : 'transparent'),
+                                                    borderLeft: isDropTarget ? '2px solid #7c3aed' : '1px solid transparent',
+                                                    position: 'relative',
+                                                    transition: 'background 0.1s',
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {col.sortKey ? (
+                                                    <button
+                                                        onClick={() => col.sortKey && handleSort(col.sortKey)}
+                                                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, color: 'inherit', font: 'inherit', width: '100%', justifyContent: col.center ? 'center' : 'flex-start' }}
+                                                    >
+                                                        {col.label}
+                                                        {isSorted ? (
+                                                            sortConfig.direction === 'asc'
+                                                                ? <ArrowUp style={{ width: 9, height: 9, flexShrink: 0 }} />
+                                                                : <ArrowDown style={{ width: 9, height: 9, flexShrink: 0 }} />
+                                                        ) : (
+                                                            <ArrowUpDown style={{ width: 9, height: 9, flexShrink: 0, opacity: 0.35 }} />
+                                                        )}
+                                                    </button>
+                                                ) : (
+                                                    <span style={{ display: 'flex', justifyContent: col.center ? 'center' : 'flex-start' }}>{col.label}</span>
+                                                )}
+                                                {/* Drag handle hint */}
+                                                {!col.fixed && (
+                                                    <span style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', color: '#c4b5fd', fontSize: 10, lineHeight: 1, pointerEvents: 'none' }}>⋮</span>
+                                                )}
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
+
+                                {/* ── Column Filter Row ── */}
+                                {showColFilters && (
+                                    <tr style={{ background: '#fefce8', borderBottom: '1px solid #fde68a' }}>
+                                        {columnOrder.map((key) => {
+                                            const col = COLUMN_DEFS.find(c => c.key === key);
+                                            if (!col) return null;
+                                            const hasVal = colFilters[key] && colFilters[key] !== 'All';
+                                            const cellStyle = {
+                                                padding: '4px 5px',
+                                                borderRight: '1px solid #fde68a',
+                                            };
+                                            if (col.filter === 'text') {
+                                                return (
+                                                    <td key={key} style={cellStyle}>
+                                                        <div style={{ position: 'relative' }}>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="filter…"
+                                                                value={colFilters[key] || ''}
+                                                                onChange={e => setColFilters(f => ({ ...f, [key]: e.target.value }))}
+                                                                style={{ width: '100%', padding: '3px 20px 3px 6px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 5, fontSize: 10, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', boxSizing: 'border-box' }}
+                                                            />
+                                                            {hasVal && (
+                                                                <button onClick={() => setColFilters(f => ({ ...f, [key]: '' }))} style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0, lineHeight: 1 }}>
+                                                                    <X style={{ width: 9, height: 9 }} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                );
+                                            }
+                                            if (col.filter === 'select') {
+                                                return (
+                                                    <td key={key} style={cellStyle}>
+                                                        <select
+                                                            value={colFilters[key] || 'All'}
+                                                            onChange={e => setColFilters(f => ({ ...f, [key]: e.target.value }))}
+                                                            style={{ width: '100%', padding: '3px 4px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 5, fontSize: 10, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', cursor: 'pointer' }}
+                                                        >
+                                                            {col.opts.map(o => <option key={o}>{o}</option>)}
+                                                        </select>
+                                                    </td>
+                                                );
+                                            }
+                                            return <td key={key} style={{ ...cellStyle, textAlign: 'center', fontSize: 10, color: '#d1d5db' }}>—</td>;
+                                        })}
+                                    </tr>
+                                )}
                             </thead>
+
+                            {/* ── Body rows ── */}
                             <tbody>
                                 {paginated.map((demand, idx) => {
                                     const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
-                                    const internalCount = demand.resources.filter(r => r.type === "EMPLOYEE").length;
-                                    const externalCount = demand.resources.filter(r => r.type === "CANDIDATE").length;
-                                    const scheduledCount = demand.resources.filter(r => r.interviewLevels.some(l => l.status === "Scheduled")).length;
-                                    const selectedCount = demand.resources.filter(r => r.overallStatus === "Selected").length;
-                                    const rejectedCount = demand.resources.filter(r => r.overallStatus === "Rejected").length;
+                                    const internalCount  = demand.resources.filter(r => r.type === 'EMPLOYEE').length;
+                                    const externalCount  = demand.resources.filter(r => r.type === 'CANDIDATE').length;
+                                    const scheduledCount = demand.resources.filter(r => r.interviewLevels.some(l => l.status === 'Scheduled')).length;
+                                    const selectedCount  = demand.resources.filter(r => r.overallStatus === 'Selected').length;
+                                    const rejectedCount  = demand.resources.filter(r => r.overallStatus === 'Rejected').length;
+                                    const isEven = idx % 2 === 0;
+
+                                    const cellVal = (key) => {
+                                        switch (key) {
+                                            case '#':             return null;
+                                            case 'name':          return null;
+                                            case 'client':        return demand.client;
+                                            case 'project':       return demand.project;
+                                            case 'due_date':      return formatDemandDate(demand.fulfilmentDt);
+                                            case 'priority':      return null;   // badge
+                                            case 'status':        return null;   // badge
+                                            case 'requested':     return demand.totalRequested;
+                                            case 'internal':      return internalCount;
+                                            case 'external':      return externalCount;
+                                            case 'scheduled':     return scheduledCount;
+                                            case 'selected_cnt':  return selectedCount;
+                                            case 'rejected_cnt':  return rejectedCount;
+                                            case 'interviewLevel':return null;   // dropdown
+                                            default:              return null;
+                                        }
+                                    };
+                                    const numColor = (n, base) => n > 0 ? base : '#cbd5e1';
+
+                                    const rowBase = {
+                                        borderBottom: '1px solid #e2e8f0',
+                                        transition: 'background 0.1s',
+                                        cursor: 'pointer',
+                                    };
 
                                     return (
                                         <tr
                                             key={demand.id}
                                             onClick={() => setDrawerDemand(demand)}
-                                            className="group border-b border-gray-100 transition-colors even:bg-white odd:bg-gray-50/30 hover:bg-violet-50/30 cursor-pointer"
+                                            style={rowBase}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
+                                            onMouseLeave={e => e.currentTarget.style.background = isEven ? '#fff' : '#fafafa'}
                                         >
-                                            <td style={{ width: '2%' }} className="py-2.5 px-2 text-center text-[10px] font-semibold text-gray-400 sticky-col-1">{rowNum}</td>
-                                            <td style={{ width: '17%' }} className="py-2.5 px-2 sticky-col-2">
-                                                <div className="flex items-center gap-1 group-hover:text-violet-700 transition-colors">
-                                                    <span className="text-[11px] font-semibold text-gray-800 truncate">{demand.name}</span>
-                                                    <ChevronRight className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                                                </div>
-                                            </td>
-                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[10px] text-gray-600 truncate text-left">{demand.client}</td>
-                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[10px] text-gray-500 truncate text-left">{demand.project}</td>
-                                            <td style={{ width: '7%' }} className="py-2.5 px-2 text-[10px] text-gray-500 text-center font-mono">{formatDemandDate(demand.fulfilmentDt)}</td>
-                                            <td style={{ width: '7%' }} className="py-2.5 px-1 text-center" onClick={e => e.stopPropagation()}>
-                                                <PriorityBadge priority={demand.priority} />
-                                            </td>
-                                            <td style={{ width: '9%' }} className="py-2.5 px-1 text-center" onClick={e => e.stopPropagation()}>
-                                                <StatusBadge status={demand.status} />
-                                            </td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(demand.totalRequested, 'text-gray-700')}`}>{demand.totalRequested}</td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(internalCount, 'text-blue-600')}`}>{internalCount}</td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(externalCount, 'text-violet-600')}`}>{externalCount}</td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(scheduledCount, 'text-amber-600')}`}>{scheduledCount}</td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(selectedCount, 'text-emerald-600')}`}>{selectedCount}</td>
-                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(rejectedCount, 'text-red-600')}`}>{rejectedCount}</td>
-                                            <td style={{ width: '11%' }} className="py-2 px-1.5 text-center" onClick={e => e.stopPropagation()}>
-                                                <InterviewLevelSelect
-                                                    demandId={demand._demandId}
-                                                    value={demand.interviewLevel}
-                                                    isSaving={!!savingDropdowns[demand._demandId]}
-                                                    saveStatus={saveStatus[demand._demandId] || null}
-                                                    onChange={handleInterviewLevelChange}
-                                                />
-                                            </td>
+                                            {columnOrder.map((key) => {
+                                                const col = COLUMN_DEFS.find(c => c.key === key);
+                                                if (!col) return null;
+                                                const baseCell = {
+                                                    padding: '9px 8px',
+                                                    fontSize: 12,
+                                                    borderRight: '1px solid #f1f5f9',
+                                                    background: isEven ? '#fff' : '#fafafa',
+                                                    verticalAlign: 'middle',
+                                                };
+
+                                                if (key === '#') return (
+                                                    <td key={key} style={{ ...baseCell, textAlign: 'center', fontSize: 10, color: '#94a3b8', fontWeight: 600, width: 36 }}>{rowNum}</td>
+                                                );
+                                                if (key === 'name') return (
+                                                    <td key={key} style={{ ...baseCell }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                            <span style={{ fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{demand.name}</span>
+                                                        </div>
+                                                    </td>
+                                                );
+                                                if (key === 'priority') return (
+                                                    <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                                        <PriorityBadge priority={demand.priority} />
+                                                    </td>
+                                                );
+                                                if (key === 'status') return (
+                                                    <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                                        <StatusBadge status={demand.status} />
+                                                    </td>
+                                                );
+                                                if (key === 'interviewLevel') return (
+                                                    <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                                        <InterviewLevelSelect
+                                                            demandId={demand._demandId}
+                                                            value={demand.interviewLevel}
+                                                            isSaving={!!savingDropdowns[demand._demandId]}
+                                                            saveStatus={saveStatus[demand._demandId] || null}
+                                                            onChange={handleInterviewLevelChange}
+                                                        />
+                                                    </td>
+                                                );
+                                                // Number columns
+                                                const numKeys = ['requested','internal','external','scheduled','selected_cnt','rejected_cnt'];
+                                                const numColors = { requested: '#475569', internal: '#2563eb', external: '#7c3aed', scheduled: '#d97706', selected_cnt: '#16a34a', rejected_cnt: '#dc2626' };
+                                                if (numKeys.includes(key)) {
+                                                    const v = cellVal(key);
+                                                    return (
+                                                        <td key={key} style={{ ...baseCell, textAlign: 'center', fontFamily: 'monospace', fontWeight: v > 0 ? 700 : 400, color: v > 0 ? numColors[key] : '#cbd5e1', fontSize: 12 }}>
+                                                            {v}
+                                                        </td>
+                                                    );
+                                                }
+                                                // Plain text columns
+                                                const v = cellVal(key);
+                                                return (
+                                                    <td key={key} style={{ ...baseCell, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {v}
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     );
                                 })}
