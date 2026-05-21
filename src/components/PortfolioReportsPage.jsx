@@ -1233,78 +1233,7 @@ export default function PortfolioReportsPage() {
                 })}
             </div>
 
-            {/* Filters Card */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-bold text-gray-700">Filters</span>
-                    {hasActiveFilters && (
-                        <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
-                            <X className="w-3 h-3" /> Clear all
-                        </button>
-                    )}
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    {/* Client */}
-                    <div className="xl:col-span-1">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Client</label>
-                        <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all">
-                            {clientList.map(c => <option key={c}>{c}</option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Demand From</label>
-                        <div className="relative">
-                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all" />
-                            {startDate && <button onClick={() => setStartDate("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Demand To</label>
-                        <div className="relative">
-                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all" />
-                            {endDate && <button onClick={() => setEndDate("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Status</label>
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all">
-                            {["All", "Open", "InProgress", "Completed", "On Hold"].map(s => <option key={s}>{s}</option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Priority</label>
-                        <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all">
-                            {["All", "High", "Medium", "Low"].map(p => <option key={p}>{p}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="sm:col-span-2 lg:col-span-1 xl:col-span-1">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Search</label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                            <input type="text" placeholder="Demand, client, project…" value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-8 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 bg-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all" />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {/* Results + grid controls bar — anchored for auto-scroll */}
             <div ref={tableAnchorRef} className="flex items-center justify-between mb-4 flex-wrap gap-3">
