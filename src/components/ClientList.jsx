@@ -403,45 +403,50 @@ const ClientList = () => {
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 items-center w-full">
-              <div className="relative flex-1 w-full">
+            <div className="client-search-container">
+              {/* Search Input */}
+              <div className="client-search-input-wrapper">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search by client name, company..."
+                  placeholder="Search clients..."
                   value={searchText}
                   onChange={handleSearchInputChange}
                   onKeyDown={handleKeyDown}
                   className="pl-10 w-full bg-white/80 backdrop-blur-sm border-purple-200 focus:border-purple-400 transition-all duration-300"
                 />
               </div>
-              <div className="w-full md:w-[220px] flex-shrink-0">
-                <Select value={industryFilter} onValueChange={handleIndustryChange}>
-                  <SelectTrigger className="w-full bg-white/80 backdrop-blur-sm">
-                    <SelectValue placeholder="All Industries" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999]">
-                    <SelectItem value="All Industries">All Industries</SelectItem>
-                    {allIndustries.map((industry, index) => (
-                      <SelectItem key={index} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Dropdown and buttons wrapper */}
+              <div className="client-search-controls-wrapper">
+                <div className="client-search-dropdown-container">
+                  <Select value={industryFilter} onValueChange={handleIndustryChange}>
+                    <SelectTrigger className="w-full bg-white/80 backdrop-blur-sm border-purple-200">
+                      <SelectValue placeholder="All Industries" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="All Industries">All Industries</SelectItem>
+                      {allIndustries.map((industry, index) => (
+                        <SelectItem key={index} value={industry}>
+                          {industry}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={() => fetchClients(currentPage, rowsPerPage, searchText, industryFilter)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white client-search-btn-refresh"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2 animate-none" />
+                  Refresh
+                </Button>
+                <Button
+                  onClick={resetFilters}
+                  className="bg-gray-500 hover:bg-gray-600 text-white client-search-btn-reset"
+                >
+                  Reset Filters
+                </Button>
               </div>
-              <Button
-                onClick={() => fetchClients(currentPage, rowsPerPage, searchText, industryFilter)}
-                className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0 w-full md:w-auto"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                onClick={resetFilters}
-                className="bg-gray-500 hover:bg-gray-600 text-white flex-shrink-0 w-full md:w-auto"
-              >
-                Reset Filters
-              </Button>
             </div>
           </CardContent>
         </Card>
