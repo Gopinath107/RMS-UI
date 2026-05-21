@@ -642,11 +642,16 @@ export default function PortfolioReportsPage() {
     const [saveStatus, setSaveStatus] = useState({});
 
     // ── Excel Grid: column order (drag-drop), per-column filters ──
-    const [columnOrder, setColumnOrder] = useState(DEFAULT_COL_ORDER);
-    const [colFilters, setColFilters] = useState({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' });
+    const [columnOrder, setColumnOrder]     = useState(DEFAULT_COL_ORDER);
+    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' });
     const [showColFilters, setShowColFilters] = useState(false);
-    const [dragCol, setDragCol]         = useState(null);   // key being dragged
-    const [dragOverCol, setDragOverCol] = useState(null);   // key being hovered over
+    const [dragCol, setDragCol]             = useState(null);
+    const [dragOverCol, setDragOverCol]     = useState(null);
+    // Column resize
+    const [colWidths, setColWidths]         = useState(() => Object.fromEntries(COLUMN_DEFS.map(c => [c.key, c.minW])));
+    const resizingColRef   = useRef(null);
+    const resizeStartX     = useRef(0);
+    const resizeStartWidth = useRef(0);
 
     // ── API data state ────────────────────────────────────────────
     const [allDemands, setAllDemands] = useState([]);
@@ -858,6 +863,27 @@ export default function PortfolioReportsPage() {
         setDragOverCol(null);
     };
     const handleColDragEnd = () => { setDragCol(null); setDragOverCol(null); };
+
+    // ── Column resize (Excel-style drag border) ────────────────────
+    const handleResizeMouseDown = (e, key) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizingColRef.current   = key;
+        resizeStartX.current     = e.clientX;
+        resizeStartWidth.current = colWidths[key];
+        const onMouseMove = (ev) => {
+            const diff = ev.clientX - resizeStartX.current;
+            const newW = Math.max(40, resizeStartWidth.current + diff);
+            setColWidths(prev => ({ ...prev, [resizingColRef.current]: newW }));
+        };
+        const onMouseUp = () => {
+            resizingColRef.current = null;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
 
     const sorted = useMemo(() => {
         let list = [...filtered];
@@ -1273,16 +1299,49 @@ export default function PortfolioReportsPage() {
                 </div>
             </div>
 
-            {/* Results header */}
+            {/* Results + grid controls bar */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <div className="flex items-center gap-3">
+                {/* Left: count + filters */}
+                <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm text-gray-600">
                         Showing <span className="font-bold text-gray-900">{paginated.length}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> demands
                     </p>
                     {hasActiveFilters && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Filtered</span>
                     )}
+                    {/* Column Filters toggle */}
+                    <button
+                        onClick={() => setShowColFilters(v => !v)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 6, border: showColFilters ? '1px solid #8b5cf6' : '1px solid #e2e8f0', background: showColFilters ? '#f5f3ff' : '#fff', color: showColFilters ? '#7c3aed' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                    >
+                        <Filter style={{ width: 11, height: 11 }} />
+                        Column Filters
+                        {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
+                            <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', marginLeft: 2 }}>
+                                {Object.values(colFilters).filter(v => v !== '' && v !== 'All').length}
+                            </span>
+                        )}
+                    </button>
+                    {/* Clear column filters — only when active */}
+                    {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
+                        <button
+                            onClick={() => setColFilters({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            <X style={{ width: 9, height: 9 }} /> Clear filters
+                        </button>
+                    )}
+                    {/* Reset column order — only when non-default */}
+                    {JSON.stringify(columnOrder) !== JSON.stringify(DEFAULT_COL_ORDER) && (
+                        <button
+                            onClick={() => setColumnOrder(DEFAULT_COL_ORDER)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8f8f8', color: '#64748b', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            <RefreshCw style={{ width: 9, height: 9 }} /> Reset columns
+                        </button>
+                    )}
                 </div>
+                {/* Right: per-page */}
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                     <span>Show</span>
                     <select value={itemsPerPage} onChange={e => setItemsPerPage(Number(e.target.value))}
@@ -1303,57 +1362,13 @@ export default function PortfolioReportsPage() {
             ) : (
                 <div style={{ borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', background: '#fff', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginBottom: 24 }}>
 
-                    {/* ── Grid Toolbar ── */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(to right, #f8f7ff, #faf9ff)', flexWrap: 'wrap', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            {/* Column filter toggle */}
-                            <button
-                                onClick={() => setShowColFilters(v => !v)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: showColFilters ? '1px solid #8b5cf6' : '1px solid #e2e8f0', background: showColFilters ? '#f5f3ff' : '#fff', color: showColFilters ? '#7c3aed' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-                                title="Toggle column filters"
-                            >
-                                <Filter style={{ width: 12, height: 12 }} />
-                                Column Filters
-                                {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
-                                    <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>
-                                        {Object.values(colFilters).filter(v => v !== '' && v !== 'All').length}
-                                    </span>
-                                )}
-                            </button>
-                            {/* Reset column filters */}
-                            {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
-                                <button
-                                    onClick={() => setColFilters({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 7, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                                >
-                                    <X style={{ width: 10, height: 10 }} /> Clear column filters
-                                </button>
-                            )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {/* Reset column order */}
-                            {JSON.stringify(columnOrder) !== JSON.stringify(DEFAULT_COL_ORDER) && (
-                                <button
-                                    onClick={() => setColumnOrder(DEFAULT_COL_ORDER)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8f8f8', color: '#64748b', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                                    title="Reset column order"
-                                >
-                                    <RefreshCw style={{ width: 10, height: 10 }} /> Reset columns
-                                </button>
-                            )}
-                            <span style={{ fontSize: 10, color: '#94a3b8' }}>
-                                ⋯ Drag column headers to reorder
-                            </span>
-                        </div>
-                    </div>
-
                     {/* ── Excel Grid ── */}
                     <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 820 }}>
                             <colgroup>
                                 {columnOrder.map(key => {
                                     const col = COLUMN_DEFS.find(c => c.key === key);
-                                    return col ? <col key={key} style={{ minWidth: col.minW, width: col.key === 'name' ? '16%' : col.key === '#' ? 36 : undefined }} /> : null;
+                                    return col ? <col key={key} style={{ width: colWidths[key], minWidth: colWidths[key] }} /> : null;
                                 })}
                             </colgroup>
 
@@ -1410,10 +1425,13 @@ export default function PortfolioReportsPage() {
                                                 ) : (
                                                     <span style={{ display: 'flex', justifyContent: col.center ? 'center' : 'flex-start' }}>{col.label}</span>
                                                 )}
-                                                {/* Drag handle hint */}
-                                                {!col.fixed && (
-                                                    <span style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', color: '#c4b5fd', fontSize: 10, lineHeight: 1, pointerEvents: 'none' }}>⋮</span>
-                                                )}
+                                                {/* Resize handle — drag right edge like Excel */}
+                                                <div
+                                                    onMouseDown={(e) => handleResizeMouseDown(e, key)}
+                                                    style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 5, cursor: 'col-resize', zIndex: 2, background: 'transparent' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#a78bfa60'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                />
                                             </th>
                                         );
                                     })}
