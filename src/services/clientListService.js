@@ -1,10 +1,22 @@
 import api from "./api";
 
 export const ClientService = {
-  fetchClientList: async function () {
+  fetchClientList: async function (page = null, size = null, q = "", industry = "") {
     try {
-      const response = await api.get('/accounts/list');
-      // Return only the array of clients
+      const params = {};
+      if (page !== null) params.page = page;
+      if (size !== null) params.size = size;
+      if (q !== "") params.q = q;
+      if (industry !== "" && industry !== "All Industries") params.industry = industry;
+
+      const response = await api.get('/accounts/list', { params });
+      
+      // If pagination parameters are provided, return the full response object
+      // so the caller can read both the content array and the total elements count.
+      if (page !== null || size !== null) {
+        return response;
+      }
+      // Return only the array of clients for backward compatibility
       return response.data.result;
     } catch (error) {
       console.error("Error fetching clients:", error);
