@@ -159,7 +159,6 @@ const COLUMN_DEFS = [
     { key: 'scheduled',      label: 'Sch',             minW: 40,   sortKey: 'scheduled',      filter: null,     center: true                                 },
     { key: 'selected_cnt',   label: 'Sel',             minW: 40,   sortKey: 'selected',       filter: null,     center: true                                 },
     { key: 'rejected_cnt',   label: 'Rej',             minW: 40,   sortKey: 'rejected',       filter: null,     center: true                                 },
-    { key: 'interviewLevel', label: 'Interview Level', minW: 110,  sortKey: 'interviewLevel', filter: 'select', opts: ['All','Not Started','L1','L2','L3','HR Round','Final Round','Completed'] },
 ];
 const DEFAULT_COL_ORDER = COLUMN_DEFS.map(c => c.key);
 
@@ -643,7 +642,7 @@ export default function PortfolioReportsPage() {
 
     // ── Excel Grid: column order (drag-drop), per-column filters ──
     const [columnOrder, setColumnOrder]     = useState(DEFAULT_COL_ORDER);
-    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' });
+    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', priority: 'All', status: 'All' });
     const [showColFilters, setShowColFilters] = useState(false);
     const [dragCol, setDragCol]             = useState(null);
     const [dragOverCol, setDragOverCol]     = useState(null);
@@ -652,6 +651,14 @@ export default function PortfolioReportsPage() {
     const resizingColRef   = useRef(null);
     const resizeStartX     = useRef(0);
     const resizeStartWidth = useRef(0);
+    // Auto-scroll to table on mount
+    const tableAnchorRef   = useRef(null);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            tableAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
+        return () => clearTimeout(timer);
+    }, []);
 
     // ── API data state ────────────────────────────────────────────
     const [allDemands, setAllDemands] = useState([]);
@@ -1299,8 +1306,8 @@ export default function PortfolioReportsPage() {
                 </div>
             </div>
 
-            {/* Results + grid controls bar */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            {/* Results + grid controls bar — anchored for auto-scroll */}
+            <div ref={tableAnchorRef} className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 {/* Left: count + filters */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm text-gray-600">
@@ -1513,7 +1520,6 @@ export default function PortfolioReportsPage() {
                                             case 'scheduled':     return scheduledCount;
                                             case 'selected_cnt':  return selectedCount;
                                             case 'rejected_cnt':  return rejectedCount;
-                                            case 'interviewLevel':return null;   // dropdown
                                             default:              return null;
                                         }
                                     };
@@ -1564,17 +1570,7 @@ export default function PortfolioReportsPage() {
                                                         <StatusBadge status={demand.status} />
                                                     </td>
                                                 );
-                                                if (key === 'interviewLevel') return (
-                                                    <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                                        <InterviewLevelSelect
-                                                            demandId={demand._demandId}
-                                                            value={demand.interviewLevel}
-                                                            isSaving={!!savingDropdowns[demand._demandId]}
-                                                            saveStatus={saveStatus[demand._demandId] || null}
-                                                            onChange={handleInterviewLevelChange}
-                                                        />
-                                                    </td>
-                                                );
+
                                                 // Number columns
                                                 const numKeys = ['requested','internal','external','scheduled','selected_cnt','rejected_cnt'];
                                                 const numColors = { requested: '#475569', internal: '#2563eb', external: '#7c3aed', scheduled: '#d97706', selected_cnt: '#16a34a', rejected_cnt: '#dc2626' };
