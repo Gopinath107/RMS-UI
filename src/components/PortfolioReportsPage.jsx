@@ -92,18 +92,18 @@ const PRIORITY_CONFIG = {
     Low: { bg: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 };
 
+/* Pill badge — sized to content with nowrap, no hardcoded minWidth */
 const PriorityBadge = ({ priority }) => {
     const config = {
-        High: "bg-red-500 text-white border-red-500 shadow-red-100",
-        Medium: "bg-orange-500 text-white border-orange-500 shadow-orange-100",
-        Low: "bg-emerald-500 text-white border-emerald-500 shadow-emerald-100"
+        High:   { dot: 'bg-red-500',     cls: 'bg-red-50   text-red-600   border-red-200'   },
+        Medium: { dot: 'bg-orange-400',  cls: 'bg-orange-50 text-orange-600 border-orange-200' },
+        Low:    { dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
     };
-    const classes = config[priority] || "bg-gray-500 text-white border-gray-500";
+    const { dot, cls } = config[priority] || { dot: 'bg-gray-400', cls: 'bg-gray-50 text-gray-600 border-gray-200' };
     return (
-        <span 
-            style={{ minWidth: '90px' }} 
-            className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
-        >
+        <span style={{ whiteSpace: 'nowrap' }}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold border ${cls}`}>
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
             {priority}
         </span>
     );
@@ -111,37 +111,35 @@ const PriorityBadge = ({ priority }) => {
 
 const StatusBadge = ({ status }) => {
     const config = {
-        Open: "bg-blue-50 text-blue-600 border-blue-200 shadow-blue-50/50",
-        InProgress: "bg-purple-50 text-purple-600 border-purple-200 shadow-purple-50/50",
-        "In Progress": "bg-purple-50 text-purple-600 border-purple-200 shadow-purple-50/50",
-        Completed: "bg-green-50 text-green-600 border-green-200 shadow-green-50/50",
-        Closed: "bg-gray-50 text-gray-600 border-gray-200 shadow-gray-50/50",
-        "On Hold": "bg-amber-50 text-amber-600 border-amber-200 shadow-amber-50/50",
-        Rejected: "bg-red-50 text-red-600 border-red-200 shadow-red-50/50"
+        Open:        'bg-sky-50   text-sky-600   border-sky-200',
+        InProgress:  'bg-violet-50 text-violet-600 border-violet-200',
+        'In Progress':'bg-violet-50 text-violet-600 border-violet-200',
+        Completed:   'bg-emerald-50 text-emerald-600 border-emerald-200',
+        Closed:      'bg-gray-50  text-gray-500   border-gray-200',
+        'On Hold':   'bg-amber-50  text-amber-600  border-amber-200',
+        Rejected:    'bg-red-50   text-red-600    border-red-200',
     };
-    const classes = config[status] || "bg-gray-50 text-gray-600 border-gray-200 shadow-sm";
-    const label = status === "InProgress" ? "In Progress" : status;
+    const cls = config[status] || 'bg-gray-50 text-gray-600 border-gray-200';
+    const label = status === 'InProgress' ? 'In Progress' : status;
     return (
-        <span 
-            style={{ minWidth: '90px' }} 
-            className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border shadow-sm ${classes}`}
-        >
+        <span style={{ whiteSpace: 'nowrap' }}
+            className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[9px] font-bold border ${cls}`}>
             {label}
         </span>
     );
 };
 
 const LEVEL_STATUS_CONFIG = {
-    Selected: { bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle },
-    Rejected: { bg: "bg-red-100", text: "text-red-700", icon: XCircle },
-    Scheduled: { bg: "bg-blue-100", text: "text-blue-700", icon: Clock },
-    Completed: { bg: "bg-teal-100", text: "text-teal-700", icon: Award },
+    Selected:  { bg: 'bg-emerald-50', text: 'text-emerald-700', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
+    Rejected:  { bg: 'bg-red-50',     text: 'text-red-700',     pill: 'bg-red-100 text-red-700 border-red-200',         icon: XCircle },
+    Scheduled: { bg: 'bg-blue-50',    text: 'text-blue-700',    pill: 'bg-blue-100 text-blue-700 border-blue-200',       icon: Clock },
+    Completed: { bg: 'bg-teal-50',    text: 'text-teal-700',    pill: 'bg-teal-100 text-teal-700 border-teal-200',       icon: Award },
 };
 
 const OVERALL_STATUS_CONFIG = {
-    Selected: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-300" },
-    Rejected: { bg: "bg-red-50", text: "text-red-700", border: "border-red-300" },
-    "In Progress": { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-300" },
+    Selected:     { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    Rejected:     { bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200'     },
+    'In Progress':{ bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
 };
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -252,246 +250,259 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-            {/* Transparent backdrop overlay */}
-            <div 
-                className="absolute inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity" 
-                onClick={onClose} 
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', justifyContent: 'flex-end' }}>
+            {/* Backdrop */}
+            <div
+                style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)' }}
+                onClick={onClose}
             />
-            {/* Slide-out Drawer Container */}
-            <div className="relative w-full md:w-[420px] h-screen bg-white shadow-2xl flex flex-col z-10 transform transition-transform duration-300 ease-in-out drawer-slide-in">
+            {/* Drawer panel */}
+            <div
+                className="drawer-slide-in"
+                style={{
+                    position: 'fixed', top: 0, right: 0,
+                    width: '440px', maxWidth: '100vw', height: '100vh',
+                    background: '#ffffff', zIndex: 201,
+                    display: 'flex', flexDirection: 'column',
+                    boxShadow: '-8px 0 40px rgba(0,0,0,0.15)',
+                }}
+            >
                 
-                {/* Fixed Header */}
-                <div className="px-6 py-5 border-b border-gray-150 flex justify-between items-start bg-gray-50/50 flex-shrink-0">
-                    <div className="flex-1 min-w-0 pr-4">
-                        <span className="inline-flex font-mono text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">{demand.id}</span>
-                        <h2 className="text-lg font-bold text-gray-900 mt-1.5 truncate leading-snug" title={demand.name}>{demand.name}</h2>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-1.5">
-                            <span className="flex items-center gap-1 font-semibold text-gray-700">
-                                <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                {demand.client}
-                            </span>
-                            <span className="text-gray-300">|</span>
-                            <span className="flex items-center gap-1 truncate max-w-[120px]" title={demand.project}>
-                                <Briefcase className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                {demand.project}
-                            </span>
+                {/* ── HEADER ── */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', flexShrink: 0, background: 'linear-gradient(to right, #fafafa, #f8f7ff)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                <span style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 700, color: '#ea580c', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 6, padding: '2px 8px' }}>{demand.id}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: demand.priority === 'High' ? '#dc2626' : demand.priority === 'Medium' ? '#d97706' : '#16a34a', background: demand.priority === 'High' ? '#fef2f2' : demand.priority === 'Medium' ? '#fffbeb' : '#f0fdf4', border: `1px solid ${demand.priority === 'High' ? '#fca5a5' : demand.priority === 'Medium' ? '#fcd34d' : '#86efac'}`, borderRadius: 6, padding: '2px 8px' }}>
+                                    {demand.priority}
+                                </span>
+                            </div>
+                            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={demand.name}>{demand.name}</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#374151', fontWeight: 600 }}>
+                                    <Building2 style={{ width: 12, height: 12, color: '#9ca3af', flexShrink: 0 }} />
+                                    {demand.client}
+                                </span>
+                                <span style={{ color: '#d1d5db' }}>·</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#6b7280', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={demand.project}>
+                                    <Briefcase style={{ width: 12, height: 12, color: '#9ca3af', flexShrink: 0 }} />
+                                    {demand.project}
+                                </span>
+                            </div>
                         </div>
+                        <button
+                            onClick={onClose}
+                            style={{ padding: 6, borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background='#f3f4f6'; e.currentTarget.style.color='#374151'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#9ca3af'; }}
+                        >
+                            <X style={{ width: 18, height: 18 }} />
+                        </button>
                     </div>
-                    <button 
-                        onClick={onClose} 
-                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-200/50 transition-all flex-shrink-0"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
                 </div>
 
-                {/* Scrollable Content Body */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-                    
-                    {/* Section 1: Key Dates */}
-                    <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Key Dates</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-250">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Due Date</p>
-                                <p className="text-xs font-bold text-gray-800 font-mono">{formatDrawerDate(demand.fulfilmentDt)}</p>
-                            </div>
-                            <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-250">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Opened Date</p>
-                                <p className="text-xs font-bold text-gray-800 font-mono">{formatDrawerDate(demand.demandOpenDt)}</p>
-                            </div>
+                {/* ── SCROLLABLE BODY ── */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 24px' }}>
+
+                    {/* ─── Section: Key Dates ─── */}
+                    <div style={{ padding: '16px 20px 0' }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Key Dates</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            {[{ label: 'Due Date', value: formatDrawerDate(demand.fulfilmentDt), icon: '📅' },
+                              { label: 'Opened', value: formatDrawerDate(demand.demandOpenDt), icon: '🗓' }].map(({ label, value }) => (
+                                <div key={label} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px' }}>
+                                    <p style={{ fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</p>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: 'monospace' }}>{value}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Section 2: Summary Stats */}
-                    <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Summary Stats</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-250 flex flex-col justify-between">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Total Requests</p>
-                                <p className="text-2xl font-black text-gray-800 font-mono leading-none">{demand.statusSummary.totalRequests}</p>
-                            </div>
-                            <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-250 flex flex-col justify-between">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Total Interviews</p>
-                                <p className="text-2xl font-black text-gray-800 font-mono leading-none">{demand.statusSummary.totalInterviews}</p>
-                            </div>
+                    {/* ─── Section: Stats ─── */}
+                    <div style={{ padding: '14px 20px 0' }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Summary</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                            {[
+                                { label: 'Requests', value: demand.statusSummary.totalRequests, color: '#6366f1', bg: '#eef2ff' },
+                                { label: 'Interviews', value: demand.statusSummary.totalInterviews, color: '#0284c7', bg: '#e0f2fe' },
+                                { label: 'Selected', value: demand.statusSummary.selected, color: '#16a34a', bg: '#f0fdf4' },
+                                { label: 'Rejected', value: demand.statusSummary.rejected, color: '#dc2626', bg: '#fef2f2' },
+                            ].map(({ label, value, color, bg }) => (
+                                <div key={label} style={{ background: bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                                    <p style={{ fontSize: 18, fontWeight: 800, color, fontFamily: 'monospace', lineHeight: 1 }}>{value}</p>
+                                    <p style={{ fontSize: 9, color: '#6b7280', fontWeight: 600, marginTop: 4 }}>{label}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Section 3: Description */}
-                    <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Description</h4>
-                        <div className="bg-white p-4 rounded-xl border border-gray-250 shadow-sm">
-                            <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-line">
-                                {demand.description || <span className="text-gray-400 italic">No description provided for this demand.</span>}
-                            </p>
+                    {/* ─── Section: Pipeline Counts ─── */}
+                    <div style={{ padding: '14px 20px 0' }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Pipeline Counts</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {[{ label: 'Allocated', value: demand.statusSummary.allocated, color: '#4338ca', bg: '#eef2ff', border: '#a5b4fc' },
+                              { label: 'Onboarded', value: demand.statusSummary.onboarded, color: '#0f766e', bg: '#f0fdfa', border: '#5eead4' }].map(({ label, value, color, bg, border }) => (
+                                <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, color, background: bg, border: `1px solid ${border}` }}>
+                                    <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 800 }}>{value}</span> {label}
+                                </span>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Section 4: Pipeline Stats */}
-                    <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pipeline Stats</h4>
-                        <div className="flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-300 bg-emerald-50/50 text-emerald-700 text-xs font-bold">
-                                <span className="font-mono">{demand.statusSummary.selected}</span> Selected
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-300 bg-red-50/50 text-red-700 text-xs font-bold">
-                                <span className="font-mono">{demand.statusSummary.rejected}</span> Rejected
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-indigo-300 bg-indigo-50/50 text-indigo-700 text-xs font-bold">
-                                <span className="font-mono">{demand.statusSummary.allocated}</span> Allocated
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-teal-300 bg-teal-50/50 text-teal-700 text-xs font-bold">
-                                <span className="font-mono">{demand.statusSummary.onboarded}</span> Onboarded
-                            </span>
+                    {/* ─── Section: Description ─── */}
+                    {demand.description ? (
+                        <div style={{ padding: '14px 20px 0' }}>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Description</p>
+                            <div style={{ background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px' }}>
+                                <p style={{ fontSize: 11, color: '#374151', lineHeight: 1.6 }}>{demand.description}</p>
+                            </div>
                         </div>
-                    </div>
+                    ) : null}
 
-                    {/* Section 5: Candidates Pipeline List */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-gray-100">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                Candidate Pipeline
-                                <span className="text-[10px] font-normal text-gray-500">({demand.resources.length} total)</span>
-                            </h4>
-                            <div className="flex gap-1.5 text-[9px] font-extrabold uppercase">
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-150">{internalCount} Internal</span>
-                                <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full border border-purple-150">{externalCount} External</span>
+                    {/* ─── Section: Divider ─── */}
+                    <div style={{ margin: '16px 20px 0', borderTop: '1px solid #f3f4f6' }} />
+
+                    {/* ─── Section: Candidate Pipeline ─── */}
+                    <div style={{ padding: '14px 20px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Candidate Pipeline</p>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: '#6b7280', background: '#f3f4f6', borderRadius: 20, padding: '1px 7px' }}>{demand.resources.length}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '2px 8px' }}>{internalCount} Internal</span>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 20, padding: '2px 8px' }}>{externalCount} External</span>
                             </div>
                         </div>
 
-                        {/* Standardized Search Bar */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        {/* Search */}
+                        <div style={{ position: 'relative', marginBottom: 10 }}>
+                            <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#9ca3af', pointerEvents: 'none' }} />
                             <input
                                 type="text"
-                                placeholder="Search candidates by name, ID, skill…"
+                                placeholder="Search candidates…"
                                 value={resourceSearch}
-                                onChange={e => {
-                                    setResourceSearch(e.target.value);
-                                    setExpandedResourceId(null);
-                                }}
-                                className="w-full pl-9 pr-8 py-2 border border-gray-250 bg-gray-50/50 rounded-xl text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition-all shadow-sm"
+                                onChange={e => { setResourceSearch(e.target.value); setExpandedResourceId(null); }}
+                                style={{ width: '100%', paddingLeft: 30, paddingRight: 28, paddingTop: 7, paddingBottom: 7, border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11, color: '#374151', background: '#fafafa', outline: 'none', boxSizing: 'border-box' }}
                             />
                             {resourceSearch && (
-                                <button
-                                    onClick={() => { setResourceSearch(""); setExpandedResourceId(null); }}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                    <X className="w-3.5 h-3.5" />
+                                <button onClick={() => { setResourceSearch(''); setExpandedResourceId(null); }}
+                                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
+                                    <X style={{ width: 12, height: 12 }} />
                                 </button>
                             )}
                         </div>
 
-                        {/* Candidates cards */}
+                        {/* Candidate cards */}
                         {filteredResources.length === 0 ? (
-                            <div className="py-8 text-center text-xs text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-250">
+                            <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 11, color: '#9ca3af', background: '#fafafa', borderRadius: 10, border: '1px dashed #e5e7eb' }}>
                                 No candidates match &ldquo;{resourceSearch}&rdquo;
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {filteredResources.map((resource) => {
-                                    const overallCfg = OVERALL_STATUS_CONFIG[resource.overallStatus] || OVERALL_STATUS_CONFIG["In Progress"];
-                                    const isInternal = resource.type === "EMPLOYEE";
+                                    const overallCfg = OVERALL_STATUS_CONFIG[resource.overallStatus] || OVERALL_STATUS_CONFIG['In Progress'];
+                                    const isInternal = resource.type === 'EMPLOYEE';
                                     const isCardOpen = expandedResourceId === resource.id;
-
-                                    // Avatar initials
-                                    const initials = resource.name
-                                        .split(" ")
-                                        .filter(Boolean)
-                                        .map(n => n[0].toUpperCase())
-                                        .join("")
-                                        .slice(0, 2) || "?";
+                                    const initials = resource.name.split(' ').filter(Boolean).map(n => n[0].toUpperCase()).join('').slice(0, 2) || '?';
+                                    const avatarBg = isInternal ? { bg: '#dbeafe', text: '#1d4ed8' } : { bg: '#ede9fe', text: '#6d28d9' };
 
                                     return (
-                                        <div
-                                            key={resource.id}
-                                            className={`border rounded-xl bg-white shadow-sm overflow-hidden transition-all duration-200 ${isCardOpen ? "border-purple-400 ring-2 ring-purple-100" : "border-gray-200 hover:border-purple-300 hover:shadow"}`}
-                                        >
-                                            {/* Header */}
+                                        <div key={resource.id} style={{
+                                            border: isCardOpen ? '1px solid #c4b5fd' : '1px solid #e5e7eb',
+                                            borderRadius: 12, background: '#fff',
+                                            boxShadow: isCardOpen ? '0 2px 12px rgba(124,58,237,0.1)' : '0 1px 3px rgba(0,0,0,0.06)',
+                                            overflow: 'hidden', transition: 'all 0.2s ease',
+                                        }}>
+                                            {/* Card header button */}
                                             <button
                                                 onClick={() => setExpandedResourceId(isCardOpen ? null : resource.id)}
-                                                className="w-full flex items-center gap-3 p-3 text-left hover:bg-purple-50/10 transition-colors"
+                                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                                             >
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 ${isInternal ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                                                {/* Avatar */}
+                                                <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, background: avatarBg.bg, color: avatarBg.text }}>
                                                     {initials}
                                                 </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-bold text-gray-900 truncate">{resource.name}</span>
-                                                        <span className={`text-[8px] px-1.5 py-0.2 rounded font-extrabold uppercase ${isInternal ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-purple-50 text-purple-600 border border-purple-100"}`}>
-                                                            {isInternal ? "Internal" : "External"}
+                                                {/* Info */}
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                        <span style={{ fontSize: 12, fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{resource.name}</span>
+                                                        <span style={{ fontSize: 8, fontWeight: 700, color: isInternal ? '#2563eb' : '#7c3aed', background: isInternal ? '#eff6ff' : '#f5f3ff', border: `1px solid ${isInternal ? '#bfdbfe' : '#ddd6fe'}`, borderRadius: 4, padding: '1px 5px', textTransform: 'uppercase' }}>
+                                                            {isInternal ? 'Internal' : 'External'}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[9px] text-gray-400 font-mono mt-0.5">{resource.resourceId}</p>
+                                                    <p style={{ fontSize: 9, color: '#9ca3af', fontFamily: 'monospace', margin: '2px 0 0' }}>{resource.resourceId}</p>
                                                 </div>
-
-                                                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold border uppercase ${overallCfg.bg} ${overallCfg.text} ${overallCfg.border} ml-2 flex-shrink-0`}>
+                                                {/* Status badge */}
+                                                <span style={{ fontSize: 9, fontWeight: 700, color: overallCfg.text.replace('text-', '').includes('-') ? undefined : overallCfg.text, padding: '3px 8px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap',
+                                                    ...(resource.overallStatus === 'Selected' ? { background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' } :
+                                                       resource.overallStatus === 'Rejected' ? { background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' } :
+                                                       { background: '#eff6ff', color: '#2563eb', border: '1px solid #93c5fd' }) }}>
                                                     {resource.overallStatus}
-                                                </div>
-
-                                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-1 ${isCardOpen ? "rotate-180" : ""}`} />
+                                                </span>
+                                                <ChevronDown style={{ width: 14, height: 14, color: '#9ca3af', flexShrink: 0, transform: isCardOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                                             </button>
 
-                                            {/* Details accordion panel */}
+                                            {/* Expanded detail panel */}
                                             {isCardOpen && (
-                                                <div className="border-t border-gray-100 bg-gray-50/30 p-3.5 space-y-4">
-                                                    {/* Coordinates */}
-                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs">
-                                                        <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                                            <Mail className="w-3.5 h-3.5 text-gray-450 flex-shrink-0" />
-                                                            <span className="truncate select-all">{resource.email}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                                            <Phone className="w-3.5 h-3.5 text-gray-455 flex-shrink-0" />
-                                                            <span className="select-all">{resource.phone}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                                            <MapPin className="w-3.5 h-3.5 text-gray-460 flex-shrink-0" />
-                                                            <span className="truncate">{resource.location}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-gray-600 min-w-0">
-                                                            <Briefcase className="w-3.5 h-3.5 text-gray-465 flex-shrink-0" />
-                                                            <span>{resource.experience} yrs exp {resource.company ? `(${resource.company})` : ""}</span>
-                                                        </div>
+                                                <div style={{ borderTop: '1px solid #f3f4f6', background: '#fafafa', padding: '12px 14px' }}>
+                                                    {/* Contact row */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                                                        {[{ Icon: Mail, text: resource.email },
+                                                          { Icon: Phone, text: resource.phone },
+                                                          { Icon: MapPin, text: resource.location },
+                                                          { Icon: Briefcase, text: `${resource.experience} yrs exp${resource.company ? ` · ${resource.company}` : ''}` }
+                                                        ].map(({ Icon, text }, i) => (
+                                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#4b5563', overflow: 'hidden' }}>
+                                                                <Icon style={{ width: 11, height: 11, color: '#9ca3af', flexShrink: 0 }} />
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</span>
+                                                            </div>
+                                                        ))}
                                                     </div>
 
-                                                    {/* Skills Tags */}
-                                                    {resource.skills && resource.skills.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1">
+                                                    {/* Skills */}
+                                                    {resource.skills?.length > 0 && (
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
                                                             {resource.skills.map((s, i) => (
-                                                                <span key={i} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-[9px] rounded font-bold shadow-sm">
-                                                                    {s}
-                                                                </span>
+                                                                <span key={i} style={{ fontSize: 9, fontWeight: 600, color: '#374151', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 6px' }}>{s}</span>
                                                             ))}
                                                         </div>
                                                     )}
 
-                                                    {/* Expandable journey steps */}
-                                                    <div className="pt-2.5 border-t border-gray-100">
-                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">Interview Journey</p>
+                                                    {/* Interview Journey */}
+                                                    <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 10 }}>
+                                                        <p style={{ fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>Interview Journey</p>
                                                         {resource.interviewLevels.length === 0 ? (
-                                                            <p className="text-[10px] text-gray-450 italic">No interview steps scheduled.</p>
+                                                            <p style={{ fontSize: 10, color: '#9ca3af', fontStyle: 'italic' }}>No interview steps yet.</p>
                                                         ) : (
-                                                            <div className="space-y-1.5">
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                                                 {resource.interviewLevels.map((il, i) => {
                                                                     const cfg = LEVEL_STATUS_CONFIG[il.status] || LEVEL_STATUS_CONFIG.Scheduled;
                                                                     const Icon = cfg.icon;
+                                                                    const pillStyle = il.status === 'Selected' ? { bg: '#f0fdf4', text: '#15803d', bd: '#86efac' }
+                                                                        : il.status === 'Rejected' ? { bg: '#fef2f2', text: '#dc2626', bd: '#fca5a5' }
+                                                                        : il.status === 'Completed' ? { bg: '#f0fdfa', text: '#0f766e', bd: '#5eead4' }
+                                                                        : { bg: '#eff6ff', text: '#2563eb', bd: '#93c5fd' };
                                                                     return (
-                                                                        <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] ${cfg.bg} ${cfg.text} border-current/10`}>
-                                                                            <Icon className="w-3 h-3 flex-shrink-0" />
-                                                                            <span className="font-extrabold w-12 flex-shrink-0 truncate">{il.level}</span>
-                                                                            <span className="font-extrabold px-1.5 py-0.2 rounded-full bg-white text-[9px] shadow-sm">{il.status}</span>
-                                                                            <span className="flex items-center gap-1 text-[10px] opacity-80 ml-auto truncate">
-                                                                                <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
-                                                                                <span className="truncate max-w-[65px]">{il.interviewer}</span>
-                                                                            </span>
-                                                                            <span className="flex items-center gap-1 text-[10px] opacity-80 font-mono flex-shrink-0">
-                                                                                <Calendar className="w-2.5 h-2.5 flex-shrink-0" />
-                                                                                {formatDrawerDate(il.date)}
-                                                                            </span>
+                                                                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: pillStyle.bg, border: `1px solid ${pillStyle.bd}`, borderRadius: 8, padding: '7px 10px' }}>
+                                                                            <Icon style={{ width: 11, height: 11, color: pillStyle.text, flexShrink: 0, marginTop: 1 }} />
+                                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#1f2937' }}>{il.level}</span>
+                                                                                    <span style={{ fontSize: 8, fontWeight: 700, color: pillStyle.text, background: '#fff', border: `1px solid ${pillStyle.bd}`, borderRadius: 10, padding: '1px 6px', whiteSpace: 'nowrap' }}>{il.status}</span>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', gap: 12, marginTop: 3, flexWrap: 'wrap' }}>
+                                                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#6b7280' }}>
+                                                                                        <UserCheck style={{ width: 9, height: 9, flexShrink: 0 }} />
+                                                                                        {il.interviewer}
+                                                                                    </span>
+                                                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#6b7280', fontFamily: 'monospace' }}>
+                                                                                        <Calendar style={{ width: 9, height: 9, flexShrink: 0 }} />
+                                                                                        {formatDrawerDate(il.date)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -508,15 +519,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                     </div>
                 </div>
 
-                {/* Fixed Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-all shadow-sm active:scale-95"
-                    >
-                        Close Details
-                    </button>
-                </div>
+                {/* No footer — close via X or backdrop */}
             </div>
         </div>
     );
@@ -1234,24 +1237,31 @@ export default function PortfolioReportsPage() {
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-                    <div className="overflow-x-auto w-full" style={{ scrollbarWidth: "thin" }}>
-                        <table className="table-fixed min-w-[1200px] w-full border-collapse">
+                    {/* overflow-x-auto only kicks in if viewport < laptop — table is sized to fill 100% */}
+                    <div className="overflow-x-auto w-full" style={{ scrollbarWidth: 'thin' }}>
+                        {/*
+                          14 columns × % widths = 100%
+                          #(2) + Name(17) + Client(8) + Project(8) + DueDate(7)
+                          + Priority(7) + Status(9) + Req(3) + Int(3) + Ext(3)
+                          + Sch(3) + Sel(3) + Rej(3) + InterviewLevel(11) = 100%
+                        */}
+                        <table className="table-fixed w-full border-collapse">
                             <thead>
-                                <tr className="bg-[#eae6f8] border-b border-purple-250 shadow-sm text-center">
-                                    <th style={{ width: '3%', minWidth: '48px', maxWidth: '48px' }} className="py-3 px-3 text-center text-slate-800 font-extrabold text-[12px] uppercase tracking-wider sticky-header-col-1 w-[48px] min-w-[48px] max-w-[48px]">#</th>
-                                    <SortableHeader label="Demand Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} style={{ width: '22%' }} className="sticky-header-col-2 min-w-[200px]" />
-                                    <SortableHeader label="Client" sortKey="client" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} />
-                                    <SortableHeader label="Project" sortKey="project" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} />
-                                    <SortableHeader label="Due Date" sortKey="due_date" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                <tr className="bg-[#eae6f8] border-b border-purple-200 text-center">
+                                    <th style={{ width: '2%' }} className="py-2.5 px-2 text-center text-slate-700 font-black text-[10px] uppercase tracking-wider sticky-header-col-1">#</th>
+                                    <SortableHeader label="Demand Name" sortKey="name" currentSort={sortConfig} onSort={handleSort} style={{ width: '17%' }} className="sticky-header-col-2 text-left" />
+                                    <SortableHeader label="Client" sortKey="client" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                    <SortableHeader label="Project" sortKey="project" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} />
+                                    <SortableHeader label="Due Date" sortKey="due_date" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} />
                                     <SortableHeader label="Priority" sortKey="priority" currentSort={sortConfig} onSort={handleSort} style={{ width: '7%' }} className="text-center" />
-                                    <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={handleSort} style={{ width: '8%' }} className="text-center" />
-                                    <SortableHeader label="Req" sortKey="requested" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Int" sortKey="internal" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Ext" sortKey="external" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Sch" sortKey="scheduled" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Sel" sortKey="selected" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Rej" sortKey="rejected" currentSort={sortConfig} onSort={handleSort} style={{ width: '4%' }} className="text-center" />
-                                    <SortableHeader label="Interview Level" sortKey="interviewLevel" currentSort={sortConfig} onSort={handleSort} style={{ width: '10%' }} className="text-center min-w-[150px]" />
+                                    <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={handleSort} style={{ width: '9%' }} className="text-center" />
+                                    <SortableHeader label="Req" sortKey="requested" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Int" sortKey="internal" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Ext" sortKey="external" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Sch" sortKey="scheduled" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Sel" sortKey="selected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Rej" sortKey="rejected" currentSort={sortConfig} onSort={handleSort} style={{ width: '3%' }} className="text-center" />
+                                    <SortableHeader label="Interview Level" sortKey="interviewLevel" currentSort={sortConfig} onSort={handleSort} style={{ width: '11%' }} className="text-center" />
                                 </tr>
                             </thead>
                             <tbody>
@@ -1267,31 +1277,31 @@ export default function PortfolioReportsPage() {
                                         <tr
                                             key={demand.id}
                                             onClick={() => setDrawerDemand(demand)}
-                                            className="group border-b border-gray-100 transition-colors even:bg-white odd:bg-gray-50/50 hover:bg-purple-50/40 cursor-pointer text-center"
+                                            className="group border-b border-gray-100 transition-colors even:bg-white odd:bg-gray-50/30 hover:bg-violet-50/30 cursor-pointer"
                                         >
-                                            <td style={{ width: '3%', minWidth: '48px', maxWidth: '48px' }} className="py-3.5 px-3 text-center text-xs font-semibold text-gray-500 sticky-col-1 w-[48px] min-w-[48px] max-w-[48px]">{rowNum}</td>
-                                            <td style={{ width: '22%' }} className="py-3.5 px-3 text-xs font-bold text-gray-900 sticky-col-2 min-w-[200px]">
-                                                <div className="hover:text-purple-700 transition-colors text-left flex items-center justify-between">
-                                                    <span className="truncate max-w-[320px]">{demand.name}</span>
-                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 flex-shrink-0" />
+                                            <td style={{ width: '2%' }} className="py-2.5 px-2 text-center text-[10px] font-semibold text-gray-400 sticky-col-1">{rowNum}</td>
+                                            <td style={{ width: '17%' }} className="py-2.5 px-2 sticky-col-2">
+                                                <div className="flex items-center gap-1 group-hover:text-violet-700 transition-colors">
+                                                    <span className="text-[11px] font-semibold text-gray-800 truncate">{demand.name}</span>
+                                                    <ChevronRight className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                                                 </div>
                                             </td>
-                                            <td style={{ width: '9%' }} className="py-3.5 px-3 text-xs font-medium text-gray-700 text-left truncate">{demand.client}</td>
-                                            <td style={{ width: '9%' }} className="py-3.5 px-3 text-xs text-gray-600 text-left truncate">{demand.project}</td>
-                                            <td style={{ width: '8%' }} className="py-3.5 px-3 text-xs text-gray-600 text-left font-mono truncate">{formatDemandDate(demand.fulfilmentDt)}</td>
-                                            <td style={{ width: '7%' }} className="py-3.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[10px] text-gray-600 truncate text-left">{demand.client}</td>
+                                            <td style={{ width: '8%' }} className="py-2.5 px-2 text-[10px] text-gray-500 truncate text-left">{demand.project}</td>
+                                            <td style={{ width: '7%' }} className="py-2.5 px-2 text-[10px] text-gray-500 text-center font-mono">{formatDemandDate(demand.fulfilmentDt)}</td>
+                                            <td style={{ width: '7%' }} className="py-2.5 px-1 text-center" onClick={e => e.stopPropagation()}>
                                                 <PriorityBadge priority={demand.priority} />
                                             </td>
-                                            <td style={{ width: '8%' }} className="py-3.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                                            <td style={{ width: '9%' }} className="py-2.5 px-1 text-center" onClick={e => e.stopPropagation()}>
                                                 <StatusBadge status={demand.status} />
                                             </td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(demand.totalRequested, "text-gray-800")}`}>{demand.totalRequested}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(internalCount, "text-blue-700")}`}>{internalCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(externalCount, "text-purple-700")}`}>{externalCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(scheduledCount, "text-amber-700")}`}>{scheduledCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(selectedCount, "text-emerald-700")}`}>{selectedCount}</td>
-                                            <td style={{ width: '4%' }} className={`py-3.5 px-3 text-center text-xs font-mono truncate ${getNumClass(rejectedCount, "text-red-650")}`}>{rejectedCount}</td>
-                                            <td style={{ width: '10%' }} className="py-3.5 px-3 text-center">
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(demand.totalRequested, 'text-gray-700')}`}>{demand.totalRequested}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(internalCount, 'text-blue-600')}`}>{internalCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(externalCount, 'text-violet-600')}`}>{externalCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(scheduledCount, 'text-amber-600')}`}>{scheduledCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(selectedCount, 'text-emerald-600')}`}>{selectedCount}</td>
+                                            <td style={{ width: '3%' }} className={`py-2.5 px-1 text-center text-[10px] font-mono font-semibold ${getNumClass(rejectedCount, 'text-red-600')}`}>{rejectedCount}</td>
+                                            <td style={{ width: '11%' }} className="py-2 px-1.5 text-center" onClick={e => e.stopPropagation()}>
                                                 <InterviewLevelSelect
                                                     demandId={demand._demandId}
                                                     value={demand.interviewLevel}
