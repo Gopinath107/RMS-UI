@@ -3,10 +3,11 @@ import { APIConfigurations } from '../constant/AuthPath'; // ADD THIS IMPORT
 
 export const PortfolioReportService = {
 
-    fetchDemandFlowList: async (from, to, size = 100) => {
-        return api.get('/demands/DemandFlowList', {
-            params: { size, from, to }
-        });
+    fetchDemandFlowList: async (from, to, size = 100, page = 0, accountId = null, status = null) => {
+        const params = { size, from, to, page };
+        if (accountId) params.accountId = accountId;
+        if (status && status !== "All") params.status = status;
+        return api.get('/demands/DemandFlowList', { params });
     },
 
     fetchEmployeeFlows: async (page = 0, size = 10000) => {
