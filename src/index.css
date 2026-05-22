@@ -6620,3 +6620,47 @@ TabsTrigger:hover:not([data-state="active"]) {
   }
 }
 
+/* --- Resizable Table Column Handles --- */
+.table-resizable {
+  table-layout: fixed !important;
+}
+
+.table-resizable th {
+  position: relative !important;
+}
+
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px; /* 4px clickable area on the right edge of each th */
+  height: 100%;
+  cursor: col-resize;
+  z-index: 50;
+  user-select: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+}
+
+.col-resize-line {
+  width: 2px;
+  height: 100%;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+/* No handle visible by default — only appears on column hover or table hover */
+.table-resizable:hover .col-resize-line,
+.col-resize-handle:hover .col-resize-line,
+th:hover .col-resize-line {
+  background-color: #cbd5e1; /* subtle 2px vertical line in color #cbd5e1 */
+}
+
+/* On active drag: line turns #6366f1 (or app's primary color) */
+.col-resize-handle.is-resizing .col-resize-line {
+  background-color: #6366f1 !important;
+}
+
+

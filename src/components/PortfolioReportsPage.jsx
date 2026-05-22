@@ -647,7 +647,18 @@ export default function PortfolioReportsPage() {
     const [dragCol, setDragCol]             = useState(null);
     const [dragOverCol, setDragOverCol]     = useState(null);
     // Column resize
-    const [colWidths, setColWidths]         = useState(() => Object.fromEntries(COLUMN_DEFS.map(c => [c.key, c.minW])));
+    const [colWidths, setColWidths]         = useState(() => {
+        let saved = {};
+        try {
+            const raw = localStorage.getItem("colWidths_demandsTable");
+            if (raw) saved = JSON.parse(raw);
+        } catch (e) {
+            console.error("Error parsing colWidths_demandsTable from localStorage", e);
+        }
+        return Object.fromEntries(
+            COLUMN_DEFS.map(c => [c.key, Math.max(60, saved[c.key] || c.minW)])
+        );
+    });
     const resizingColRef   = useRef(null);
     const resizeStartX     = useRef(0);
     const resizeStartWidth = useRef(0);
@@ -882,13 +893,55 @@ export default function PortfolioReportsPage() {
         resizingColRef.current   = key;
         resizeStartX.current     = e.clientX;
         resizeStartWidth.current = colWidths[key];
+        
+        const handle = e.currentTarget;
+        if (handle) {
+            handle.classList.add("is-resizing");
+        }
+
+        const tableEl = handle.closest('table');
+        const colGroup = tableEl ? tableEl.querySelector('colgroup') : null;
+        const colIdx = columnOrder.indexOf(key);
+        const colEl = colGroup && colIdx !== -1 ? colGroup.children[colIdx] : null;
+        const thEl = handle.closest('th');
+        const tdEls = tableEl ? tableEl.querySelectorAll(`tbody tr td:nth-child(${colIdx + 1})`) : [];
+
+        let finalW = resizeStartWidth.current;
+
         const onMouseMove = (ev) => {
             const diff = ev.clientX - resizeStartX.current;
-            const newW = Math.max(40, resizeStartWidth.current + diff);
-            setColWidths(prev => ({ ...prev, [resizingColRef.current]: newW }));
+            const newW = Math.max(60, resizeStartWidth.current + diff);
+            finalW = newW;
+            if (colEl) {
+                colEl.style.width = `${newW}px`;
+                colEl.style.minWidth = `${newW}px`;
+            }
+            if (thEl) {
+                thEl.style.width = `${newW}px`;
+                thEl.style.minWidth = `${newW}px`;
+            }
+            tdEls.forEach(td => {
+                td.style.width = `${newW}px`;
+                td.style.minWidth = `${newW}px`;
+            });
         };
         const onMouseUp = () => {
             resizingColRef.current = null;
+            if (handle) {
+                handle.classList.remove("is-resizing");
+            }
+            
+            // Commit final width to state and localStorage once on mouseup
+            setColWidths(prev => {
+                const next = { ...prev, [key]: finalW };
+                try {
+                    localStorage.setItem("colWidths_demandsTable", JSON.stringify(next));
+                } catch (err) {
+                    console.error("Error saving demands table widths", err);
+                }
+                return next;
+            });
+
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         };
@@ -1372,7 +1425,7 @@ export default function PortfolioReportsPage() {
 
                     {/* ── Excel Grid ── */}
                     <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 820 }}>
+                        <table className="table-resizable" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 820 }}>
                             <colgroup>
                                 {columnOrder.map(key => {
                                     const col = COLUMN_DEFS.find(c => c.key === key);
@@ -1414,6 +1467,8 @@ export default function PortfolioReportsPage() {
                                                     position: 'relative',
                                                     transition: 'background 0.1s',
                                                     whiteSpace: 'nowrap',
+                                                    width: colWidths[key],
+                                                    minWidth: colWidths[key],
                                                 }}
                                             >
                                                 {col.sortKey ? (
@@ -1435,11 +1490,11 @@ export default function PortfolioReportsPage() {
                                                 )}
                                                 {/* Resize handle — drag right edge like Excel */}
                                                 <div
+                                                    className="col-resize-handle"
                                                     onMouseDown={(e) => handleResizeMouseDown(e, key)}
-                                                    style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 5, cursor: 'col-resize', zIndex: 2, background: 'transparent' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = '#a78bfa60'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                />
+                                                >
+                                                    <div className="col-resize-line" />
+                                                </div>
                                             </th>
                                         );
                                     })}
@@ -1549,6 +1604,8 @@ export default function PortfolioReportsPage() {
                                                     borderRight: '1px solid #f1f5f9',
                                                     background: isEven ? '#fff' : '#fafafa',
                                                     verticalAlign: 'middle',
+                                                    width: colWidths[key],
+                                                    minWidth: colWidths[key],
                                                 };
 
                                                 if (key === '#') return (

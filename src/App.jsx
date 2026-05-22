@@ -54,6 +54,7 @@ import Sidebar from './components/Sidebar.jsx';
 
 import { Toaster } from './components/ui/sonner.jsx';
 import { getDashboardPath } from './config/routes.js';
+import { useGlobalTableResizer } from './hooks/useGlobalTableResizer.js';
 
 // ─── Role-specific theme colours ────────────────────────────────────────────
 const ROLE_THEMES = {
@@ -264,6 +265,7 @@ function getInitialAuthState() {
 }
 
 function AppContent() {
+  useGlobalTableResizer();
   const initial = getInitialAuthState();
   const [userRole, setUserRole] = useState(initial.userRole);
   const [isAuthenticated, setIsAuthenticated] = useState(initial.isAuthenticated);
