@@ -687,6 +687,14 @@ export default function PortfolioReportsPage() {
     const [isSending, setIsSending] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
+    // ── Report Filter Modal state ──
+    const [showReportFilterModal, setShowReportFilterModal] = useState(false);
+    const [reportFilterAction, setReportFilterAction] = useState(null); // 'generate' | 'export'
+    const [reportFromDate, setReportFromDate] = useState('');
+    const [reportToDate, setReportToDate] = useState('');
+    const [reportClient, setReportClient] = useState('All Clients');
+    const [reportFilterPreset, setReportFilterPreset] = useState('custom'); // 'all' | 'today' | 'custom'
+
     // Date formatting helper: DD-MM-YYYY
     const formatDemandDate = (dateString) => {
         if (!dateString || dateString === "—") return "—";
@@ -1083,14 +1091,17 @@ export default function PortfolioReportsPage() {
     const hasActiveFilters = selectedClient !== "All Clients" || startDate || endDate || searchTerm || statusFilter !== "All" || priorityFilter !== "All";
 
     // ── Export Report handler ──
-    const handleExport = useCallback(async () => {
+    const handleExport = useCallback(async (overrideFrom, overrideTo, overrideClient) => {
         setExporting(true);
         try {
+           const useFrom = overrideFrom !== undefined ? overrideFrom : startDate;
+           const useTo = overrideTo !== undefined ? overrideTo : endDate;
+           const useClient = overrideClient !== undefined ? overrideClient : selectedClient;
            const payload = {
                userId: localStorage.getItem('userId'),
-               fromDate: startDate || null,
-               toDate: endDate || null,
-               accountId: selectedClient !== "All Clients" ? clientMap[selectedClient] : null,
+               fromDate: useFrom || null,
+               toDate: useTo || null,
+               accountId: useClient !== "All Clients" ? clientMap[useClient] : null,
                demandIds: filtered.map(d => d._demandId).filter(Boolean),
            };
 
@@ -1101,9 +1112,9 @@ export default function PortfolioReportsPage() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            const fromStr = startDate ? startDate.replace(/-/g, '') : 'all';
-            const toStr = endDate ? endDate.replace(/-/g, '') : 'all';
-            const clientStr = selectedClient !== "All Clients" ? `_${selectedClient.replace(/\s+/g, '_')}` : '';
+            const fromStr = useFrom ? useFrom.replace(/-/g, '') : 'all';
+            const toStr = useTo ? useTo.replace(/-/g, '') : 'all';
+            const clientStr = useClient !== "All Clients" ? `_${useClient.replace(/\s+/g, '_')}` : '';
             link.download = `demand_report_${fromStr}_to_${toStr}${clientStr}.xlsx`;
             document.body.appendChild(link);
             link.click();
@@ -1121,6 +1132,43 @@ export default function PortfolioReportsPage() {
     const handleOpenEmailModal = () => {
         setIsEmailModalOpen(true);
         setToEmails([]); setCcEmails([]); setShowCc(false);
+    };
+
+    // ── Open filter modal before Generate/Export ──
+    const openReportFilter = (action) => {
+        setReportFilterAction(action);
+        setReportFromDate(startDate || '');
+        setReportToDate(endDate || '');
+        setReportClient(selectedClient);
+        setReportFilterPreset('custom');
+        setShowReportFilterModal(true);
+    };
+
+    const applyReportFilter = () => {
+        let fromVal = reportFromDate;
+        let toVal = reportToDate;
+        const clientVal = reportClient;
+
+        if (reportFilterPreset === 'all') {
+            fromVal = '';
+            toVal = '';
+        } else if (reportFilterPreset === 'today') {
+            const today = new Date().toISOString().split('T')[0];
+            fromVal = today;
+            toVal = today;
+        }
+
+        setShowReportFilterModal(false);
+
+        if (reportFilterAction === 'export') {
+            handleExport(fromVal, toVal, clientVal);
+        } else if (reportFilterAction === 'generate') {
+            // Set page-level filters to match, then open email modal
+            setStartDate(fromVal);
+            setEndDate(toVal);
+            setSelectedClient(clientVal);
+            setTimeout(() => handleOpenEmailModal(), 100);
+        }
     };
 
     const handleGenerateEmailReport = async (emailData = { toEmail: [], ccEmail: [] }) => {
@@ -1302,7 +1350,7 @@ export default function PortfolioReportsPage() {
                     {/* Action buttons */}
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={handleOpenEmailModal}
+                            onClick={() => openReportFilter('generate')}
                             disabled={loading}
                             className="btn-premium-generate"
                         >
@@ -1311,7 +1359,7 @@ export default function PortfolioReportsPage() {
                         </button>
 
                         <button
-                            onClick={handleExport}
+                            onClick={() => openReportFilter('export')}
                             disabled={exporting}
                             className="btn-premium-export"
                         >
@@ -1336,23 +1384,148 @@ export default function PortfolioReportsPage() {
                 </div>
             )}
 
-            {/* KPI Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            {/* KPI Strip — Premium Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 mb-8">
                 {[
-                    { label: "Active Demands", value: kpis.total, icon: Target, iconColor: "text-orange-500", valueColor: "text-orange-600" },
-                    { label: "Internal Resources", value: kpis.totalInternal, icon: UserCheck, iconColor: "text-blue-500", valueColor: "text-blue-600" },
-                    { label: "External Resources", value: kpis.totalExternal, icon: Users, iconColor: "text-purple-500", valueColor: "text-purple-600" },
-                    { label: "Interviews Ongoing", value: kpis.totalScheduled, icon: Clock, iconColor: "text-amber-500", valueColor: "text-red-500" },
-                    { label: "Selected", value: kpis.totalSelected, icon: Award, iconColor: "text-emerald-500", valueColor: "text-emerald-600" },
+                    {
+                        label: "Active Demands",
+                        value: kpis.total,
+                        icon: Target,
+                        gradient: "linear-gradient(135deg, #fff7ed, #ffedd5)",
+                        iconBg: "linear-gradient(135deg, #fb923c, #ea580c)",
+                        borderColor: "#fb923c",
+                        valueColor: "#ea580c",
+                        ringColor: "rgba(251,146,60,0.25)",
+                    },
+                    {
+                        label: "Internal Resources",
+                        value: kpis.totalInternal,
+                        icon: UserCheck,
+                        gradient: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+                        iconBg: "linear-gradient(135deg, #60a5fa, #2563eb)",
+                        borderColor: "#60a5fa",
+                        valueColor: "#2563eb",
+                        ringColor: "rgba(96,165,250,0.25)",
+                    },
+                    {
+                        label: "External Resources",
+                        value: kpis.totalExternal,
+                        icon: Users,
+                        gradient: "linear-gradient(135deg, #faf5ff, #f3e8ff)",
+                        iconBg: "linear-gradient(135deg, #a78bfa, #7c3aed)",
+                        borderColor: "#a78bfa",
+                        valueColor: "#7c3aed",
+                        ringColor: "rgba(167,139,250,0.25)",
+                    },
+                    {
+                        label: "Interviews Ongoing",
+                        value: kpis.totalScheduled,
+                        icon: Clock,
+                        gradient: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                        iconBg: "linear-gradient(135deg, #fbbf24, #d97706)",
+                        borderColor: "#fbbf24",
+                        valueColor: "#d97706",
+                        ringColor: "rgba(251,191,36,0.25)",
+                    },
+                    {
+                        label: "Selected",
+                        value: kpis.totalSelected,
+                        icon: Award,
+                        gradient: "linear-gradient(135deg, #ecfdf5, #d1fae5)",
+                        iconBg: "linear-gradient(135deg, #34d399, #059669)",
+                        borderColor: "#34d399",
+                        valueColor: "#059669",
+                        ringColor: "rgba(52,211,153,0.25)",
+                    },
                 ].map((k, i) => {
                     const Icon = k.icon;
                     return (
-                        <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Icon className={`w-4 h-4 ${k.iconColor}`} />
-                                <p className="text-sm text-gray-600 font-medium">{k.label}</p>
+                        <div
+                            key={i}
+                            style={{
+                                background: k.gradient,
+                                borderLeft: `4px solid ${k.borderColor}`,
+                                borderRadius: 16,
+                                padding: '20px 18px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                cursor: 'default',
+                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                e.currentTarget.style.boxShadow = `0 8px 30px ${k.ringColor}, 0 2px 8px rgba(0,0,0,0.08)`;
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
+                            }}
+                        >
+                            {/* Decorative background circle */}
+                            <div style={{
+                                position: 'absolute',
+                                top: -18,
+                                right: -18,
+                                width: 80,
+                                height: 80,
+                                borderRadius: '50%',
+                                background: k.ringColor,
+                                opacity: 0.5,
+                                pointerEvents: 'none',
+                            }} />
+                            <div style={{
+                                position: 'absolute',
+                                bottom: -24,
+                                right: 20,
+                                width: 50,
+                                height: 50,
+                                borderRadius: '50%',
+                                background: k.ringColor,
+                                opacity: 0.3,
+                                pointerEvents: 'none',
+                            }} />
+
+                            {/* Icon with gradient background */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 40,
+                                height: 40,
+                                borderRadius: 12,
+                                background: k.iconBg,
+                                boxShadow: `0 4px 14px ${k.ringColor}`,
+                                marginBottom: 14,
+                                flexShrink: 0,
+                            }}>
+                                <Icon style={{ width: 20, height: 20, color: '#fff', strokeWidth: 2.2 }} />
                             </div>
-                            <p className={`text-2xl font-bold ${k.valueColor}`}>{k.value}</p>
+
+                            {/* Label */}
+                            <p style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#64748b',
+                                letterSpacing: '0.02em',
+                                marginBottom: 4,
+                                textTransform: 'uppercase',
+                            }}>
+                                {k.label}
+                            </p>
+
+                            {/* Value */}
+                            <p style={{
+                                fontSize: 30,
+                                fontWeight: 800,
+                                color: k.valueColor,
+                                lineHeight: 1.1,
+                                letterSpacing: '-0.02em',
+                                position: 'relative',
+                                zIndex: 1,
+                            }}>
+                                {k.value}
+                            </p>
                         </div>
                     );
                 })}
@@ -1706,6 +1879,147 @@ export default function PortfolioReportsPage() {
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-white border border-green-100 text-green-800 px-6 py-3 rounded-full shadow-xl flex items-center gap-3 z-50">
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <span className="text-sm font-medium">Report sent successfully</span>
+                </div>
+            )}
+
+            {/* ── REPORT FILTER MODAL ── */}
+            {showReportFilterModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setShowReportFilterModal(false)} />
+                    <div className="relative bg-white w-full max-w-[340px] overflow-hidden flex flex-col" style={{ borderRadius: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', animation: 'slide-in 0.2s ease-out' }}>
+
+                        {/* Header */}
+                        <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {reportFilterAction === 'export'
+                                    ? <><Download style={{ width: 14, height: 14, color: '#ea580c' }} /> Export Report</>
+                                    : <><Mail style={{ width: 14, height: 14, color: '#16a34a' }} /> Generate Report</>
+                                }
+                            </h3>
+                            <button onClick={() => setShowReportFilterModal(false)} style={{ color: '#9ca3af', width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <X style={{ width: 14, height: 14 }} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ padding: '0 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                            {/* Pill preset tabs */}
+                            <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', borderRadius: 50, padding: 3 }}>
+                                {[
+                                    { key: 'all', label: 'All Data' },
+                                    { key: 'today', label: 'Today' },
+                                    { key: 'custom', label: 'Custom' },
+                                ].map(p => (
+                                    <button
+                                        key={p.key}
+                                        onClick={() => setReportFilterPreset(p.key)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '6px 0',
+                                            borderRadius: 50,
+                                            border: 'none',
+                                            background: reportFilterPreset === p.key ? '#fff' : 'transparent',
+                                            color: reportFilterPreset === p.key ? '#ea580c' : '#64748b',
+                                            fontWeight: 600,
+                                            fontSize: 11,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            textAlign: 'center',
+                                            boxShadow: reportFilterPreset === p.key ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                                        }}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Date Range — only in custom mode */}
+                            {reportFilterPreset === 'custom' && (
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From</label>
+                                        <input
+                                            type="date"
+                                            value={reportFromDate}
+                                            onChange={e => setReportFromDate(e.target.value)}
+                                            style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc' }}
+                                            onFocus={e => e.target.style.borderColor = '#f97316'}
+                                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To</label>
+                                        <input
+                                            type="date"
+                                            value={reportToDate}
+                                            onChange={e => setReportToDate(e.target.value)}
+                                            style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc' }}
+                                            onFocus={e => e.target.style.borderColor = '#f97316'}
+                                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Client */}
+                            <div>
+                                <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</label>
+                                <select
+                                    value={reportClient}
+                                    onChange={e => setReportClient(e.target.value)}
+                                    style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc', cursor: 'pointer' }}
+                                    onFocus={e => e.target.style.borderColor = '#f97316'}
+                                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                                >
+                                    {clientList.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            {/* Summary pill */}
+                            <div style={{ background: '#f8fafc', borderRadius: 50, padding: '7px 14px', fontSize: 11, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontWeight: 700 }}>
+                                    {reportFilterPreset === 'all' ? '📊 All data'
+                                        : reportFilterPreset === 'today' ? `📅 ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                        : `📆 ${reportFromDate || '—'} → ${reportToDate || '—'}`
+                                    }
+                                </span>
+                                <span style={{ color: '#cbd5e1' }}>·</span>
+                                <span style={{ color: '#94a3b8' }}>{reportClient}</span>
+                            </div>
+
+                            {/* Action buttons — inline at bottom */}
+                            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                                <button
+                                    onClick={() => setShowReportFilterModal(false)}
+                                    style={{ flex: 1, padding: '8px 0', fontSize: 12, fontWeight: 600, color: '#64748b', background: '#f1f5f9', border: 'none', borderRadius: 50, cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={applyReportFilter}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px 0',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: '#fff',
+                                        background: reportFilterAction === 'export' ? 'linear-gradient(135deg, #fb923c, #ea580c)' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                        border: 'none',
+                                        borderRadius: 50,
+                                        cursor: 'pointer',
+                                        boxShadow: reportFilterAction === 'export' ? '0 2px 8px rgba(234,88,12,0.3)' : '0 2px 8px rgba(34,197,94,0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 5,
+                                    }}
+                                >
+                                    {reportFilterAction === 'export' ? <><Download style={{ width: 12, height: 12 }} /> Export</> : <><Mail style={{ width: 12, height: 12 }} /> Continue</>}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
