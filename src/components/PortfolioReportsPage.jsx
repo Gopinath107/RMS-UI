@@ -150,7 +150,7 @@ const COLUMN_DEFS = [
     { key: 'name',           label: 'Demand Name',     minW: 140,  sortKey: 'name',           filter: 'text'                                                  },
     { key: 'client',         label: 'Client',          minW: 80,   sortKey: 'client',         filter: 'text'                                                  },
     { key: 'project',        label: 'Project',         minW: 80,   sortKey: 'project',        filter: 'text'                                                  },
-    { key: 'due_date',       label: 'Due Date',        minW: 80,   sortKey: 'due_date',       filter: null                                                    },
+    { key: 'due_date',       label: 'Due Date',        minW: 80,   sortKey: 'due_date',       filter: 'text'                                                  },
     { key: 'priority',       label: 'Priority',        minW: 80,   sortKey: 'priority',       filter: 'select', opts: ['All','High','Medium','Low']           },
     { key: 'status',         label: 'Status',          minW: 96,   sortKey: 'status',         filter: 'select', opts: ['All','Open','In Progress','Completed','On Hold'] },
     { key: 'requested',      label: 'Req',             minW: 44,   sortKey: 'requested',      filter: null,     center: true                                 },
@@ -642,7 +642,7 @@ export default function PortfolioReportsPage() {
 
     // ── Excel Grid: column order (drag-drop), per-column filters ──
     const [columnOrder, setColumnOrder]     = useState(DEFAULT_COL_ORDER);
-    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', priority: 'All', status: 'All' });
+    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', due_date: '', priority: 'All', status: 'All' });
     const [showColFilters, setShowColFilters] = useState(false);
     const [dragCol, setDragCol]             = useState(null);
     const [dragOverCol, setDragOverCol]     = useState(null);
@@ -824,6 +824,10 @@ export default function PortfolioReportsPage() {
         if (colFilters.name.trim())    list = list.filter(d => d.name.toLowerCase().includes(colFilters.name.toLowerCase()));
         if (colFilters.client.trim())  list = list.filter(d => d.client.toLowerCase().includes(colFilters.client.toLowerCase()));
         if (colFilters.project.trim()) list = list.filter(d => d.project.toLowerCase().includes(colFilters.project.toLowerCase()));
+        if (colFilters.due_date && colFilters.due_date.trim()) {
+            const q = colFilters.due_date.trim().toLowerCase();
+            list = list.filter(d => formatDemandDate(d.fulfilmentDt).toLowerCase().includes(q));
+        }
         if (colFilters.priority !== 'All') list = list.filter(d => d.priority === colFilters.priority);
         if (colFilters.status !== 'All') {
             const s = colFilters.status;
@@ -1157,6 +1161,74 @@ export default function PortfolioReportsPage() {
                         background-color: #e6e0fa !important;
                     }
                 }
+
+                /* Premium Gradient Action Buttons */
+                .btn-premium-generate {
+                    background: linear-gradient(135deg, #22c55e, #16a34a);
+                    color: #ffffff;
+                    border: none;
+                    border-radius: 10px;
+                    padding: 10px 20px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.35);
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    outline: none;
+                    text-decoration: none;
+                }
+                .btn-premium-generate:hover:not(:disabled) {
+                    background: linear-gradient(135deg, #16a34a, #15803d);
+                    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+                    transform: translateY(-2px);
+                }
+                .btn-premium-generate:active:not(:disabled) {
+                    transform: translateY(0px);
+                    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+                }
+                .btn-premium-generate:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .btn-premium-export {
+                    background: linear-gradient(135deg, #fb923c, #ea580c);
+                    color: #ffffff;
+                    border: none;
+                    border-radius: 10px;
+                    padding: 10px 20px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    outline: none;
+                    text-decoration: none;
+                }
+                .btn-premium-export:hover:not(:disabled) {
+                    background: linear-gradient(135deg, #ea580c, #c2410c);
+                    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.5);
+                    transform: translateY(-2px);
+                }
+                .btn-premium-export:active:not(:disabled) {
+                    transform: translateY(0px);
+                    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35);
+                }
+                .btn-premium-export:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .btn-premium-icon {
+                    margin-right: 6px;
+                    flex-shrink: 0;
+                }
             `}</style>
 
             {/* Page Header */}
@@ -1179,18 +1251,18 @@ export default function PortfolioReportsPage() {
                         <button
                             onClick={handleOpenEmailModal}
                             disabled={loading}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-green-600 bg-white border-2 border-green-400 rounded-xl shadow-md hover:bg-green-50 hover:border-green-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="btn-premium-generate"
                         >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin text-white btn-premium-icon" /> : <Mail className="w-4 h-4 text-white btn-premium-icon" />}
                             Generate Report
                         </button>
 
                         <button
                             onClick={handleExport}
                             disabled={exporting}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-orange-600 bg-white border-2 border-orange-400 rounded-xl shadow-md hover:bg-orange-50 hover:border-orange-500 transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="btn-premium-export"
                         >
-                            <Download className={`w-4 h-4 ${exporting ? "animate-spin" : ""}`} />
+                            <Download className={`w-4 h-4 text-white btn-premium-icon ${exporting ? "animate-spin" : ""}`} />
                             {exporting ? "Exporting…" : "Export Report"}
                         </button>
                     </div>
@@ -1261,7 +1333,7 @@ export default function PortfolioReportsPage() {
                     {/* Clear column filters — only when active */}
                     {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
                         <button
-                            onClick={() => setColFilters({ name: '', client: '', project: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
+                            onClick={() => setColFilters({ name: '', client: '', project: '', due_date: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
                         >
                             <X style={{ width: 9, height: 9 }} /> Clear filters
@@ -1278,13 +1350,13 @@ export default function PortfolioReportsPage() {
                     )}
                 </div>
                 {/* Right: per-page */}
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span>Show</span>
+                <div className="flex items-center gap-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
+                    <span className="text-gray-600 font-medium">Show</span>
                     <select value={itemsPerPage} onChange={e => setItemsPerPage(Number(e.target.value))}
-                        className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        className="bg-transparent border-b border-gray-300 focus:border-orange-500 outline-none text-gray-800 font-bold px-1 py-0.5 cursor-pointer">
                         {ITEMS_PER_PAGE_OPTIONS.map(n => <option key={n}>{n}</option>)}
                     </select>
-                    <span>per page</span>
+                    <span className="text-gray-600 font-medium">per page</span>
                 </div>
             </div>
 
@@ -1293,7 +1365,7 @@ export default function PortfolioReportsPage() {
                 <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm">
                     <AlertTriangle className="w-12 h-12 text-orange-300 mx-auto mb-4" />
                     <p className="text-gray-500 font-medium">No demands match your filters.</p>
-                    <button onClick={clearFilters} className="mt-3 text-sm text-orange-500 hover:text-orange-700 font-semibold">Clear filters</button>
+                    {/* <button onClick={clearFilters} className="mt-3 text-sm text-orange-500 hover:text-orange-700 font-semibold">Clear filters</button> */}
                 </div>
             ) : (
                 <div style={{ borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', background: '#fff', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginBottom: 24 }}>
@@ -1381,7 +1453,7 @@ export default function PortfolioReportsPage() {
                                             if (!col) return null;
                                             const hasVal = colFilters[key] && colFilters[key] !== 'All';
                                             const cellStyle = {
-                                                padding: '4px 5px',
+                                                padding: '6px 5px',
                                                 borderRight: '1px solid #fde68a',
                                             };
                                             if (col.filter === 'text') {
@@ -1393,7 +1465,7 @@ export default function PortfolioReportsPage() {
                                                                 placeholder="filter…"
                                                                 value={colFilters[key] || ''}
                                                                 onChange={e => setColFilters(f => ({ ...f, [key]: e.target.value }))}
-                                                                style={{ width: '100%', padding: '3px 20px 3px 6px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 5, fontSize: 10, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', boxSizing: 'border-box' }}
+                                                                style={{ width: '100%', height: 32, padding: '0 24px 0 8px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 6, fontSize: 13, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', boxSizing: 'border-box' }}
                                                             />
                                                             {hasVal && (
                                                                 <button onClick={() => setColFilters(f => ({ ...f, [key]: '' }))} style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0, lineHeight: 1 }}>
@@ -1410,7 +1482,7 @@ export default function PortfolioReportsPage() {
                                                         <select
                                                             value={colFilters[key] || 'All'}
                                                             onChange={e => setColFilters(f => ({ ...f, [key]: e.target.value }))}
-                                                            style={{ width: '100%', padding: '3px 4px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 5, fontSize: 10, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', cursor: 'pointer' }}
+                                                            style={{ width: '100%', height: 32, padding: '0 6px', border: `1px solid ${hasVal ? '#a78bfa' : '#e5e7eb'}`, borderRadius: 6, fontSize: 13, color: '#374151', background: hasVal ? '#f5f3ff' : '#fff', outline: 'none', cursor: 'pointer' }}
                                                         >
                                                             {col.opts.map(o => <option key={o}>{o}</option>)}
                                                         </select>
