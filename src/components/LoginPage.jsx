@@ -124,18 +124,29 @@ export default function LoginPage({ onLogin }) {
           const users = response.data.result;
           setUsersData(users); // Store users data for later use
 
-          // Group users by role to get unique roles with their roleId
-          const roleGroups = users.reduce((acc, user) => {
-            const roleName = user.roleName;
-            if (!acc[roleName]) {
-              acc[roleName] = {
-                roleId: user.roleId,
-                users: []
-              };
-            }
-            acc[roleName].users.push(user);
-            return acc;
-          }, {});
+          // Group users by all of their assigned roles to get unique roles with their roleId
+          const roleGroups = {};
+          users.forEach(user => {
+            const rolesToProcess = user.roles && user.roles.length > 0
+              ? user.roles
+              : [{ roleId: user.roleId, roleName: user.roleName }];
+
+            rolesToProcess.forEach(role => {
+              const roleName = role.roleName;
+              if (roleName) {
+                if (!roleGroups[roleName]) {
+                  roleGroups[roleName] = {
+                    roleId: role.roleId,
+                    users: []
+                  };
+                }
+                // Avoid duplicate users in the same role group
+                if (!roleGroups[roleName].users.some(u => u.userId === user.userId)) {
+                  roleGroups[roleName].users.push(user);
+                }
+              }
+            });
+          });
 
           // Create role configs from unique roles
           const uniqueRoleNames = Object.keys(roleGroups);
@@ -175,9 +186,20 @@ export default function LoginPage({ onLogin }) {
             };
           });
 
+          // Sort newConfigs based on the hardcodedRoleConfigs order
+          newConfigs.sort((a, b) => {
+            const indexA = hardcodedRoleConfigs.findIndex(c => c.id === a.id);
+            const indexB = hardcodedRoleConfigs.findIndex(c => c.id === b.id);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+
           setRoleConfigs(newConfigs);
           if (newConfigs.length > 0) {
-            setActiveRole(newConfigs[0].id);
+            // Default to 'project-manager' if it exists in the fetched configs, otherwise first config
+            const pmConfig = newConfigs.find(c => c.id === 'project-manager');
+            setActiveRole(pmConfig ? pmConfig.id : newConfigs[0].id);
           }
         } else {
           throw new Error('Failed to fetch users');

@@ -248,19 +248,23 @@ function AppShell({ userRole, onLogout }) {
 
 /** Clear stale auth data if there is no token (session expired / first load). */
 function getInitialAuthState() {
-  const flagged = localStorage.getItem('isAuthenticated') === 'true';
-  const hasToken = !!localStorage.getItem('token');
-  if (flagged && !hasToken) {
-    // No valid token — wipe stale flags so the user sees the login page
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userId');
-    return { isAuthenticated: false, userRole: '' };
-  }
+  // Always clear auth data on initial application load so it starts fresh at the login page
+  localStorage.removeItem('isAuthenticated');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('employeeName');
+  localStorage.removeItem('roleName');
+  localStorage.removeItem('companyName');
+  localStorage.removeItem('companyId');
+  localStorage.removeItem('employeeId');
+  localStorage.removeItem('roleId');
+  localStorage.removeItem('email');
   return {
-    isAuthenticated: flagged,
-    userRole: localStorage.getItem('userRole') || '',
+    isAuthenticated: false,
+    userRole: '',
   };
 }
 
