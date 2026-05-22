@@ -42,6 +42,7 @@ import {
   Activity,
   CheckCircle,
   Clock,
+  Tag,
 } from "lucide-react";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
@@ -293,11 +294,17 @@ const ProjectsManagement = () => {
       companyId: project.companyId || 1,
       managerUserId: project.managerUserId || null,
       selectedSkills: project.skills
-        .map(skill =>
-          typeof skill === "object"
-            ? { id: skill.skillId, name: skill.skillName }
-            : skillsList.find(s => s.skillId === skill || s.skillName === skill) || { id: null, name: skill }
-        )
+        .map(skill => {
+          if (typeof skill === "object") {
+            const id = skill.skillId ?? skill.id;
+            const name = skill.skillName ?? skill.name;
+            return { id, name };
+          }
+          const found = skillsList.find(s => s.skillId === skill || s.skillName === skill);
+          return found
+            ? { id: found.skillId, name: found.skillName }
+            : { id: null, name: String(skill) };
+        })
         .filter(s => s.name && s.id),
     });
     setIsModalOpen(true);
@@ -575,9 +582,9 @@ const ProjectsManagement = () => {
                     <FileText className="h-4 w-4 mr-2" />
                     Status: {project.status}
                   </p>
-                  {project.skills && project.skills.length > 0 && (
-                    <p className="flex items-center text-sm text-gray-600">
-                      <FileText className="h-4 w-4 mr-2" />
+                 {project.skills && project.skills.length > 0 && (
+                    <p className="flex items-start text-sm text-gray-600">
+                      <Tag className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                       Skills:{" "}
                       {project.skills
                         .map(s =>
@@ -1056,8 +1063,8 @@ const ProjectsManagement = () => {
                   <Activity className="w-4 h-4 text-blue-500" /> Required Skills
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="flex flex-wrap gap-2">
+              <CardContent className="pt-4 overflow-hidden">
+                <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[100px]">
                   {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
                     selectedDetails.skills.map((skill) => {
                       const skillName =
