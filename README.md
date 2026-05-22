@@ -57,17 +57,17 @@ RMS-UI/
 
 ## 🔑 Developer Test Credentials
 
-For local testing and validation, the application provides built-in mock accounts corresponding to each user persona:
+For local testing and validation, the application supports preconfigured logins for the following user roles (replace with the correct login details configured in your instance):
 
-| Role | Username | Password | Sidebar Theme |
+| Role | Sample Username | Sample Password | Sidebar Theme |
 | :--- | :--- | :--- | :--- |
-| **System Admin** | `admin` | `admin123` | Rose/Red Gradient |
-| **HR Manager** | `hr` | `hr123` | Blue/Indigo Gradient |
-| **Project Manager** | `pm` | `pm123` | Emerald/Green Gradient |
-| **PMO** | `pmo` | `pmo123` | Purple/Violet Gradient |
-| **Portfolio Manager** | `portfolio` | `portfolio123` | Orange/Amber Gradient |
-| **Sales Manager** | `sales` | `sales123` | Yellow/Amber Gradient |
-| **Interview Panel** | `panel` | `panel123` | Indigo/Purple Gradient |
+| **System Admin** | `admin_user` | `admin_pass` | Rose/Red Gradient |
+| **HR Manager** | `hr_user` | `hr_pass` | Blue/Indigo Gradient |
+| **Project Manager** | `pm_user` | `pm_pass` | Emerald/Green Gradient |
+| **PMO** | `pmo_user` | `pmo_pass` | Purple/Violet Gradient |
+| **Portfolio Manager** | `portfolio_user` | `portfolio_pass` | Orange/Amber Gradient |
+| **Sales Manager** | `sales_user` | `sales_pass` | Yellow/Amber Gradient |
+| **Interview Panel** | `panel_user` | `panel_pass` | Indigo/Purple Gradient |
 
 ---
 
