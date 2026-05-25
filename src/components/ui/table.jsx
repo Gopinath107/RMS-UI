@@ -52,7 +52,12 @@ const Table = React.forwardRef(({ className, containerClassName, tableKey, ...pr
         loadWidths();
       }
 
-      tableEl.style.tableLayout = "fixed";
+      const hasSavedWidths = Object.keys(widthsCache).length > 0;
+      if (hasSavedWidths) {
+        tableEl.style.tableLayout = "fixed";
+      } else {
+        tableEl.style.tableLayout = "auto";
+      }
 
       const ths = tableEl.querySelectorAll("thead tr:first-child th");
       ths.forEach((th, idx) => {
@@ -66,6 +71,14 @@ const Table = React.forwardRef(({ className, containerClassName, tableKey, ...pr
           cells.forEach((cell) => {
             cell.style.width = `${width}px`;
             cell.style.minWidth = `${width}px`;
+          });
+        } else {
+          th.style.width = "";
+          th.style.minWidth = "";
+          const cells = tableEl.querySelectorAll(`tbody tr td:nth-child(${idx + 1}), tfoot tr td:nth-child(${idx + 1})`);
+          cells.forEach((cell) => {
+            cell.style.width = "";
+            cell.style.minWidth = "";
           });
         }
       });
@@ -87,9 +100,16 @@ const Table = React.forwardRef(({ className, containerClassName, tableKey, ...pr
       // Lock all columns immediately when starting drag, using their current actual widths.
       // This is crucial to prevent shifting of other columns!
       const ths = tableEl.querySelectorAll("thead tr:first-child th");
+
+      // Capture actual widths FIRST while in the current layout state (e.g. auto-layout)
+      const curWidths = Array.from(ths).map((otherTh) => otherTh.getBoundingClientRect().width || otherTh.offsetWidth);
+
+      // Now switch table layout to fixed
+      tableEl.style.tableLayout = "fixed";
+
       ths.forEach((otherTh, otherIdx) => {
         const otherKey = getColumnKey(otherTh, otherIdx);
-        const curWidth = otherTh.getBoundingClientRect().width || otherTh.offsetWidth;
+        const curWidth = curWidths[otherIdx];
         otherTh.style.width = `${curWidth}px`;
         otherTh.style.minWidth = `${curWidth}px`;
         widthsCache[otherKey] = curWidth;

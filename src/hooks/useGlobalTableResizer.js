@@ -15,7 +15,6 @@ export function useGlobalTableResizer() {
       // Mark it as initialized to prevent double-processing
       table.dataset.resizerInitialized = "true";
       table.classList.add("table-resizable");
-      table.style.tableLayout = "fixed";
 
       // 1. Generate unique table key based on header text
       const generateTableKey = () => {
@@ -55,6 +54,14 @@ export function useGlobalTableResizer() {
         if (Object.keys(widthsCache).length === 0) {
           loadWidths();
         }
+
+        const hasSavedWidths = Object.keys(widthsCache).length > 0;
+        if (hasSavedWidths) {
+          table.style.tableLayout = "fixed";
+        } else {
+          table.style.tableLayout = "auto";
+        }
+
         ths.forEach((th, idx) => {
           const colKey = getColumnKey(th, idx);
           const width = widthsCache[colKey];
@@ -66,6 +73,14 @@ export function useGlobalTableResizer() {
             cells.forEach((cell) => {
               cell.style.width = `${width}px`;
               cell.style.minWidth = `${width}px`;
+            });
+          } else {
+            th.style.width = "";
+            th.style.minWidth = "";
+            const cells = table.querySelectorAll(`tbody tr td:nth-child(${idx + 1}), tfoot tr td:nth-child(${idx + 1})`);
+            cells.forEach((cell) => {
+              cell.style.width = "";
+              cell.style.minWidth = "";
             });
           }
         });
@@ -86,9 +101,16 @@ export function useGlobalTableResizer() {
 
         // Lock all columns immediately when starting drag, using their current actual widths.
         const currentThs = table.querySelectorAll("thead tr:first-child th");
+
+        // Capture actual widths FIRST while in the current layout state (e.g. auto-layout)
+        const curWidths = Array.from(currentThs).map((otherTh) => otherTh.getBoundingClientRect().width || otherTh.offsetWidth);
+
+        // Now switch table layout to fixed
+        table.style.tableLayout = "fixed";
+
         currentThs.forEach((otherTh, otherIdx) => {
           const otherKey = getColumnKey(otherTh, otherIdx);
-          const curWidth = otherTh.getBoundingClientRect().width || otherTh.offsetWidth;
+          const curWidth = curWidths[otherIdx];
           otherTh.style.width = `${curWidth}px`;
           otherTh.style.minWidth = `${curWidth}px`;
           widthsCache[otherKey] = curWidth;
