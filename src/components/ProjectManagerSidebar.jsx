@@ -50,7 +50,8 @@ export default function ProjectManagerSidebar({
       initial={{ x: -250 }}
       animate={{ x: 0, width: isExpanded ? 256 : 64 }}
       transition={{ duration: 0.3 }}
-      className={`fixed left-0 top-0 h-full ${isExpanded ? 'w-64' : 'w-16'} bg-gradient-to-b from-green-900/98 via-emerald-900/98 to-teal-900/98 backdrop-blur-md shadow-2xl border-r border-green-300/20 z-50 flex flex-col`}
+      className={`fixed left-0 top-0 h-full ${isExpanded ? 'w-64 overflow-hidden' : 'w-16 overflow-visible'
+        } bg-gradient-to-b from-green-900/98 via-emerald-900/98 to-teal-900/98 backdrop-blur-md shadow-2xl border-r border-green-300/20 z-50 flex flex-col`}
     >
       <div className={`${isExpanded ? 'p-4' : 'p-3'} border-b border-green-300/20`}>
         <div className="flex items-center gap-3">
@@ -75,24 +76,58 @@ export default function ProjectManagerSidebar({
         </div>
       </div>
 
-      <nav className={`mt-4 ${isExpanded ? 'px-3' : 'px-2'} overflow-y-auto flex-1 hide-scrollbar`}>
+      <nav
+        className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+          ? 'px-3 overflow-y-auto overflow-x-hidden'
+          : 'px-2 overflow-visible'
+          }`}
+      >
         <div className="space-y-2 pb-20">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
-              <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: index * 0.1 }}>
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="relative overflow-visible"
+              >
                 <motion.button
                   onClick={() => navigate(item.path)}
                   className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-3' : 'justify-center px-2'} py-3 rounded-xl transition-all duration-200 relative group ${isActive ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 text-white border border-green-400/30 shadow-lg' : 'text-green-200 hover:bg-green-500/20 hover:text-white'}`}
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-green-300' : ''}`} />
-                  {/* Collapsed: hover label pill */}
+                  {/* ── COLLAPSED TOOLTIP (ChatGPT-style dark) ── */}
                   {!isExpanded && (
-                    <span className="pointer-events-none absolute left-full ml-2 z-50 flex items-center gap-1 bg-green-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl border border-green-400/30 whitespace-nowrap opacity-0 translate-x-[-6px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out">
+                    <span
+                      className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+                      style={{
+                        backgroundColor: '#1f1f1f',
+                        color: '#fff',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                      }}
+                    >
+                      {/* Left arrow */}
+                      <span
+                        className="absolute top-1/2 -translate-y-1/2"
+                        style={{
+                          left: '-6px',
+                          width: 0,
+                          height: 0,
+                          borderTop: '6px solid transparent',
+                          borderBottom: '6px solid transparent',
+                          borderRight: '6px solid #1f1f1f',
+                        }}
+                      />
                       {item.label}
-                      {item.badge && <span className="ml-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{item.badge}</span>}
+                      {item.badge && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
                     </span>
                   )}
                   {isExpanded && (
@@ -127,10 +162,52 @@ export default function ProjectManagerSidebar({
             </div>
           </motion.div>
         )}
-        <Button onClick={onLogout} variant="outline" className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'} py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`} title={!isExpanded ? 'Logout' : undefined}>
-          <LogOut className="w-5 h-5" />
-          {isExpanded && <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2, delay: 0.1 }} className="truncate">Logout</motion.span>}
-        </Button>
+        <div className="relative group overflow-visible">
+          <Button
+            onClick={onLogout}
+            variant="outline"
+            className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
+              } py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`}
+          >
+            <LogOut className="w-5 h-5" />
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="truncate"
+              >
+                Logout
+              </motion.span>
+            )}
+          </Button>
+
+          {/* Collapsed Logout tooltip (same ChatGPT-style dark) */}
+          {!isExpanded && (
+            <span
+              className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+              style={{
+                backgroundColor: '#1f1f1f',
+                color: '#fff',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                bottom: '1rem',
+              }}
+            >
+              <span
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{
+                  left: '-6px',
+                  width: 0,
+                  height: 0,
+                  borderTop: '6px solid transparent',
+                  borderBottom: '6px solid transparent',
+                  borderRight: '6px solid #1f1f1f',
+                }}
+              />
+              Logout
+            </span>
+          )}
+        </div>
       </div>
     </motion.div>
   );

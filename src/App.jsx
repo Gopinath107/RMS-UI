@@ -121,7 +121,7 @@ const Placeholder = ({ title, color = 'text-gray-600' }) => (
 
 // ─── Authenticated App Shell ─────────────────────────────────────────────────
 function AppShell({ userRole, onLogout }) {
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const theme = ROLE_THEMES[userRole] || DEFAULT_THEME;
   const roleTitle = ROLE_TITLES[userRole] || 'Dashboard';
 
@@ -218,6 +218,7 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioManagerDashboard /></ProtectedRoute>} />
                 <Route path="/portfolio/projects" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ProjectPortfolio /></ProtectedRoute>} />
                 <Route path="/portfolio/clients" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ClientList /></ProtectedRoute>} />
+                <Route path="/portfolio/interview-hub" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><InterviewHub /></ProtectedRoute>} />
                <Route path="/portfolio/reports" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioReportsPage /></ProtectedRoute>} />
                 <Route path="/portfolio/strategic-planning" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Strategic Planning" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/financial-overview" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Financial Overview" color="text-orange-600" /></ProtectedRoute>} />
@@ -248,23 +249,19 @@ function AppShell({ userRole, onLogout }) {
 
 /** Clear stale auth data if there is no token (session expired / first load). */
 function getInitialAuthState() {
-  // Always clear auth data on initial application load so it starts fresh at the login page
-  localStorage.removeItem('isAuthenticated');
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('userName');
-  localStorage.removeItem('userId');
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('employeeName');
-  localStorage.removeItem('roleName');
-  localStorage.removeItem('companyName');
-  localStorage.removeItem('companyId');
-  localStorage.removeItem('employeeId');
-  localStorage.removeItem('roleId');
-  localStorage.removeItem('email');
+  const flagged = localStorage.getItem('isAuthenticated') === 'true';
+  const hasToken = !!localStorage.getItem('token');
+  if (flagged && !hasToken) {
+    // No valid token — wipe stale flags so the user sees the login page
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userId');
+    return { isAuthenticated: false, userRole: '' };
+  }
   return {
-    isAuthenticated: false,
-    userRole: '',
+    isAuthenticated: flagged,
+    userRole: localStorage.getItem('userRole') || '',
   };
 }
 
