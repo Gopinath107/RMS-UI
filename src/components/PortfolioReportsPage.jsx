@@ -9,7 +9,7 @@ import {
     TrendingUp, Award, UserCheck, UserX, Briefcase, BarChart2,
     ChevronLeft, ChevronRight as ChevronRightIcon, FileText, X, Circle,
     Building2, Mail, Phone, MapPin, Star, Send, Loader2, History,
-    ArrowUpDown, ArrowUp, ArrowDown
+    ArrowUpDown, ArrowUp, ArrowDown, CalendarRange
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -693,7 +693,7 @@ export default function PortfolioReportsPage() {
     const [reportFromDate, setReportFromDate] = useState('');
     const [reportToDate, setReportToDate] = useState('');
     const [reportClient, setReportClient] = useState('All Clients');
-    const [reportFilterPreset, setReportFilterPreset] = useState('custom'); // 'all' | 'today' | 'custom'
+    const [reportFilterPreset, setReportFilterPreset] = useState('all'); // 'all' | 'today' | 'custom'
 
     // Date formatting helper: DD-MM-YYYY
     const formatDemandDate = (dateString) => {
@@ -1140,7 +1140,8 @@ export default function PortfolioReportsPage() {
         setReportFromDate(startDate || '');
         setReportToDate(endDate || '');
         setReportClient(selectedClient);
-        setReportFilterPreset('custom');
+        // Default to 'all' for clean entry; switch to 'custom' only if dates already set
+        setReportFilterPreset((startDate || endDate) ? 'custom' : 'all');
         setShowReportFilterModal(true);
     };
 
@@ -1224,6 +1225,160 @@ export default function PortfolioReportsPage() {
                 .drawer-slide-in {
                     animation: slide-in 0.25s ease-out forwards;
                 }
+
+                /* Enterprise Modal Popup Animation */
+                @keyframes modal-popup {
+                    from { opacity: 0; transform: scale(0.94) translateY(8px); }
+                    to   { opacity: 1; transform: scale(1)   translateY(0px); }
+                }
+                .report-modal-enter {
+                    animation: modal-popup 0.22s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+                }
+
+                /* Report Modal Input Styling */
+                .report-date-input {
+                    width: 100%;
+                    height: 44px;
+                    padding: 0 12px 0 38px;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #1e293b;
+                    background: #f8fafc;
+                    outline: none;
+                    transition: border-color 0.15s, box-shadow 0.15s;
+                    box-sizing: border-box;
+                    cursor: pointer;
+                }
+                .report-date-input:focus {
+                    border-color: var(--report-accent, #ea580c);
+                    box-shadow: 0 0 0 3px var(--report-accent-ring, rgba(234,88,12,0.12));
+                    background: #fff;
+                }
+                .report-date-input:hover:not(:focus) {
+                    border-color: #cbd5e1;
+                }
+
+                .report-select {
+                    width: 100%;
+                    height: 44px;
+                    padding: 0 36px 0 38px;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #1e293b;
+                    background: #f8fafc;
+                    outline: none;
+                    appearance: none;
+                    -webkit-appearance: none;
+                    cursor: pointer;
+                    transition: border-color 0.15s, box-shadow 0.15s;
+                }
+                .report-select:focus {
+                    border-color: var(--report-accent, #ea580c);
+                    box-shadow: 0 0 0 3px var(--report-accent-ring, rgba(234,88,12,0.12));
+                    background: #fff;
+                }
+                .report-select:hover:not(:focus) {
+                    border-color: #cbd5e1;
+                }
+
+                .report-cancel-btn {
+                    height: 44px;
+                    padding: 0 20px;
+                    border-radius: 12px;
+                    border: 1.5px solid #e2e8f0;
+                    background: #fff;
+                    color: #64748b;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                    outline: none;
+                }
+                .report-cancel-btn:hover {
+                    background: #f1f5f9;
+                    border-color: #cbd5e1;
+                    color: #475569;
+                }
+
+                .report-primary-btn {
+                    height: 44px;
+                    flex: 1;
+                    padding: 0 20px;
+                    border-radius: 12px;
+                    border: none;
+                    color: #fff;
+                    font-size: 13px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    outline: none;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    letter-spacing: 0.01em;
+                }
+                .report-primary-btn.green {
+                    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+                    box-shadow: 0 4px 16px rgba(22,163,74,0.30);
+                }
+                .report-primary-btn.green:hover {
+                    box-shadow: 0 6px 20px rgba(22,163,74,0.45);
+                    transform: translateY(-1px);
+                }
+                .report-primary-btn.orange {
+                    background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+                    box-shadow: 0 4px 16px rgba(234,88,12,0.30);
+                }
+                .report-primary-btn.orange:hover {
+                    box-shadow: 0 6px 20px rgba(234,88,12,0.45);
+                    transform: translateY(-1px);
+                }
+                .report-primary-btn:active {
+                    transform: translateY(0);
+                }
+
+                /* Preset Tab Styles */
+                .report-preset-tab {
+                    flex: 1;
+                    height: 38px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    border-radius: 9px;
+                    border: none;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                    outline: none;
+                    padding: 0 8px;
+                    white-space: nowrap;
+                }
+                .report-preset-tab.inactive {
+                    background: transparent;
+                    color: #94a3b8;
+                }
+                .report-preset-tab.inactive:hover {
+                    color: #64748b;
+                    background: rgba(0,0,0,0.03);
+                }
+                .report-preset-tab.active-green {
+                    background: #ffffff;
+                    color: #16a34a;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
+                }
+                .report-preset-tab.active-orange {
+                    background: #ffffff;
+                    color: #ea580c;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
+                }
+
                 @media (max-width: 1279px) {
                     .sticky-col-1 {
                         position: sticky;
@@ -1883,151 +2038,246 @@ export default function PortfolioReportsPage() {
             )}
 
             {/* ── REPORT FILTER MODAL ── */}
-            {showReportFilterModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setShowReportFilterModal(false)} />
-                    <div className="relative bg-white w-full max-w-[340px] overflow-hidden flex flex-col" style={{ borderRadius: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', animation: 'slide-in 0.2s ease-out' }}>
+            {showReportFilterModal && (() => {
+                const isExport = reportFilterAction === 'export';
+                const accentColor    = isExport ? '#ea580c' : '#16a34a';
+                const accentLight    = isExport ? '#fff7ed' : '#f0fdf4';
+                const accentBorder   = isExport ? '#fed7aa' : '#86efac';
+                const accentRing     = isExport ? 'rgba(234,88,12,0.12)' : 'rgba(22,163,74,0.12)';
+                const accentGradient = isExport
+                    ? 'linear-gradient(135deg, #f97316 0%, #c2410c 100%)'
+                    : 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)';
+                const accentShadow   = isExport
+                    ? '0 4px 16px rgba(234,88,12,0.28)'
+                    : '0 4px 16px rgba(22,163,74,0.28)';
+                const activeTabClass = isExport ? 'active-orange' : 'active-green';
 
-                        {/* Header */}
-                        <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                {reportFilterAction === 'export'
-                                    ? <><Download style={{ width: 14, height: 14, color: '#ea580c' }} /> Export Report</>
-                                    : <><Mail style={{ width: 14, height: 14, color: '#16a34a' }} /> Generate Report</>
-                                }
-                            </h3>
-                            <button onClick={() => setShowReportFilterModal(false)} style={{ color: '#9ca3af', width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <X style={{ width: 14, height: 14 }} />
-                            </button>
-                        </div>
+                const presets = [
+                    { key: 'all',    label: 'All Time',      Icon: BarChart2     },
+                    { key: 'today',  label: 'Today',         Icon: Calendar      },
+                    { key: 'custom', label: 'Custom Range',  Icon: CalendarRange },
+                ];
 
-                        {/* Body */}
-                        <div style={{ padding: '0 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                const getSummaryText = () => {
+                    if (reportFilterPreset === 'all')   return 'All demands across all time';
+                    if (reportFilterPreset === 'today') return new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+                    if (!reportFromDate && !reportToDate) return 'Select a date range above';
+                    const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+                    return `${fmt(reportFromDate)}  →  ${fmt(reportToDate)}`;
+                };
 
-                            {/* Pill preset tabs */}
-                            <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', borderRadius: 50, padding: 3 }}>
-                                {[
-                                    { key: 'all', label: 'All Data' },
-                                    { key: 'today', label: 'Today' },
-                                    { key: 'custom', label: 'Custom' },
-                                ].map(p => (
-                                    <button
-                                        key={p.key}
-                                        onClick={() => setReportFilterPreset(p.key)}
-                                        style={{
-                                            flex: 1,
-                                            padding: '6px 0',
-                                            borderRadius: 50,
-                                            border: 'none',
-                                            background: reportFilterPreset === p.key ? '#fff' : 'transparent',
-                                            color: reportFilterPreset === p.key ? '#ea580c' : '#64748b',
-                                            fontWeight: 600,
-                                            fontSize: 11,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            textAlign: 'center',
-                                            boxShadow: reportFilterPreset === p.key ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-                                        }}
-                                    >
-                                        {p.label}
-                                    </button>
-                                ))}
-                            </div>
+                return (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                        {/* Overlay */}
+                        <div
+                            style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.35)', backdropFilter: 'blur(6px)' }}
+                            onClick={() => setShowReportFilterModal(false)}
+                        />
 
-                            {/* Date Range — only in custom mode */}
-                            {reportFilterPreset === 'custom' && (
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From</label>
-                                        <input
-                                            type="date"
-                                            value={reportFromDate}
-                                            onChange={e => setReportFromDate(e.target.value)}
-                                            style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc' }}
-                                            onFocus={e => e.target.style.borderColor = '#f97316'}
-                                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                                        />
+                        {/* Modal card */}
+                        <div
+                            className="report-modal-enter"
+                            style={{
+                                position: 'relative',
+                                width: '100%',
+                                maxWidth: 480,
+                                background: '#ffffff',
+                                borderRadius: 20,
+                                boxShadow: '0 24px 64px rgba(0,0,0,0.16), 0 8px 24px rgba(0,0,0,0.08)',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column',
+                            }}
+                        >
+                            {/* Top accent bar */}
+                            <div style={{ height: 4, background: accentGradient, flexShrink: 0 }} />
+
+                            {/* ── HEADER ── */}
+                            <div style={{ padding: '20px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    {/* Action icon */}
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: 12,
+                                        background: accentLight,
+                                        border: `1.5px solid ${accentBorder}`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        flexShrink: 0,
+                                    }}>
+                                        {isExport
+                                            ? <Download style={{ width: 18, height: 18, color: accentColor }} />
+                                            : <Mail     style={{ width: 18, height: 18, color: accentColor }} />
+                                        }
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To</label>
-                                        <input
-                                            type="date"
-                                            value={reportToDate}
-                                            onChange={e => setReportToDate(e.target.value)}
-                                            style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc' }}
-                                            onFocus={e => e.target.style.borderColor = '#f97316'}
-                                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                                        />
+                                    <div>
+                                        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+                                            {isExport ? 'Export Report' : 'Generate Report'}
+                                        </h3>
+                                        <p style={{ fontSize: 12, color: '#94a3b8', margin: '3px 0 0', fontWeight: 400 }}>
+                                            {isExport ? 'Download as Excel (.xlsx)' : 'Send via email to recipients'}
+                                        </p>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Client */}
-                            <div>
-                                <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</label>
-                                <select
-                                    value={reportClient}
-                                    onChange={e => setReportClient(e.target.value)}
-                                    style={{ width: '100%', padding: '7px 10px', borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, color: '#1e293b', outline: 'none', background: '#f8fafc', cursor: 'pointer' }}
-                                    onFocus={e => e.target.style.borderColor = '#f97316'}
-                                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                                >
-                                    {clientList.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-
-                            {/* Summary pill */}
-                            <div style={{ background: '#f8fafc', borderRadius: 50, padding: '7px 14px', fontSize: 11, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontWeight: 700 }}>
-                                    {reportFilterPreset === 'all' ? '📊 All data'
-                                        : reportFilterPreset === 'today' ? `📅 ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
-                                        : `📆 ${reportFromDate || '—'} → ${reportToDate || '—'}`
-                                    }
-                                </span>
-                                <span style={{ color: '#cbd5e1' }}>·</span>
-                                <span style={{ color: '#94a3b8' }}>{reportClient}</span>
-                            </div>
-
-                            {/* Action buttons — inline at bottom */}
-                            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                                 <button
                                     onClick={() => setShowReportFilterModal(false)}
-                                    style={{ flex: 1, padding: '8px 0', fontSize: 12, fontWeight: 600, color: '#64748b', background: '#f1f5f9', border: 'none', borderRadius: 50, cursor: 'pointer' }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={applyReportFilter}
                                     style={{
-                                        flex: 1,
-                                        padding: '8px 0',
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        color: '#fff',
-                                        background: reportFilterAction === 'export' ? 'linear-gradient(135deg, #fb923c, #ea580c)' : 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                        border: 'none',
-                                        borderRadius: 50,
+                                        width: 32, height: 32, borderRadius: 8,
+                                        border: '1.5px solid #e2e8f0',
+                                        background: '#f8fafc',
+                                        color: '#94a3b8',
                                         cursor: 'pointer',
-                                        boxShadow: reportFilterAction === 'export' ? '0 2px 8px rgba(234,88,12,0.3)' : '0 2px 8px rgba(34,197,94,0.3)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: 5,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        flexShrink: 0,
+                                        transition: 'all 0.15s',
                                     }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#94a3b8'; }}
                                 >
-                                    {reportFilterAction === 'export' ? <><Download style={{ width: 12, height: 12 }} /> Export</> : <><Mail style={{ width: 12, height: 12 }} /> Continue</>}
+                                    <X style={{ width: 15, height: 15 }} />
                                 </button>
+                            </div>
+
+                            {/* ── DIVIDER ── */}
+                            <div style={{ height: 1, background: '#f1f5f9', margin: '0 24px' }} />
+
+                            {/* ── BODY ── */}
+                            <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                                {/* ── Section: Time Range ── */}
+                                <div>
+                                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Time Range</p>
+
+                                    {/* Preset tabs */}
+                                    <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 12, padding: 4 }}>
+                                        {presets.map(p => {
+                                            const isActive = reportFilterPreset === p.key;
+                                            return (
+                                                <button
+                                                    key={p.key}
+                                                    onClick={() => setReportFilterPreset(p.key)}
+                                                    className={`report-preset-tab ${isActive ? activeTabClass : 'inactive'}`}
+                                                >
+                                                    <p.Icon style={{ width: 13, height: 13, flexShrink: 0 }} />
+                                                    <span>{p.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Custom date range — only visible in custom preset */}
+                                    {reportFilterPreset === 'custom' && (
+                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 14 }}>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 6, display: 'block', letterSpacing: '0.01em' }}>From</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Calendar style={{
+                                                        position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
+                                                        width: 15, height: 15, color: '#94a3b8', pointerEvents: 'none'
+                                                    }} />
+                                                    <input
+                                                        type="date"
+                                                        value={reportFromDate}
+                                                        onChange={e => setReportFromDate(e.target.value)}
+                                                        className="report-date-input"
+                                                        style={{ '--report-accent': accentColor, '--report-accent-ring': accentRing }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Arrow connector */}
+                                            <div style={{ paddingBottom: 10, flexShrink: 0, color: '#cbd5e1' }}>
+                                                <ChevronRight style={{ width: 16, height: 16 }} />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 6, display: 'block', letterSpacing: '0.01em' }}>To</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Calendar style={{
+                                                        position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
+                                                        width: 15, height: 15, color: '#94a3b8', pointerEvents: 'none'
+                                                    }} />
+                                                    <input
+                                                        type="date"
+                                                        value={reportToDate}
+                                                        onChange={e => setReportToDate(e.target.value)}
+                                                        className="report-date-input"
+                                                        style={{ '--report-accent': accentColor, '--report-accent-ring': accentRing }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── Section: Client ── */}
+                                <div>
+                                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Client</p>
+                                    <div style={{ position: 'relative' }}>
+                                        <Building2 style={{
+                                            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                                            width: 15, height: 15, color: '#94a3b8', pointerEvents: 'none', zIndex: 1
+                                        }} />
+                                        <ChevronDown style={{
+                                            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                                            width: 15, height: 15, color: '#94a3b8', pointerEvents: 'none', zIndex: 1
+                                        }} />
+                                        <select
+                                            value={reportClient}
+                                            onChange={e => setReportClient(e.target.value)}
+                                            className="report-select"
+                                            style={{ '--report-accent': accentColor, '--report-accent-ring': accentRing }}
+                                        >
+                                            {clientList.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* ── Summary Badge ── */}
+                                <div style={{
+                                    background: accentLight,
+                                    border: `1px solid ${accentBorder}`,
+                                    borderRadius: 12,
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 4,
+                                }}>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Report Preview</p>
+                                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', margin: 0 }}>{getSummaryText()}</p>
+                                    <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+                                        <Building2 style={{ width: 11, height: 11, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                                        {reportClient}
+                                    </p>
+                                </div>
+
+                                {/* ── Action Buttons ── */}
+                                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                                    <button
+                                        onClick={() => setShowReportFilterModal(false)}
+                                        className="report-cancel-btn"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={applyReportFilter}
+                                        className={`report-primary-btn ${isExport ? 'orange' : 'green'}`}
+                                        style={{ boxShadow: accentShadow }}
+                                    >
+                                        {isExport
+                                            ? <><Download style={{ width: 14, height: 14 }} /><span>Export Now</span></>
+                                            : <><Mail     style={{ width: 14, height: 14 }} /><span>Continue</span></>
+                                        }
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* ── EMAIL MODAL ── */}
             {isEmailModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={() => setIsEmailModalOpen(false)} />
-                    <div className="relative bg-white w-full max-w-[500px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className="relative bg-white w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" style={{ maxWidth: '500px' }}>
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
