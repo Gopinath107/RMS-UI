@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -638,13 +639,13 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
     {
       // Total — purple accent
       accent: "#a78bfa",
-      labelColor: "#d8b4fe",
+      labelColor: "#c4b5fd",
       accentLight: "rgba(167,139,250,0.18)",
     },
     {
       // Open — blue accent
       accent: "#60a5fa",
-      labelColor: "#bfdbfe",
+      labelColor: "#93c5fd",
       accentLight: "rgba(96,165,250,0.18)",
     },
     {
@@ -656,7 +657,7 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
     {
       // Completed — teal/green accent
       accent: "#34d399",
-      labelColor: "#a7f3d0",
+      labelColor: "#86efac",
       accentLight: "rgba(52,211,153,0.18)",
     },
   ];
@@ -681,12 +682,14 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
             className="relative cursor-pointer overflow-hidden group"
             style={{
               borderRadius: '24px',
-              background: 'rgba(255,255,255,0.22)',
-              backdropFilter: 'blur(20px) saturate(1.6)',
-              WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
-              border: '1.5px solid rgba(255,255,255,0.45)',
+              background: 'rgba(255,255,255,0.28)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderLeft: '1.5px solid rgba(255,255,255,0.55)',
+              borderRight: '1.5px solid rgba(255,255,255,0.55)',
+              borderBottom: '1.5px solid rgba(255,255,255,0.55)',
               borderTop: `3px solid ${theme.accent}`,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.5)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15), inset 0 1.5px 0 rgba(255,255,255,0.6)',
               transition: 'transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
           >
@@ -699,15 +702,16 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
               }}
             />
 
-            <div className="relative p-4 md:p-5 flex flex-col justify-between h-full">
+            <div className="relative p-4 md:p-4.5 flex flex-col justify-between h-full" style={{ padding: '16px 18px' }}>
               <div className="flex justify-between items-start">
-                <div className="min-w-0 flex-1 pr-2">
+                <div className="min-w-0 flex-1 pr-2 text-left">
                   <p
-                    className="truncate mb-2"
+                    className="truncate mb-1.5"
                     style={{
                       color: theme.labelColor,
-                      fontSize: '13px',
+                      fontSize: '11px',
                       fontWeight: 600,
+                      letterSpacing: '0.3px',
                     }}
                   >
                     {stat.title}
@@ -715,10 +719,10 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                   <motion.h3
                     className="leading-none text-white"
                     style={{
-                      fontSize: '46px',
+                      fontSize: '42px',
                       fontWeight: 700,
                       color: '#ffffff',
-                      textShadow: '0 2px 16px rgba(255,255,255,0.4)'
+                      textShadow: '0 0 20px rgba(255,255,255,0.35)'
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -727,27 +731,27 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                     {stat.value}
                   </motion.h3>
                 </div>
-                {/* Icon circle matching requirements */}
+                {/* Icon circle matching requirements — 36px circle, 16px icon */}
                 <div
                   className="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
                   style={{
-                    width: '42px',
-                    height: '42px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.20)',
+                    background: 'rgba(255,255,255,0.18)',
                   }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: theme.labelColor }} />
+                  <Icon className="w-4 h-4" style={{ color: theme.labelColor }} />
                 </div>
               </div>
 
               <p
-                className="mt-4 pt-2.5 truncate"
+                className="mt-3 pt-2 truncate"
                 style={{
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: '13px',
+                  color: 'rgba(255,255,255,0.55)',
+                  fontSize: '11.5px',
                   fontWeight: 400,
-                  borderTop: '1px solid rgba(255,255,255,0.15)',
+                  borderTop: '1px solid rgba(255,255,255,0.12)',
                 }}
               >
                 {stat.description}
@@ -4042,15 +4046,15 @@ export default function HRDashboard() {
         transition={{ duration: 0.55, ease: "easeOut" }}
         className="mb-6 flex justify-center"
       >
-        {/* Centered glass panel — floats over the app's animated bg */}
+        {/* Centered compact glass panel — floats over the app's animated bg */}
         <div
           className="w-full relative"
           style={{
-            background: 'rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(32px) saturate(2) brightness(1.1)',
-            WebkitBackdropFilter: 'blur(32px) saturate(2) brightness(1.1)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: '32px',
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(40px) saturate(1.8) brightness(1.05)',
+            WebkitBackdropFilter: 'blur(40px) saturate(1.8) brightness(1.05)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '28px',
             boxShadow: '0 0 60px rgba(100,120,255,0.18), 0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4)',
           }}
         >
@@ -4059,115 +4063,75 @@ export default function HRDashboard() {
             style={{
               position: 'absolute',
               inset: 0,
-              borderRadius: '32px',
+              borderRadius: '28px',
               background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)',
               pointerEvents: 'none',
             }}
           />
 
-          <div className="relative p-6 md:p-8">
-            {/* Header text section */}
-            <div className="text-center mb-6">
-              <motion.div
-                initial={{ scale: 0.75, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="mb-4"
-              >
-                {/* HR Avatar icon with glass circle */}
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div
+          <div className="relative" style={{ padding: '20px 24px' }}>
+            {/* Row 1: Header text + Action button in a horizontal layout */}
+            <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                {/* Compact rounded-xl Avatar */}
+                <div
+                  className="relative w-10 h-10 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.7) 0%, rgba(59,130,246,0.7) 100%)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                  }}
+                >
+                  <UserCheck className="w-5 h-5 text-white" />
+                </div>
+                {/* Title and subtitle stacked */}
+                <div className="text-left">
+                  <h1
+                    className="leading-tight"
                     style={{
-                      position: 'absolute',
-                      inset: 0,
-                      borderRadius: '20px',
-                      background: 'rgba(99,102,241,0.35)',
-                      filter: 'blur(12px)',
-                      animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
-                    }}
-                  />
-                  <div
-                    className="relative w-16 h-16 flex items-center justify-center"
-                    style={{
-                      borderRadius: '20px',
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.7) 0%, rgba(59,130,246,0.7) 100%)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(255,255,255,0.35)',
-                      boxShadow: '0 8px 32px rgba(99,102,241,0.45)',
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: '#ffffff',
                     }}
                   >
-                    <UserCheck className="w-8 h-8" style={{ color: '#ffffff' }} />
-                  </div>
+                    HR Manager Dashboard
+                  </h1>
+                  <p
+                    className="leading-normal mt-0.5"
+                    style={{
+                      fontSize: '12px',
+                      color: 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    Review and approve resource and opportunity requests from project managers
+                  </p>
                 </div>
-
-                <h1
-                  className="mb-2 text-white"
-                  style={{
-                    fontSize: '30px',
-                    fontWeight: 600,
-                    letterSpacing: '-0.5px',
-                    textShadow: '0 2px 20px rgba(100,100,255,0.3)'
-                  }}
-                >
-                  HR Manager Dashboard
-                </h1>
-                <p
-                  className="text-sm max-w-md mx-auto leading-relaxed"
-                  style={{ color: 'rgba(255,255,255,0.72)' }}
-                >
-                  Review and approve resource and opportunity requests from project managers
-                </p>
-              </motion.div>
-
-              {/* CTA Buttons — rounded-full, glass style */}
-              <div className="flex gap-3 justify-center flex-wrap">
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setIsChatOpen(!isChatOpen)}
-                  className="inline-flex items-center gap-2 text-sm transition-all duration-200"
-                  style={{
-                    padding: '10px 22px',
-                    borderRadius: '99px',
-                    fontWeight: 500,
-                    color: '#ffffff',
-                    background: 'rgba(255,255,255,0.18)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(255,255,255,1)',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-                >
-                  <Bot className="w-4 h-4" />
-                  AI Assistant
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                  className="inline-flex items-center gap-2 text-sm transition-all duration-200"
-                  style={{
-                    padding: '10px 22px',
-                    borderRadius: '99px',
-                    fontWeight: 500,
-                    color: '#ffffff',
-                    background: 'linear-gradient(135deg, #059669, #10b981)',
-                    border: 'none',
-                    boxShadow: '0 4px 20px rgba(16,185,129,0.4)',
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Demand
-                </motion.button>
               </div>
+
+              {/* Create Demand button only */}
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all duration-200"
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '99px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#ffffff',
+                  background: 'linear-gradient(135deg, #059669, #10b981)',
+                  border: 'none',
+                  boxShadow: '0 4px 20px rgba(16,185,129,0.35)',
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                Create Demand
+              </motion.button>
             </div>
 
-            {/* Divider */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', marginBottom: '20px' }} />
-
-            {/* Glass Stat Cards */}
+            {/* Row 2: 4 stat cards side by side */}
             <StatisticsCards
               activeTab={activeTab}
               onTabChange={setActiveTab}
@@ -4608,6 +4572,55 @@ export default function HRDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {createPortal(
+        <div
+          className="group"
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            right: '28px',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {/* Tooltip on hover appearing to the left of the button */}
+          <span
+            className="mr-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-white pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            style={{
+              background: 'rgba(15,23,42,0.85)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}
+          >
+            AI Assistant
+          </span>
+          <motion.button
+            whileHover={{
+              scale: 1.1,
+              boxShadow: '0 12px 40px rgba(99,102,241,0.6), 0 2px 8px rgba(0,0,0,0.2)'
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="flex items-center justify-center relative cursor-pointer"
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              boxShadow: '0 8px 32px rgba(99,102,241,0.45), 0 2px 8px rgba(0,0,0,0.2)',
+              border: 'none',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+            }}
+          >
+            <Bot className="w-[18px] h-[18px] text-white" />
+          </motion.button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
