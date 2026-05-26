@@ -687,39 +687,43 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
   const cardThemes = [
     {
       gradient: "from-violet-500 to-purple-600",
-      blob: "bg-violet-400",
-      title: "text-violet-700",
-      val: "text-violet-950",
-      desc: "text-violet-500",
+      blobColor: "#8b5cf6",
+      titleColor: "#7c3aed",
+      numGradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
       bar: "from-violet-400 to-purple-500",
-      ring: "ring-violet-200/60",
+      iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+      glow: "rgba(139,92,246,0.25)",
+      desc: "text-violet-600",
     },
     {
-      gradient: "from-sky-500 to-blue-600",
-      blob: "bg-sky-400",
-      title: "text-sky-700",
-      val: "text-sky-950",
-      desc: "text-sky-500",
-      bar: "from-sky-400 to-blue-500",
-      ring: "ring-sky-200/60",
+      gradient: "from-blue-500 to-cyan-500",
+      blobColor: "#3b82f6",
+      titleColor: "#1d4ed8",
+      numGradient: "linear-gradient(135deg, #2563eb, #0891b2)",
+      bar: "from-blue-400 to-cyan-400",
+      iconBg: "linear-gradient(135deg, #3b82f6, #06b6d4)",
+      glow: "rgba(59,130,246,0.25)",
+      desc: "text-blue-600",
     },
     {
       gradient: "from-amber-500 to-orange-500",
-      blob: "bg-amber-400",
-      title: "text-amber-700",
-      val: "text-amber-950",
-      desc: "text-amber-600",
+      blobColor: "#f59e0b",
+      titleColor: "#b45309",
+      numGradient: "linear-gradient(135deg, #d97706, #ea580c)",
       bar: "from-amber-400 to-orange-500",
-      ring: "ring-amber-200/60",
+      iconBg: "linear-gradient(135deg, #f59e0b, #f97316)",
+      glow: "rgba(245,158,11,0.25)",
+      desc: "text-amber-700",
     },
     {
-      gradient: "from-emerald-500 to-green-600",
-      blob: "bg-emerald-400",
-      title: "text-emerald-700",
-      val: "text-emerald-950",
-      desc: "text-emerald-600",
-      bar: "from-emerald-400 to-green-500",
-      ring: "ring-emerald-200/60",
+      gradient: "from-emerald-500 to-teal-500",
+      blobColor: "#10b981",
+      titleColor: "#047857",
+      numGradient: "linear-gradient(135deg, #059669, #0d9488)",
+      bar: "from-emerald-400 to-teal-400",
+      iconBg: "linear-gradient(135deg, #10b981, #14b8a6)",
+      glow: "rgba(16,185,129,0.25)",
+      desc: "text-emerald-700",
     },
   ];
 
@@ -731,43 +735,70 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
         return (
           <motion.div
             key={index}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.08 }}
-            whileHover={{ y: -5, scale: 1.03 }}
-            className={`relative overflow-hidden rounded-2xl p-4 md:p-5 flex flex-col justify-between cursor-pointer text-left group transition-all duration-300
-              bg-white/60 backdrop-blur-xl border border-white/80 shadow-lg hover:shadow-xl ring-1 ${theme.ring}`}
+            transition={{ duration: 0.45, delay: index * 0.09 }}
+            whileHover={{ y: -6, scale: 1.03 }}
+            className="relative overflow-hidden rounded-2xl cursor-pointer text-left group transition-all duration-300"
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.9)',
+              boxShadow: `0 4px 24px ${theme.glow}, 0 1px 0 rgba(255,255,255,0.95) inset`,
+            }}
             onClick={() => onTabChange(activeTab)}
           >
-            {/* Colour blob that bleeds through the glass */}
-            <div className={`absolute -top-6 -right-6 w-20 h-20 ${theme.blob} rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-300`} />
-            {/* Top gradient bar */}
-            <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${theme.bar} rounded-t-2xl`} />
-            {/* Glass inner shine */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/50 to-transparent rounded-t-2xl pointer-events-none" />
+            {/* Vivid colour blob bleeding through glass */}
+            <div
+              className="absolute -bottom-4 -right-4 w-28 h-28 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-400"
+              style={{ background: theme.blobColor }}
+            />
+            {/* Coloured top bar */}
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.bar} rounded-t-2xl`} />
+            {/* Glass shine */}
+            <div className="absolute top-0 left-0 right-0 h-2/5 bg-gradient-to-b from-white/70 to-transparent rounded-t-2xl pointer-events-none" />
 
-            <div className="flex justify-between items-start relative">
-              <div className="min-w-0 flex-1 pr-2">
-                <p className={`${theme.title} text-[10px] md:text-[11px] font-bold uppercase tracking-widest truncate`}>
+            <div className="relative p-4 md:p-5 flex flex-col gap-3">
+              {/* Top row: label + icon */}
+              <div className="flex justify-between items-center">
+                <p
+                  className="text-[10px] md:text-[11px] font-extrabold uppercase tracking-[0.15em] truncate"
+                  style={{ color: theme.titleColor }}
+                >
                   {stat.title}
                 </p>
-                <motion.h3
-                  className={`text-3xl md:text-4xl font-black ${theme.val} mt-2 tracking-tight leading-none`}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
+                {/* Glowing icon badge */}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
+                  style={{
+                    background: theme.iconBg,
+                    boxShadow: `0 4px 14px ${theme.glow}, 0 1px 0 rgba(255,255,255,0.4) inset`,
+                  }}
+                >
+                  <Icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+                </div>
+              </div>
+
+              {/* Big bold number */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.55, delay: index * 0.1 + 0.2, type: 'spring', stiffness: 200 }}
+              >
+                <span
+                  className="text-5xl md:text-6xl font-black tracking-tight leading-none block"
+                  style={{ background: theme.numGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
                 >
                   {stat.value}
-                </motion.h3>
-              </div>
-              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center text-white shadow-lg flex-shrink-0 group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
-                <Icon className="w-5 h-5" />
-              </div>
-            </div>
+                </span>
+              </motion.div>
 
-            <p className={`text-[10px] ${theme.desc} font-semibold mt-4 pt-2.5 border-t border-black/5 truncate relative`}>
-              {stat.description}
-            </p>
+              {/* Description */}
+              <p className={`text-[11px] ${theme.desc} font-semibold truncate pt-2 border-t border-black/5`}>
+                {stat.description}
+              </p>
+            </div>
           </motion.div>
         );
       })}
@@ -4050,91 +4081,105 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── Liquid Glass Dashboard Header ── */}
+      {/* ── BOLD PREMIUM HEADER — Liquid Glass Light Mode ── */}
       <motion.div
-        initial={{ opacity: 0, y: -24 }}
+        initial={{ opacity: 0, y: -28 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         className="relative overflow-hidden rounded-3xl mb-6"
         style={{ isolation: 'isolate' }}
       >
-        {/* ── Aurora background (light mode) ── */}
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-violet-100" />
-        {/* Large blurred aurora orbs */}
-        <div className="absolute -top-24 -left-16 w-80 h-80 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full opacity-25 blur-3xl" />
-        <div className="absolute -top-12 right-0 w-72 h-72 bg-gradient-to-bl from-violet-300 to-pink-300 rounded-full opacity-20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-72 h-56 bg-gradient-to-tr from-emerald-200 to-cyan-300 rounded-full opacity-20 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-56 h-56 bg-gradient-to-tl from-amber-200 to-orange-200 rounded-full opacity-20 blur-3xl" />
+        {/* ── VIVID Aurora background ── */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #faf5ff 40%, #f0fdfa 100%)' }} />
+        {/* Big vivid blobs — much higher opacity */}
+        <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full blur-3xl opacity-40" style={{ background: 'radial-gradient(circle, #818cf8, #6366f1)' }} />
+        <div className="absolute -top-10 right-10 w-80 h-80 rounded-full blur-3xl opacity-35" style={{ background: 'radial-gradient(circle, #c084fc, #e879f9)' }} />
+        <div className="absolute bottom-0 left-1/4 w-96 h-64 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #34d399, #06b6d4)' }} />
+        <div className="absolute -bottom-10 right-0 w-80 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #fbbf24, #f472b6)' }} />
+        {/* Noise texture for depth */}
+        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundSize: '200px' }} />
 
-        {/* ── Frosted glass panel (the actual card) ── */}
+        {/* ── Frosted glass card ── */}
         <div
-          className="relative m-[3px] rounded-[22px] overflow-hidden"
+          className="relative m-[2px] rounded-[22px] overflow-hidden"
           style={{
-            background: 'rgba(255,255,255,0.55)',
-            backdropFilter: 'blur(32px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.85)',
-            boxShadow: '0 8px 32px rgba(99,102,241,0.10), 0 1.5px 0 rgba(255,255,255,0.9) inset',
+            background: 'rgba(255,255,255,0.50)',
+            backdropFilter: 'blur(40px) saturate(200%) brightness(1.05)',
+            WebkitBackdropFilter: 'blur(40px) saturate(200%) brightness(1.05)',
+            border: '1.5px solid rgba(255,255,255,0.80)',
+            boxShadow: '0 20px 60px rgba(99,102,241,0.12), 0 8px 32px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,1) inset',
           }}
         >
-          {/* Inner top shine */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+          {/* Top prismatic shine */}
+          <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,1) 30%, rgba(200,200,255,0.8) 60%, transparent)' }} />
+          {/* Inner light sweep */}
+          <div className="absolute top-0 left-0 right-0 h-1/3 rounded-t-[22px]" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 100%)' }} />
 
-          <div className="relative p-6 md:p-8">
-            <div className="text-center mb-7">
+          <div className="relative p-7 md:p-9">
+            <div className="text-center mb-8">
               <motion.div
-                initial={{ scale: 0.75, opacity: 0 }}
+                initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="mb-5"
+                transition={{ duration: 0.55, delay: 0.1 }}
               >
-                {/* Glass icon badge */}
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/40 to-indigo-500/40 rounded-2xl blur-xl" />
+                {/* Glowing icon — bigger + stronger glow */}
+                <div className="relative w-20 h-20 mx-auto mb-5">
                   <div
-                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
+                    className="absolute inset-0 rounded-3xl blur-2xl"
+                    style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', opacity: 0.5 }}
+                  />
+                  <div
+                    className="relative w-20 h-20 rounded-3xl flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.9) 0%, rgba(59,130,246,0.9) 100%)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(255,255,255,0.5)',
-                      boxShadow: '0 8px 32px rgba(99,102,241,0.35), 0 1px 0 rgba(255,255,255,0.6) inset',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #3b82f6 100%)',
+                      boxShadow: '0 16px 48px rgba(99,102,241,0.5), 0 2px 0 rgba(255,255,255,0.4) inset, 0 -2px 0 rgba(0,0,0,0.1) inset',
+                      border: '1.5px solid rgba(255,255,255,0.5)',
                     }}
                   >
-                    <UserCheck className="w-8 h-8 text-white drop-shadow" />
+                    <UserCheck className="w-10 h-10 text-white drop-shadow-lg" />
                   </div>
                 </div>
 
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight mb-2">
+                {/* Bold gradient title */}
+                <h1
+                  className="text-3xl md:text-4xl font-black tracking-tight mb-3 pb-0.5"
+                  style={{
+                    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #6d28d9 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
                   HR Manager Dashboard
                 </h1>
-                <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
-                  Review and approve resource and opportunity requests from project managers
+                <p className="text-sm text-gray-500/90 max-w-sm mx-auto leading-relaxed font-medium">
+                  Review &amp; approve resource requests from project managers
                 </p>
               </motion.div>
 
-              {/* Liquid glass CTA buttons */}
-              <div className="flex gap-3 justify-center flex-wrap">
+              {/* CTA Buttons — glass + gradient */}
+              <div className="flex gap-3 justify-center flex-wrap mt-6">
                 <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.06, y: -2 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setIsChatOpen(!isChatOpen)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-200"
                   style={{
                     background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
-                    boxShadow: '0 4px 16px rgba(99,102,241,0.35), 0 1px 0 rgba(255,255,255,0.3) inset',
+                    boxShadow: '0 6px 24px rgba(99,102,241,0.45), 0 1px 0 rgba(255,255,255,0.35) inset',
                   }}
                 >
                   <Bot className="w-4 h-4" />
                   AI Assistant
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.06, y: -2 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-200"
                   style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    boxShadow: '0 4px 16px rgba(16,185,129,0.35), 0 1px 0 rgba(255,255,255,0.3) inset',
+                    boxShadow: '0 6px 24px rgba(16,185,129,0.45), 0 1px 0 rgba(255,255,255,0.35) inset',
                   }}
                 >
                   <Plus className="w-4 h-4" />
@@ -4143,10 +4188,19 @@ export default function HRDashboard() {
               </div>
             </div>
 
-            {/* Glass divider */}
-            <div className="border-t border-white/60 mb-6" />
+            {/* Divider with glow */}
+            <div className="relative mb-7">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t" style={{ borderColor: 'rgba(99,102,241,0.12)' }} />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-4 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ background: 'rgba(255,255,255,0.5)', color: '#6366f1', backdropFilter: 'blur(8px)' }}>
+                  Live Metrics
+                </span>
+              </div>
+            </div>
 
-            {/* Stats Cards */}
+            {/* Stats */}
             <StatisticsCards
               activeTab={activeTab}
               onTabChange={setActiveTab}
