@@ -638,26 +638,26 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
     {
       // Total — purple accent
       accent: "#a78bfa",
+      labelColor: "#d8b4fe",
       accentLight: "rgba(167,139,250,0.18)",
-      labelColor: "#c4b5fd",
     },
     {
       // Open — blue accent
       accent: "#60a5fa",
+      labelColor: "#bfdbfe",
       accentLight: "rgba(96,165,250,0.18)",
-      labelColor: "#93c5fd",
     },
     {
       // In Progress — amber accent
       accent: "#fbbf24",
+      labelColor: "#fde68a",
       accentLight: "rgba(251,191,36,0.18)",
-      labelColor: "#fcd34d",
     },
     {
       // Completed — teal/green accent
       accent: "#34d399",
+      labelColor: "#a7f3d0",
       accentLight: "rgba(52,211,153,0.18)",
-      labelColor: "#6ee7b7",
     },
   ];
 
@@ -681,12 +681,12 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
             className="relative cursor-pointer overflow-hidden group"
             style={{
               borderRadius: '24px',
-              background: 'rgba(255,255,255,0.10)',
-              backdropFilter: 'blur(16px) saturate(1.8)',
-              WebkitBackdropFilter: 'blur(16px) saturate(1.8)',
-              border: '1px solid rgba(255,255,255,0.28)',
-              borderTop: `2.5px solid ${theme.accent}`,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 32px rgba(0,0,0,0.12)',
+              background: 'rgba(255,255,255,0.22)',
+              backdropFilter: 'blur(20px) saturate(1.6)',
+              WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+              border: '1.5px solid rgba(255,255,255,0.45)',
+              borderTop: `3px solid ${theme.accent}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.5)',
               transition: 'transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
           >
@@ -708,8 +708,6 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                       color: theme.labelColor,
                       fontSize: '13px',
                       fontWeight: 600,
-                      letterSpacing: '0.5px',
-                      textTransform: 'uppercase'
                     }}
                   >
                     {stat.title}
@@ -717,10 +715,10 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                   <motion.h3
                     className="leading-none text-white"
                     style={{
-                      fontSize: '48px',
-                      fontWeight: 600,
+                      fontSize: '46px',
+                      fontWeight: 700,
                       color: '#ffffff',
-                      textShadow: '0 0 30px rgba(255,255,255,0.5)'
+                      textShadow: '0 2px 16px rgba(255,255,255,0.4)'
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -733,22 +731,22 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                 <div
                   className="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
                   style={{
-                    width: '44px',
-                    height: '44px',
+                    width: '42px',
+                    height: '42px',
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.12)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.20)',
                   }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: theme.accent }} />
+                  <Icon className="w-5 h-5" style={{ color: theme.labelColor }} />
                 </div>
               </div>
 
               <p
-                className="font-semibold mt-4 pt-2.5 truncate"
+                className="mt-4 pt-2.5 truncate"
                 style={{
-                  color: 'rgba(255,255,255,0.55)',
+                  color: 'rgba(255,255,255,0.6)',
                   fontSize: '13px',
+                  fontWeight: 400,
                   borderTop: '1px solid rgba(255,255,255,0.15)',
                 }}
               >
