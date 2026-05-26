@@ -52,7 +52,8 @@ import {
   ChevronUp,
   Mail,
   ExternalLink,
-  Calendar
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { SearchableSelect } from "./ui/select";
@@ -284,7 +285,7 @@ const ResourceGroupCard = ({
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Submitted: {group.submittedDate}
+                Submitted: {formatDisplayDate(group.submittedDate)}
               </p>
             </div>
           </div>
@@ -448,6 +449,36 @@ const ResourceGroupCard = ({
   );
 };
 
+const formatDisplayDate = (dateVal) => {
+  if (!dateVal) return "N/A";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return dateVal;
+    return format(d, "MM/dd/yyyy");
+  } catch (e) {
+    return dateVal;
+  }
+};
+
+const getAvatarStyle = (initials) => {
+  if (!initials) return { backgroundColor: "#6b7280", color: "#ffffff" }; // gray-500
+  const clean = initials.trim().toUpperCase();
+  if (clean === "RV") return { backgroundColor: "#7c3aed", color: "#ffffff" }; // purple-600
+  if (clean === "AS") return { backgroundColor: "#0d9488", color: "#ffffff" }; // teal-600
+  
+  const charSum = clean.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const colors = [
+    "#7c3aed", // purple-600
+    "#0d9488", // teal-600
+    "#2563eb", // blue-600
+    "#4f46e5", // indigo-600
+    "#db2777", // pink-600
+    "#059669"  // emerald-600
+  ];
+  return { backgroundColor: colors[charSum % colors.length], color: "#ffffff" };
+};
+
+
 // Statistics Cards Component
 const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunityRequests, demands }) => {
   const getTabSpecificCounts = () => {
@@ -528,9 +559,6 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
         const openDemands = demands.filter(demand => demand.overallStatus === "Open").length;
         const inProgressDemands = demands.filter(demand => demand.overallStatus === "InProgress").length;
         const completedDemands = demands.filter(demand => demand.overallStatus === "Completed").length;
-        const rejectedDemands = demands.filter(demand => demand.overallStatus === "Rejected").length;
-        const holdDemands = demands.filter(demand => demand.overallStatus === "Hold").length;
-        const closedDemands = demands.filter(demand => demand.overallStatus === "Closed").length;
 
         return [
           {
@@ -599,41 +627,96 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
     }
   };
 
+  const getCardStyles = (colorStr) => {
+    if (colorStr.includes("purple")) {
+      return {
+        bg: "bg-purple-100/60 hover:bg-purple-100/80",
+        border: "border-purple-200/70",
+        title: "text-purple-700 font-bold",
+        val: "text-purple-950",
+        desc: "text-purple-700/80",
+        borderT: "border-purple-200/40"
+      };
+    }
+    if (colorStr.includes("blue")) {
+      return {
+        bg: "bg-blue-100/60 hover:bg-blue-100/80",
+        border: "border-blue-200/70",
+        title: "text-blue-700 font-bold",
+        val: "text-blue-950",
+        desc: "text-blue-700/80",
+        borderT: "border-blue-200/40"
+      };
+    }
+    if (colorStr.includes("yellow") || colorStr.includes("orange")) {
+      return {
+        bg: "bg-amber-100/60 hover:bg-amber-100/80",
+        border: "border-amber-200/70",
+        title: "text-amber-800 font-bold",
+        val: "text-amber-950",
+        desc: "text-amber-800/80",
+        borderT: "border-amber-200/40"
+      };
+    }
+    if (colorStr.includes("green") || colorStr.includes("emerald")) {
+      return {
+        bg: "bg-emerald-100/60 hover:bg-emerald-100/80",
+        border: "border-emerald-200/70",
+        title: "text-emerald-800 font-bold",
+        val: "text-emerald-950",
+        desc: "text-emerald-800/80",
+        borderT: "border-emerald-200/40"
+      };
+    }
+    return {
+      bg: "bg-gray-100/60 hover:bg-gray-100/80",
+      border: "border-gray-200/70",
+      title: "text-gray-700 font-bold",
+      val: "text-gray-950",
+      desc: "text-gray-700/80",
+      borderT: "border-gray-200/40"
+    };
+  };
+
   const stats = getTabSpecificCounts();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
+        const styles = getCardStyles(stat.color);
         return (
-          <Card
+          <motion.div
             key={index}
-            className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-200"
+            whileHover={{ y: -4, scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+            className={`${styles.bg} rounded-2xl border ${styles.border} shadow-sm hover:shadow-md p-5 flex flex-col justify-between transition-all duration-300 cursor-pointer text-left relative overflow-hidden`}
             onClick={() => onTabChange(activeTab)}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-gray-600 text-xs font-medium mb-1 truncate">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</p>
-                  <p className="text-xs text-gray-500 truncate">{stat.description}</p>
-                </div>
-                <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-lg flex-shrink-0 ml-2`}
-                >
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
+            {/* Top decorative gradient bar */}
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color}`} />
+
+            <div className="flex justify-between items-center">
+              <div className="min-w-0 flex-1 pr-2">
+                <p className={`${styles.title} text-[10px] md:text-xs font-bold uppercase tracking-wider truncate`}>
+                  {stat.title}
+                </p>
+                <h3 className={`text-2xl md:text-3xl font-extrabold ${styles.val} mt-2 tracking-tight leading-none`}>
+                  {stat.value}
+                </h3>
               </div>
-            </CardContent>
-          </Card>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-sm flex-shrink-0`}>
+                <Icon className="w-5 h-5" />
+              </div>
+            </div>
+            
+            <p className={`text-[10px] ${styles.desc} font-medium mt-3 border-t ${styles.borderT} pt-2.5 truncate`}>
+              {stat.description}
+            </p>
+          </motion.div>
         );
       })}
-    </motion.div>
+    </div>
   );
 };
 
@@ -1301,7 +1384,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
             <div className="text-right">
               <p className="text-sm text-gray-500">Request ID</p>
               <p className="font-mono font-bold text-blue-600">{request.requestId}</p>
-              <p className="text-xs text-gray-500">Submitted: {request.submittedDate}</p>
+              <p className="text-xs text-gray-500">Submitted: {formatDisplayDate(request.submittedDate)}</p>
               {request.groupId && (
                 <p className="text-xs text-gray-500">Group ID: {request.groupId}</p>
               )}
@@ -1386,7 +1469,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
             <div className="text-right">
               <p className="text-sm text-gray-500">Group ID</p>
               <p className="font-mono font-bold text-blue-600">GRP-{group.groupId}</p>
-              <p className="text-xs text-gray-500">Submitted: {group.submittedDate}</p>
+              <p className="text-xs text-gray-500">Submitted: {formatDisplayDate(group.submittedDate)}</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -1785,7 +1868,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
               <div>
                 <h3 className="font-semibold mb-2">Timeline</h3>
                 <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Submitted:</span> {selectedRequest?.submittedDate}</p>
+                  <p><span className="font-medium">Submitted:</span> {formatDisplayDate(selectedRequest?.submittedDate)}</p>
                   <p><span className="font-medium">Created By:</span> {selectedRequest?.requestedBy}</p>
                 </div>
               </div>
@@ -2052,7 +2135,8 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [resumeCurrentPage, setResumeCurrentPage] = useState(1);
-  const [resumeItemsPerPage, setResumeItemsPerPage] = useState(5);
+  const [resumeItemsPerPage, setResumeItemsPerPage] = useState(10);
+  const [isDemandDetailsOpen, setIsDemandDetailsOpen] = useState(false);
 
   const [isSkillMatcherOpen, setIsSkillMatcherOpen] = useState(false);
   const [skillMatches, setSkillMatches] = useState(null);
@@ -2095,6 +2179,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   const handleViewDemand = (demand) => {
     setSelectedDemand(demand);
     setResumeCurrentPage(1);
+    setIsDemandDetailsOpen(false);
     setIsViewModalOpen(true);
   };
 
@@ -2234,109 +2319,150 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <Card
-        className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+        className="bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
         onClick={() => handleViewDemand(demand)}
       >
-        <CardContent className="p-6">
-          <div className="flex items-start mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xl font-bold text-gray-800">{demand.demandTitle}</h3>
-                <Badge className={`${getStatusColor(demand.overallStatus)} border`}>
+        <CardContent className="p-3 md:p-4">
+          <div className="flex justify-between items-start mb-1.5">
+            <div className="flex-1 min-w-0 pr-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base md:text-lg font-bold text-gray-800 truncate" title={demand.demandTitle}>
+                  {demand.demandTitle}
+                </h3>
+                <Badge className={`${getStatusColor(demand.overallStatus)} border text-xs py-0.5 px-2`}>
                   {demand.overallStatus}
                 </Badge>
-                <Badge className={getPriorityColor(demand.priority)}>
+                <Badge className={`${getPriorityColor(demand.priority)} text-xs py-0.5 px-2`}>
                   {demand.priority}
                 </Badge>
-                <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs py-0.5 px-2">
                   Demand
                 </Badge>
                 {/* Add Shared Resumes Badge */}
                 {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                    <Users className="w-3 h-3 mr-1" />
-                    {demand.sharedResumes.length} Shared
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs py-0.5 px-2 flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {demand.sharedResumes.length} Profile Shared
                   </Badge>
                 )}
               </div>
-              <p className="text-gray-600 mb-2">{demand.projectName}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  {demand.resourceRequestsCount} resources
-                </span>
-                <span className="flex items-center gap-1">
-                  <Target className="w-4 h-4" />
-                  {demand.accountName}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Building className="w-4 h-4" />
-                  {demand.departmentName}
-                </span>
-              </div>
             </div>
 
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Demand ID</p>
-              <p className="font-mono font-bold text-blue-600">DM-{demand.demandid}</p>
-
-              <p className="text-xs text-gray-500 mt-1">
-                Created: {new Date(demand.createddt).toLocaleDateString()}
-              </p>
-              <p className="text-xs text-gray-500">
-                Pending: {demand.pendingDays} days
-              </p>
+            <div className="text-right flex-shrink-0 flex flex-col items-end pl-2">
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Demand ID</p>
+              <p className="font-mono font-bold text-blue-600 text-base mt-1">DM-{demand.demandid}</p>
+              <div className="text-[10px] text-gray-400 font-medium mt-1.5 space-y-0.5">
+                <div>Created by: <span className="text-gray-500 font-semibold">{demand.requesterName}</span></div>
+                <div>Created at: <span className="text-gray-500 font-semibold">{formatDisplayDate(demand.createddt)}</span></div>
+              </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{demand.workLocPref}</span>
-                <span>•</span>
-                <span>{demand.locationType}</span>
-                <span>•</span>
-                <span>{demand.workMode}</span>
-              </div>
-              <span>Created by: {demand.requesterName}</span>
-            </div>
 
-            {demand.skillName && demand.skillName.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {demand.skillName.slice(0, 3).map((skill, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {skill}
-                  </Badge>
-                ))}
-                {demand.skillName.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{demand.skillName.length - 3} more
-                  </Badge>
-                )}
+          {/* Meta Row - Clean inline elements with icons, spaced using gap class */}
+          <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-gray-500 mt-2.5 mb-2">
+            <span className="flex items-center gap-1.5 shrink-0">
+              <Users className="w-3.5 h-3.5 text-gray-400" />
+              <span><strong className="font-semibold text-gray-700">{demand.resourceRequestsCount}</strong> resources open</span>
+            </span>
+            
+            <span className="flex items-center gap-1.5 shrink-0">
+              <Target className="w-3.5 h-3.5 text-gray-400" />
+              <span className="font-semibold text-gray-700">{demand.accountName}</span>
+            </span>
+
+            <span className="flex items-center gap-1.5 shrink-0">
+              <Briefcase className="w-3.5 h-3.5 text-gray-400" />
+              <span className="font-semibold text-gray-700">{demand.projectName}</span>
+            </span>
+
+            <span className="flex items-center gap-1.5 shrink-0">
+              <Building className="w-3.5 h-3.5 text-gray-400" />
+              <span className="font-semibold text-gray-700">{demand.departmentName}</span>
+            </span>
+
+            <span className="flex items-center gap-1.5 shrink-0">
+              <MapPin className="w-3.5 h-3.5 text-gray-400" />
+              <span className="font-semibold text-gray-700">{demand.workLocPref}</span>
+            </span>
+
+            {demand.locationType && (
+              <span className="flex items-center shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  {demand.locationType}
+                </span>
+              </span>
+            )}
+
+            {demand.workMode && (
+              <span className="flex items-center shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  {demand.workMode}
+                </span>
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {/* Highlighted Shared Resumes Horizontal Box */}
+            {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+              <div className="p-3 mt-4 bg-gradient-to-br from-blue-50/20 via-indigo-50/10 to-white rounded-xl border border-blue-100/60 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                  <h4 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                    Profiles Shared ({demand.sharedResumes.length})
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {demand.sharedResumes.map((resume, idx) => {
+                    const initials = resume.resourceName
+                      ? resume.resourceName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : 'R';
+                    const avatarStyle = getAvatarStyle(initials);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-xl min-w-0 shadow-sm hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex-1 min-w-[220px] max-w-[280px] flex-shrink-0"
+                      >
+                        {/* Circular Avatar using inline style to bypass purging */}
+                        <div
+                          style={avatarStyle}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm border border-black/10"
+                        >
+                          {initials}
+                        </div>
+                        
+                        {/* Resource Details */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-800 truncate" title={resume.resourceName}>
+                            {resume.resourceName}
+                          </p>
+                          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-500 min-w-0">
+                            <Mail className="w-3 h-3 shrink-0 text-gray-400" />
+                            <span className="truncate" title={resume.resourceEmail}>
+                              {resume.resourceEmail}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Shared Resumes Preview */}
-            {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-amber-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                    <Users className="w-3 h-3 mr-1" />
-                    {demand.sharedResumes.length} Resume{demand.sharedResumes.length !== 1 ? 's' : ''} Shared
+            {/* Skill Tags - Dedicated line above the divider */}
+            {demand.skillName && demand.skillName.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {demand.skillName.slice(0, 5).map((skill, idx) => (
+                  <Badge key={idx} variant="outline" className="text-[11px] font-normal py-0 h-4.5 bg-gray-50/50">
+                    {skill}
                   </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {demand.sharedResumes.slice(0, 2).map((resume, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm truncate max-w-[150px]">
-                      {resume.resourceName}
-                    </span>
-                  ))}
-                  {demand.sharedResumes.length > 2 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
-                      +{demand.sharedResumes.length - 2} more
-                    </span>
-                  )}
-                </div>
+                ))}
+                {demand.skillName.length > 5 && (
+                  <Badge variant="outline" className="text-[11px] font-normal py-0 h-4.5 bg-gray-50/50">
+                    +{demand.skillName.length - 5} more
+                  </Badge>
+                )}
               </div>
             )}
 
@@ -2346,7 +2472,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 e.stopPropagation();
                 handleSkillMatcher(demand);
               }}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 w-full mt-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full mt-1.5 h-10 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl flex items-center justify-center border border-blue-700/10"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Skill Matcher
@@ -2358,7 +2484,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Search and Sort Controls */}
       <div className="px-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -2405,7 +2531,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       )}
 
       {/* Demands List - Full width cards */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {paginatedDemands.length > 0 ? (
           paginatedDemands.map((demand, index) => renderDemandCard(demand, index))
         ) : (
@@ -2432,11 +2558,9 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           {/* Sticky header */}
           <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-gray-100">
             <DialogHeader>
-              <DialogTitle>{selectedDemand?.demandTitle}</DialogTitle>
-              <DialogDescription>
-                Status: <Badge className={getStatusColor(selectedDemand?.overallStatus)}>
-                  {selectedDemand?.overallStatus}
-                </Badge>
+              <DialogTitle className="text-xl font-bold text-gray-800">{selectedDemand?.demandTitle}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Demand details for {selectedDemand?.demandTitle}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -2444,54 +2568,55 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           <div className="flex-1 overflow-y-auto px-6 py-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
           {selectedDemand && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Demand Details & Collapsible Button */}
+              <div className="space-y-4">
+                {/* Collapsible Demand Details Section */}
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Demand Details</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="font-medium text-gray-700">Project & Account</span>
-                      <p className="text-gray-600">{selectedDemand.projectName} - {selectedDemand.accountName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Role:</span>
-                      <p className="text-gray-600">{selectedDemand.departmentName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Description:</span>
-                      <p className="text-gray-600">{selectedDemand.description}</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Requirements</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="font-medium text-gray-700">Years of Experience:</span>
-                      <p className="text-gray-600">{selectedDemand.yearsofexp}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Project Duration:</span>
-                      <p className="text-gray-600">{selectedDemand.roleDuration}</p>
-                    </div>
-
-                    {/* Request IDs Section */}
-                    {/* {selectedDemand.requestsSummary && selectedDemand.requestsSummary.length > 0 && (
-                      <div>
-                        <span className="font-medium text-gray-700">Request IDs:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {selectedDemand.requestsSummary.map((req) => (
-                            <Badge
-                              key={req.requestId}
-                              variant="outline"
-                              className="font-mono text-blue-600 border-blue-200 bg-blue-50"
-                            >
-                              REQ-{req.requestId}
-                            </Badge>
-                          ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDemandDetailsOpen(!isDemandDetailsOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50/50 hover:text-gray-900 transition-all font-semibold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      Demand Details
+                    </span>
+                    {isDemandDetailsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </Button>
+                  
+                  {isDemandDetailsOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-3 border border-gray-100 rounded-xl p-4 bg-gray-50/50 space-y-4 shadow-inner"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Project & Account</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.projectName} - {selectedDemand.accountName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Role</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.departmentName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Years of Experience</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.yearsofexp}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Project Duration</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.roleDuration}</p>
                         </div>
                       </div>
-                    )} */}
-                  </div>
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</span>
+                        <div className="mt-1.5 p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-sm">
+                          {selectedDemand.description}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -2510,33 +2635,10 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Timeline</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Demand Open:</span>
-                      <span className="text-gray-600">{selectedDemand.demandOpenDt}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Target Fulfillment:</span>
-                      <span className="text-gray-600">{selectedDemand.fulfilmentDt || "Not specified"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Created:</span>
-                      <span className="text-gray-600">
-                        {new Date(selectedDemand.createddt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Pending Days:</span>
-                      <span className="text-gray-600">{selectedDemand.pendingDays} days</span>
-                    </div>
-                  </div>
-                </div>
-                <div>
                   <h3 className="font-semibold mb-3 text-gray-800">Resource Status</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Target Headcount:</span>
+                      <span className="font-medium text-gray-700">Number of Openings:</span>
                       <span className="text-gray-600">{selectedDemand.resourceRequestsCount}</span>
                     </div>
                     <div className="flex justify-between">
@@ -2561,6 +2663,25 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                     )}
                   </div>
                 </div>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Timeline</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Demand Open:</span>
+                      <span className="text-gray-600">{formatDisplayDate(selectedDemand.demandOpenDt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Target Fulfillment:</span>
+                      <span className="text-gray-600">{formatDisplayDate(selectedDemand.fulfilmentDt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Created:</span>
+                      <span className="text-gray-600">
+                        {formatDisplayDate(selectedDemand.createddt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {selectedDemand?.sharedResumes && selectedDemand.sharedResumes.length > 0 && (() => {
@@ -2572,45 +2693,52 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 return (
                   <div className="mt-6">
                     <h3 className="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">
-                      Shared Resumes
+                      Profile Shared
                       <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{totalResumes}</span>
                     </h3>
 
-                    {/* Table with sticky header + internal body scroll */}
+                    {/* Unified single Table with sticky header */}
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="overflow-x-auto">
-                        <table className="w-full bg-white" style={{ minWidth: '520px' }}>
-                          <thead className="bg-gray-50 border-b-2 border-gray-100">
+                      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '350px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}>
+                        <table className="w-full bg-white table-auto" style={{ minWidth: '650px' }}>
+                          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Resource Name</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Email</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared By</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared At</th>
-                          </tr>
-                        </thead>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Resource Name</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Email</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared By</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared At</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {paginatedResumes.map((resume, index) => (
+                              <tr key={index} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30`}>
+                                <td className="px-4 py-3 text-sm text-gray-800 font-medium">{resume.resourceName}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  <a href={`mailto:${resume.resourceEmail}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                                    {resume.resourceEmail}
+                                  </a>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  <div className="font-medium">{resume.sharedBy || 'N/A'}</div>
+                                  {resume.sharedByEmail && <div className="text-xs text-gray-400 truncate max-w-[160px]" title={resume.sharedByEmail}>{resume.sharedByEmail}</div>}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{formatDisplayDate(resume.sharedAt)}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  <Badge className={`${
+                                    resume.status?.toLowerCase().includes('clear') || resume.status?.toLowerCase().includes('pass') || resume.status?.toLowerCase().includes('selected') || resume.status?.toLowerCase().includes('onboard')
+                                      ? 'bg-green-100 text-green-700 border-green-200'
+                                      : resume.status?.toLowerCase().includes('reject') || resume.status?.toLowerCase().includes('drop') || resume.status?.toLowerCase().includes('fail')
+                                      ? 'bg-red-100 text-red-700 border-red-200'
+                                      : 'bg-blue-100 text-blue-700 border-blue-200'
+                                  } border text-xs py-0.5 px-2 whitespace-nowrap`}>
+                                    {resume.status || 'Shared'}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
                         </table>
-                        {/* Scrollable table body in a separate div */}
-                        <div className="overflow-y-auto" style={{ maxHeight: '220px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}>
-                          <table className="w-full bg-white" style={{ minWidth: '520px' }}>
-                            <tbody className="divide-y divide-gray-100">
-                              {paginatedResumes.map((resume, index) => (
-                                <tr key={index} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30`}>
-                                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">{resume.resourceName}</td>
-                                  <td className="px-4 py-3 text-sm">
-                                    <a href={`mailto:${resume.resourceEmail}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-                                      {resume.resourceEmail}
-                                    </a>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-600">
-                                    <div className="font-medium">{resume.sharedBy || 'N/A'}</div>
-                                    {resume.sharedByEmail && <div className="text-xs text-gray-400 truncate max-w-[160px]" title={resume.sharedByEmail}>{resume.sharedByEmail}</div>}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{new Date(resume.sharedAt).toLocaleDateString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
                       </div>
                     </div>
                     {/* Pagination — always visible below table */}
@@ -2626,7 +2754,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                             setResumeCurrentPage(1);
                           }}
                           totalItems={totalResumes}
-                          label="resumes"
+                          label="profiles"
                         />
                       </div>
                     )}
@@ -3747,7 +3875,7 @@ export default function HRDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 relative">
+    <div className="p-1 sm:p-2 space-y-3 relative w-full">
       {/* Chat Bot */}
       <AnimatePresence>
         {isChatOpen && (
@@ -3843,34 +3971,36 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Header Section */}
+      {/* Integrated Dashboard Header & Statistics Card */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="bg-white rounded-3xl border border-gray-100 shadow-md overflow-hidden mb-6"
       >
-        <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 shadow-lg">
+        {/* Top Header section with blue gradient background */}
+        <div className="text-center bg-gradient-to-br from-blue-50/80 via-indigo-50/50 to-white p-6 border-b border-gray-100">
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.6 }}
-            className="mb-6"
+            className="mb-4"
           >
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <UserCheck className="w-10 h-10 text-white" />
+            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
+              <UserCheck className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-3">HR Manager Dashboard</h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tight mb-2">HR Manager Dashboard</h1>
+            <p className="text-xs md:text-sm text-gray-500 max-w-xl mx-auto leading-relaxed">
               Review and approve resource and opportunity requests from project managers
             </p>
           </motion.div>
-          <div className="flex gap-4 justify-center">
+          
+          <div className="flex gap-3 justify-center">
             <Button
               onClick={() => setIsChatOpen(!isChatOpen)}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg"
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-md text-sm font-semibold h-10 px-5 rounded-xl animate-none"
             >
-              <Bot className="w-5 h-5 mr-2" />
+              <Bot className="w-4 h-4 mr-2" />
               AI Assistant
             </Button>
             <Button
@@ -3878,23 +4008,25 @@ export default function HRDashboard() {
                 setEditingDemand(null);
                 setIsAddDemandOpen(true);
               }}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md text-sm font-semibold h-10 px-5 rounded-xl animate-none"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 mr-2" />
               Create Demand
             </Button>
           </div>
         </div>
-      </motion.div>
 
-      {/* Statistics Cards */}
-      <StatisticsCards
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        resourceRequests={resourceRequests}
-        opportunityRequests={opportunityRequests}
-        demands={demands}
-      />
+        {/* Bottom Statistics Cards section - rendered inside the same card */}
+        <div className="p-6 bg-gray-50/30">
+          <StatisticsCards
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            resourceRequests={resourceRequests}
+            opportunityRequests={opportunityRequests}
+            demands={demands}
+          />
+        </div>
+      </motion.div>
 
       {/* Tabs Section */}
       <Tabs defaultValue="demands" className="space-y-6" onValueChange={setActiveTab}>

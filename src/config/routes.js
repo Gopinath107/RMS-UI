@@ -56,6 +56,7 @@ export const APP_ROUTES = [
   { path: '/portfolio',                    allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/projects',           allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/clients',            allowedRoles: ['portfolio-manager'] },
+  { path: '/portfolio/interview-hub',      allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/reports',            allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/strategic-planning', allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/financial-overview', allowedRoles: ['portfolio-manager'] },

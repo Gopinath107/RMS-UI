@@ -124,34 +124,79 @@ export default function LoginPage({ onLogin }) {
           const users = response.data.result;
           setUsersData(users); // Store users data for later use
 
-          // Group users by role to get unique roles with their roleId
-          const roleGroups = users.reduce((acc, user) => {
-            const roleName = user.roleName;
-            if (!acc[roleName]) {
-              acc[roleName] = {
-                roleId: user.roleId,
-                users: []
-              };
-            }
-            acc[roleName].users.push(user);
-            return acc;
-          }, {});
+          // Group users by role (checking both primary and secondary roles in user.roles) to get unique roles with their roleId
+          const roleGroups = {};
+          users.forEach(user => {
+            const userRoles = Array.isArray(user.roles) && user.roles.length > 0
+              ? user.roles
+              : (user.roleId ? [{ roleId: user.roleId, roleName: user.roleName || 'Unknown' }] : []);
 
-          // Create role configs from unique roles
-          const uniqueRoleNames = Object.keys(roleGroups);
-          const newConfigs = uniqueRoleNames.map(roleName => {
-            const roleGroup = roleGroups[roleName];
-            const demoEmail = roleGroup.users.length > 0 ? roleGroup.users[0].email : '';
+            userRoles.forEach(r => {
+              const rName = r.roleName;
+              const rId = r.roleId;
+              if (rName) {
+                if (!roleGroups[rName]) {
+                  roleGroups[rName] = {
+                    roleId: rId,
+                    users: []
+                  };
+                }
+                const alreadyExists = roleGroups[rName].users.some(u => u.userId === user.userId);
+                if (!alreadyExists) {
+                  roleGroups[rName].users.push(user);
+                }
+              }
+            });
+          });
 
-            // Find matching hardcoded config
-            let config = hardcodedRoleConfigs.find(c =>
-              c.title.toLowerCase() === roleName.toLowerCase() ||
-              c.id === roleName.toLowerCase().replace(/\s+/g, '-')
+          // Map and populate hardcoded configs first, ensuring they are always in dropdown
+          const newConfigs = hardcodedRoleConfigs.map(config => {
+            // Find a matching role group in the API response
+            const matchedRoleName = Object.keys(roleGroups).find(roleName =>
+              roleName.toLowerCase() === config.title.toLowerCase() ||
+              roleName.toLowerCase().replace(/\s+/g, '-') === config.id ||
+              (roleName.toLowerCase() === 'pm' && config.id === 'project-manager') ||
+              (roleName.toLowerCase() === 'project manager' && config.id === 'project-manager')
             );
 
-            // If no match, create a default config
-            if (!config) {
-              config = {
+            if (matchedRoleName) {
+              const roleGroup = roleGroups[matchedRoleName];
+              const demoEmail = roleGroup.users.length > 0 ? roleGroup.users[0].email : '';
+              return {
+                ...config,
+                roleId: roleGroup.roleId,
+                credentials: {
+                  email: demoEmail,
+                  emails: roleGroup.users.map(user => user.email),
+                  password: ''
+                }
+              };
+            } else {
+              // Keep hardcoded config even if no users return from API for this role
+              return {
+                ...config,
+                credentials: {
+                  email: '',
+                  emails: [],
+                  password: ''
+                }
+              };
+            }
+          });
+
+          // Append any custom roles returned by the API that didn't match the hardcoded configs
+          Object.keys(roleGroups).forEach(roleName => {
+            const isMatched = hardcodedRoleConfigs.some(config =>
+              roleName.toLowerCase() === config.title.toLowerCase() ||
+              roleName.toLowerCase().replace(/\s+/g, '-') === config.id ||
+              (roleName.toLowerCase() === 'pm' && config.id === 'project-manager') ||
+              (roleName.toLowerCase() === 'project manager' && config.id === 'project-manager')
+            );
+
+            if (!isMatched) {
+              const roleGroup = roleGroups[roleName];
+              const demoEmail = roleGroup.users.length > 0 ? roleGroup.users[0].email : '';
+              newConfigs.push({
                 id: roleName.toLowerCase().replace(/\s+/g, '-'),
                 title: roleName,
                 subtitle: roleName,
@@ -161,23 +206,20 @@ export default function LoginPage({ onLogin }) {
                 bgColor: 'bg-gray-50',
                 image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=300&fit=crop',
                 description: 'Description for ' + roleName,
-              };
+                roleId: roleGroup.roleId,
+                credentials: {
+                  email: demoEmail,
+                  emails: roleGroup.users.map(user => user.email),
+                  password: ''
+                }
+              });
             }
-
-            return {
-              ...config,
-              roleId: roleGroup.roleId, // Add roleId from API
-              credentials: {
-                email: demoEmail, // Keep first email for backward compatibility
-                emails: roleGroup.users.map(user => user.email), // Store all emails
-                password: ''
-              }
-            };
           });
 
           setRoleConfigs(newConfigs);
           if (newConfigs.length > 0) {
-            setActiveRole(newConfigs[0].id);
+            const hasPM = newConfigs.some(config => config.id === 'project-manager');
+            setActiveRole(hasPM ? 'project-manager' : newConfigs[0].id);
           }
         } else {
           throw new Error('Failed to fetch users');

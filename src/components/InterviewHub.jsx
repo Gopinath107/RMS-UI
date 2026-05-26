@@ -50,6 +50,7 @@ import {
 const InterviewHub = ({ setCurrentPage }) => {
   const [myInterviews, setMyInterviews] = useState([]);
   const [currentUser, setCurrentUser] = useState('');
+  const [userRole, setUserRole] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -109,9 +110,10 @@ const InterviewHub = ({ setCurrentPage }) => {
   }, [loadInterviewStatuses]);
 
   useEffect(() => {
-    const userRole = localStorage.getItem('userRole');
+    const role = localStorage.getItem('userRole') || '';
     const userName = localStorage.getItem('userName');
-    if (userRole && userName) {
+    setUserRole(role);
+    if (role && userName) {
       setCurrentUser(userName.toLowerCase());
     } else {
       const defaultUsers = {
@@ -122,7 +124,7 @@ const InterviewHub = ({ setCurrentPage }) => {
         'sales-manager': 'sales',
         'interview-panel': 'panel',
       };
-      setCurrentUser(defaultUsers[userRole] || 'panel');
+      setCurrentUser(defaultUsers[role] || 'panel');
     }
   }, []);
 
@@ -146,9 +148,34 @@ const InterviewHub = ({ setCurrentPage }) => {
 
         const loadedInterviews = apiInterviews.map((apiInterview) => {
           const levelProgress = apiInterview.levelProgress || [];
-          const assignedProgress = levelProgress.filter(p =>
-            p.interviewerName?.toLowerCase() === currentUser.toLowerCase()
-          );
+          const assignedProgress = levelProgress.filter(p => {
+            if (!p.interviewerName) return false;
+            const interviewerLower = p.interviewerName.toLowerCase().trim();
+            const currentUserLower = currentUser.toLowerCase().trim();
+            const userRoleLower = userRole.toLowerCase().trim();
+
+            // 1. Direct username match
+            if (interviewerLower === currentUserLower) return true;
+
+            // 2. Role keywords match
+            const hrKeywords = ['hr', 'hr manager', 'human resources'];
+            const pmKeywords = ['pm', 'project manager', 'project-manager'];
+            const pmoKeywords = ['pmo'];
+            const portfolioKeywords = ['portfolio', 'portfolio manager', 'portfolio-manager'];
+            const salesKeywords = ['sales', 'sales manager', 'sales-manager'];
+            const panelKeywords = ['panel', 'interview panel', 'interview-panel'];
+            const adminKeywords = ['admin', 'system admin', 'system-admin'];
+
+            if (userRoleLower === 'hr' && hrKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'project-manager' && pmKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'pmo' && pmoKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'portfolio-manager' && portfolioKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'sales-manager' && salesKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'interview-panel' && panelKeywords.includes(interviewerLower)) return true;
+            if (userRoleLower === 'system-admin' && adminKeywords.includes(interviewerLower)) return true;
+
+            return false;
+          });
           const assignedLevels = assignedProgress.map(p => p.level);
 
           const levelResults = {};
@@ -233,15 +260,16 @@ const InterviewHub = ({ setCurrentPage }) => {
         });
 
         const assignedInterviews = loadedInterviews.filter((interview) => {
+          if (interview.assignedLevels.length > 0) return true;
+
           const levelInterviewers = (interview.levelProgress || [])
             .map(p => p.interviewerName?.toLowerCase())
             .filter(Boolean);
 
-          const isAssignedToAnyLevel = levelInterviewers.includes(currentUser.toLowerCase());
           const isPanelAndNotSystem = currentUser === 'panel' &&
             !systemRoles.some(role => levelInterviewers.includes(role));
 
-          return isAssignedToAnyLevel || isPanelAndNotSystem;
+          return isPanelAndNotSystem;
         });
 
         setMyInterviews(assignedInterviews);
@@ -259,7 +287,7 @@ const InterviewHub = ({ setCurrentPage }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, userRole]);
 
   useEffect(() => {
     if (currentUser) loadMyInterviews();
