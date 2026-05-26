@@ -687,43 +687,39 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
   const cardThemes = [
     {
       gradient: "from-violet-500 to-purple-600",
-      lightBg: "bg-gradient-to-br from-violet-50 to-purple-50",
-      border: "border-violet-200/60",
-      glow: "shadow-violet-100",
-      title: "text-violet-600",
-      val: "text-violet-900",
+      blob: "bg-violet-400",
+      title: "text-violet-700",
+      val: "text-violet-950",
       desc: "text-violet-500",
       bar: "from-violet-400 to-purple-500",
+      ring: "ring-violet-200/60",
     },
     {
       gradient: "from-sky-500 to-blue-600",
-      lightBg: "bg-gradient-to-br from-sky-50 to-blue-50",
-      border: "border-sky-200/60",
-      glow: "shadow-sky-100",
-      title: "text-sky-600",
-      val: "text-sky-900",
+      blob: "bg-sky-400",
+      title: "text-sky-700",
+      val: "text-sky-950",
       desc: "text-sky-500",
       bar: "from-sky-400 to-blue-500",
+      ring: "ring-sky-200/60",
     },
     {
       gradient: "from-amber-500 to-orange-500",
-      lightBg: "bg-gradient-to-br from-amber-50 to-orange-50",
-      border: "border-amber-200/60",
-      glow: "shadow-amber-100",
-      title: "text-amber-600",
-      val: "text-amber-900",
-      desc: "text-amber-500",
+      blob: "bg-amber-400",
+      title: "text-amber-700",
+      val: "text-amber-950",
+      desc: "text-amber-600",
       bar: "from-amber-400 to-orange-500",
+      ring: "ring-amber-200/60",
     },
     {
       gradient: "from-emerald-500 to-green-600",
-      lightBg: "bg-gradient-to-br from-emerald-50 to-green-50",
-      border: "border-emerald-200/60",
-      glow: "shadow-emerald-100",
-      title: "text-emerald-600",
-      val: "text-emerald-900",
-      desc: "text-emerald-500",
+      blob: "bg-emerald-400",
+      title: "text-emerald-700",
+      val: "text-emerald-950",
+      desc: "text-emerald-600",
       bar: "from-emerald-400 to-green-500",
+      ring: "ring-emerald-200/60",
     },
   ];
 
@@ -738,14 +734,17 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.08 }}
-            whileHover={{ y: -4, scale: 1.02 }}
-            className={`${theme.lightBg} rounded-2xl border ${theme.border} shadow-md hover:shadow-lg ${theme.glow} p-4 md:p-5 flex flex-col justify-between transition-all duration-300 cursor-pointer text-left relative overflow-hidden group`}
+            whileHover={{ y: -5, scale: 1.03 }}
+            className={`relative overflow-hidden rounded-2xl p-4 md:p-5 flex flex-col justify-between cursor-pointer text-left group transition-all duration-300
+              bg-white/60 backdrop-blur-xl border border-white/80 shadow-lg hover:shadow-xl ring-1 ${theme.ring}`}
             onClick={() => onTabChange(activeTab)}
           >
+            {/* Colour blob that bleeds through the glass */}
+            <div className={`absolute -top-6 -right-6 w-20 h-20 ${theme.blob} rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-300`} />
             {/* Top gradient bar */}
             <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${theme.bar} rounded-t-2xl`} />
-            {/* Subtle bg glow on hover */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl`} />
+            {/* Glass inner shine */}
+            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/50 to-transparent rounded-t-2xl pointer-events-none" />
 
             <div className="flex justify-between items-start relative">
               <div className="min-w-0 flex-1 pr-2">
@@ -761,12 +760,12 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                   {stat.value}
                 </motion.h3>
               </div>
-              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center text-white shadow-md flex-shrink-0 group-hover:scale-110 transition-transform duration-200`}>
+              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center text-white shadow-lg flex-shrink-0 group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
                 <Icon className="w-5 h-5" />
               </div>
             </div>
 
-            <p className={`text-[10px] ${theme.desc} font-semibold mt-4 pt-2.5 border-t border-current/10 truncate relative`}>
+            <p className={`text-[10px] ${theme.desc} font-semibold mt-4 pt-2.5 border-t border-black/5 truncate relative`}>
               {stat.description}
             </p>
           </motion.div>
@@ -4051,76 +4050,111 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── Premium Light Dashboard Header ── */}
+      {/* ── Liquid Glass Dashboard Header ── */}
       <motion.div
         initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl mb-6 bg-white border border-gray-100 shadow-md"
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-3xl mb-6"
+        style={{ isolation: 'isolate' }}
       >
-        {/* Soft decorative colour blobs — light mode */}
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-blue-100 rounded-full opacity-60 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-indigo-100 rounded-full opacity-50 blur-3xl pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-gradient-to-b from-blue-50 to-transparent opacity-80 pointer-events-none" />
+        {/* ── Aurora background (light mode) ── */}
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-100 via-white to-violet-100" />
+        {/* Large blurred aurora orbs */}
+        <div className="absolute -top-24 -left-16 w-80 h-80 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full opacity-25 blur-3xl" />
+        <div className="absolute -top-12 right-0 w-72 h-72 bg-gradient-to-bl from-violet-300 to-pink-300 rounded-full opacity-20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 w-72 h-56 bg-gradient-to-tr from-emerald-200 to-cyan-300 rounded-full opacity-20 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-56 h-56 bg-gradient-to-tl from-amber-200 to-orange-200 rounded-full opacity-20 blur-3xl" />
 
-        <div className="relative p-6 md:p-8">
-          {/* Header text section */}
-          <div className="text-center mb-7">
-            <motion.div
-              initial={{ scale: 0.75, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="mb-5"
-            >
-              {/* Icon with colourful gradient — no dark bg */}
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-2xl blur-md opacity-70" />
-                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-200">
-                  <UserCheck className="w-8 h-8 text-white" />
+        {/* ── Frosted glass panel (the actual card) ── */}
+        <div
+          className="relative m-[3px] rounded-[22px] overflow-hidden"
+          style={{
+            background: 'rgba(255,255,255,0.55)',
+            backdropFilter: 'blur(32px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.85)',
+            boxShadow: '0 8px 32px rgba(99,102,241,0.10), 0 1.5px 0 rgba(255,255,255,0.9) inset',
+          }}
+        >
+          {/* Inner top shine */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+
+          <div className="relative p-6 md:p-8">
+            <div className="text-center mb-7">
+              <motion.div
+                initial={{ scale: 0.75, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="mb-5"
+              >
+                {/* Glass icon badge */}
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/40 to-indigo-500/40 rounded-2xl blur-xl" />
+                  <div
+                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.9) 0%, rgba(59,130,246,0.9) 100%)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      boxShadow: '0 8px 32px rgba(99,102,241,0.35), 0 1px 0 rgba(255,255,255,0.6) inset',
+                    }}
+                  >
+                    <UserCheck className="w-8 h-8 text-white drop-shadow" />
+                  </div>
                 </div>
+
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight mb-2">
+                  HR Manager Dashboard
+                </h1>
+                <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+                  Review and approve resource and opportunity requests from project managers
+                </p>
+              </motion.div>
+
+              {/* Liquid glass CTA buttons */}
+              <div className="flex gap-3 justify-center flex-wrap">
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
+                    boxShadow: '0 4px 16px rgba(99,102,241,0.35), 0 1px 0 rgba(255,255,255,0.3) inset',
+                  }}
+                >
+                  <Bot className="w-4 h-4" />
+                  AI Assistant
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    boxShadow: '0 4px 16px rgba(16,185,129,0.35), 0 1px 0 rgba(255,255,255,0.3) inset',
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Demand
+                </motion.button>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight mb-2">
-                HR Manager Dashboard
-              </h1>
-              <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
-                Review and approve resource and opportunity requests from project managers
-              </p>
-            </motion.div>
-
-            {/* CTA Buttons — light */}
-            <div className="flex gap-3 justify-center flex-wrap">
-              <motion.button
-                whileHover={{ scale: 1.04, y: -1 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md shadow-blue-200 transition-all duration-200"
-              >
-                <Bot className="w-4 h-4" />
-                AI Assistant
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.04, y: -1 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md shadow-emerald-200 transition-all duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                Create Demand
-              </motion.button>
             </div>
+
+            {/* Glass divider */}
+            <div className="border-t border-white/60 mb-6" />
+
+            {/* Stats Cards */}
+            <StatisticsCards
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              resourceRequests={resourceRequests}
+              opportunityRequests={opportunityRequests}
+              demands={demands}
+            />
           </div>
-
-          {/* Divider */}
-          <div className="border-t border-gray-100 mb-6" />
-
-          {/* Stats Cards inside header */}
-          <StatisticsCards
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            resourceRequests={resourceRequests}
-            opportunityRequests={opportunityRequests}
-            demands={demands}
-          />
         </div>
       </motion.div>
 
