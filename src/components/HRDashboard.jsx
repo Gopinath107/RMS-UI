@@ -680,17 +680,21 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: index * 0.08 }}
-            whileHover={{ y: -5, scale: 1.02 }}
+            whileHover={{
+              y: -6,
+              boxShadow: '0 20px 48px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)',
+              transition: { duration: 0.25, ease: 'easeOut' }
+            }}
             onClick={() => onTabChange(activeTab)}
             className="relative cursor-pointer overflow-hidden group"
             style={{
               borderRadius: '24px',
-              background: 'rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.16)',
               backdropFilter: 'blur(20px) saturate(1.4)',
               WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-              border: '1px solid rgba(255,255,255,0.30)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.35)',
-              transition: 'all 0.3s ease',
+              border: '1.5px solid rgba(255,255,255,0.32)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5)',
+              transition: 'transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
           >
             {/* Colored top accent bar */}
@@ -724,8 +728,8 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                     {stat.title}
                   </p>
                   <motion.h3
-                    className="text-3xl md:text-4xl font-black tracking-tight leading-none"
-                    style={{ color: '#ffffff' }}
+                    className="leading-none text-white"
+                    style={{ fontSize: '44px', fontWeight: 300 }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
@@ -733,26 +737,25 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                     {stat.value}
                   </motion.h3>
                 </div>
-                {/* Icon circle with colored semi-transparent background */}
+                {/* Icon circle matching requirements */}
                 <div
                   className="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
                   style={{
                     width: '44px',
                     height: '44px',
                     borderRadius: '50%',
-                    background: theme.iconBg,
-                    border: `1px solid ${theme.iconBorder}`,
-                    backdropFilter: 'blur(8px)',
+                    background: 'rgba(255,255,255,0.15)',
+                    border: `1.5px solid ${theme.accent}`,
                   }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: '#ffffff' }} />
+                  <Icon className="w-5 h-5" style={{ color: theme.accent }} />
                 </div>
               </div>
 
               <p
                 className="text-[10px] font-semibold mt-4 pt-2.5 truncate"
                 style={{
-                  color: 'rgba(255,255,255,0.70)',
+                  color: 'rgba(255,255,255,0.6)',
                   borderTop: '1px solid rgba(255,255,255,0.15)',
                 }}
               >
@@ -4050,14 +4053,14 @@ export default function HRDashboard() {
       >
         {/* Centered glass panel — floats over the app's animated bg */}
         <div
-          className="w-full"
+          className="w-full relative"
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(24px) saturate(1.5)',
-            WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
-            border: '1px solid rgba(255,255,255,0.30)',
-            borderRadius: '28px',
-            boxShadow: '0 16px 64px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.45)',
+            background: 'rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(40px)',
+            WebkitBackdropFilter: 'blur(40px)',
+            border: '1.5px solid rgba(255,255,255,0.35)',
+            borderRadius: '32px',
+            boxShadow: '0 0 60px rgba(100,120,255,0.18), 0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4)',
           }}
         >
           {/* Subtle inner shimmer */}
@@ -4065,7 +4068,7 @@ export default function HRDashboard() {
             style={{
               position: 'absolute',
               inset: 0,
-              borderRadius: '28px',
+              borderRadius: '32px',
               background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)',
               pointerEvents: 'none',
             }}
@@ -4107,14 +4110,19 @@ export default function HRDashboard() {
                 </div>
 
                 <h1
-                  className="text-2xl md:text-3xl font-black tracking-tight mb-2"
-                  style={{ color: '#ffffff', textShadow: '0 2px 12px rgba(0,0,0,0.25)' }}
+                  className="mb-2 text-white"
+                  style={{
+                    fontSize: '30px',
+                    fontWeight: 600,
+                    letterSpacing: '-0.5px',
+                    textShadow: '0 2px 20px rgba(100,100,255,0.3)'
+                  }}
                 >
                   HR Manager Dashboard
                 </h1>
                 <p
                   className="text-sm max-w-md mx-auto leading-relaxed"
-                  style={{ color: 'rgba(255,255,255,0.75)' }}
+                  style={{ color: 'rgba(255,255,255,0.72)' }}
                 >
                   Review and approve resource and opportunity requests from project managers
                 </p>
@@ -4126,18 +4134,19 @@ export default function HRDashboard() {
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setIsChatOpen(!isChatOpen)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold transition-all duration-200"
+                  className="inline-flex items-center gap-2 text-sm transition-all duration-200"
                   style={{
                     padding: '10px 22px',
-                    borderRadius: '9999px',
+                    borderRadius: '99px',
+                    fontWeight: 500,
                     color: '#ffffff',
-                    background: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    background: 'rgba(255,255,255,0.18)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,1)',
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
                 >
                   <Bot className="w-4 h-4" />
                   AI Assistant
@@ -4147,14 +4156,15 @@ export default function HRDashboard() {
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                  className="inline-flex items-center gap-2 text-sm font-semibold transition-all duration-200"
+                  className="inline-flex items-center gap-2 text-sm transition-all duration-200"
                   style={{
                     padding: '10px 22px',
-                    borderRadius: '9999px',
+                    borderRadius: '99px',
+                    fontWeight: 500,
                     color: '#ffffff',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    border: '1px solid rgba(255,255,255,0.25)',
-                    boxShadow: '0 6px 24px rgba(16,185,129,0.40)',
+                    background: 'linear-gradient(135deg, #059669, #10b981)',
+                    border: 'none',
+                    boxShadow: '0 4px 20px rgba(16,185,129,0.4)',
                   }}
                 >
                   <Plus className="w-4 h-4" />
