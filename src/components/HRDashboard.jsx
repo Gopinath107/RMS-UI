@@ -637,35 +637,27 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
   const glassCardThemes = [
     {
       // Total — purple accent
-      accent: "#8b5cf6",
-      accentLight: "rgba(139,92,246,0.18)",
+      accent: "#a78bfa",
+      accentLight: "rgba(167,139,250,0.18)",
       labelColor: "#c4b5fd",
-      iconBg: "rgba(139,92,246,0.25)",
-      iconBorder: "rgba(139,92,246,0.4)",
     },
     {
       // Open — blue accent
-      accent: "#3b82f6",
-      accentLight: "rgba(59,130,246,0.18)",
+      accent: "#60a5fa",
+      accentLight: "rgba(96,165,250,0.18)",
       labelColor: "#93c5fd",
-      iconBg: "rgba(59,130,246,0.25)",
-      iconBorder: "rgba(59,130,246,0.4)",
     },
     {
       // In Progress — amber accent
-      accent: "#f59e0b",
-      accentLight: "rgba(245,158,11,0.18)",
+      accent: "#fbbf24",
+      accentLight: "rgba(251,191,36,0.18)",
       labelColor: "#fcd34d",
-      iconBg: "rgba(245,158,11,0.25)",
-      iconBorder: "rgba(245,158,11,0.4)",
     },
     {
       // Completed — teal/green accent
-      accent: "#10b981",
-      accentLight: "rgba(16,185,129,0.18)",
+      accent: "#34d399",
+      accentLight: "rgba(52,211,153,0.18)",
       labelColor: "#6ee7b7",
-      iconBg: "rgba(16,185,129,0.25)",
-      iconBorder: "rgba(16,185,129,0.4)",
     },
   ];
 
@@ -689,26 +681,15 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
             className="relative cursor-pointer overflow-hidden group"
             style={{
               borderRadius: '24px',
-              background: 'rgba(255,255,255,0.16)',
-              backdropFilter: 'blur(20px) saturate(1.4)',
-              WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-              border: '1.5px solid rgba(255,255,255,0.32)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5)',
+              background: 'rgba(255,255,255,0.10)',
+              backdropFilter: 'blur(16px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(16px) saturate(1.8)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              borderTop: `2.5px solid ${theme.accent}`,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 32px rgba(0,0,0,0.12)',
               transition: 'transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
           >
-            {/* Colored top accent bar */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: `linear-gradient(90deg, ${theme.accent}, transparent)`,
-                borderRadius: '24px 24px 0 0',
-              }}
-            />
             {/* Hover glow overlay */}
             <div
               className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -722,14 +703,25 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
               <div className="flex justify-between items-start">
                 <div className="min-w-0 flex-1 pr-2">
                   <p
-                    className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest truncate mb-2"
-                    style={{ color: theme.labelColor }}
+                    className="truncate mb-2"
+                    style={{
+                      color: theme.labelColor,
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase'
+                    }}
                   >
                     {stat.title}
                   </p>
                   <motion.h3
                     className="leading-none text-white"
-                    style={{ fontSize: '44px', fontWeight: 300 }}
+                    style={{
+                      fontSize: '48px',
+                      fontWeight: 600,
+                      color: '#ffffff',
+                      textShadow: '0 0 30px rgba(255,255,255,0.5)'
+                    }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
@@ -744,8 +736,8 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
                     width: '44px',
                     height: '44px',
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)',
-                    border: `1.5px solid ${theme.accent}`,
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.2)',
                   }}
                 >
                   <Icon className="w-5 h-5" style={{ color: theme.accent }} />
@@ -753,9 +745,10 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
               </div>
 
               <p
-                className="text-[10px] font-semibold mt-4 pt-2.5 truncate"
+                className="font-semibold mt-4 pt-2.5 truncate"
                 style={{
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.55)',
+                  fontSize: '13px',
                   borderTop: '1px solid rgba(255,255,255,0.15)',
                 }}
               >
@@ -4055,10 +4048,10 @@ export default function HRDashboard() {
         <div
           className="w-full relative"
           style={{
-            background: 'rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
-            border: '1.5px solid rgba(255,255,255,0.35)',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(32px) saturate(2) brightness(1.1)',
+            WebkitBackdropFilter: 'blur(32px) saturate(2) brightness(1.1)',
+            border: '1px solid rgba(255,255,255,0.25)',
             borderRadius: '32px',
             boxShadow: '0 0 60px rgba(100,120,255,0.18), 0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4)',
           }}
