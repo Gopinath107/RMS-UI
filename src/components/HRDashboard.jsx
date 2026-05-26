@@ -4051,65 +4051,67 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── Premium Dashboard Header ── */}
+      {/* ── Premium Light Dashboard Header ── */}
       <motion.div
         initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl mb-6"
+        className="relative overflow-hidden rounded-3xl mb-6 bg-white border border-gray-100 shadow-md"
       >
-        {/* Animated mesh gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900" />
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(ellipse at 20% 50%, #6366f1 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #3b82f6 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, #8b5cf6 0%, transparent 40%)' }} />
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        {/* Soft decorative colour blobs — light mode */}
+        <div className="absolute -top-16 -right-16 w-64 h-64 bg-blue-100 rounded-full opacity-60 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-indigo-100 rounded-full opacity-50 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-gradient-to-b from-blue-50 to-transparent opacity-80 pointer-events-none" />
 
         <div className="relative p-6 md:p-8">
           {/* Header text section */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-7">
             <motion.div
-              initial={{ scale: 0.7, opacity: 0 }}
+              initial={{ scale: 0.75, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-4"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mb-5"
             >
-              {/* Glowing icon */}
+              {/* Icon with colourful gradient — no dark bg */}
               <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute inset-0 bg-blue-400/30 rounded-2xl blur-lg animate-pulse" />
-                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-2xl blur-md opacity-70" />
+                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-200">
                   <UserCheck className="w-8 h-8 text-white" />
                 </div>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
+              <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight mb-2">
                 HR Manager Dashboard
               </h1>
-              <p className="text-sm text-blue-200/80 max-w-md mx-auto leading-relaxed">
+              <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
                 Review and approve resource and opportunity requests from project managers
               </p>
             </motion.div>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons — light */}
             <div className="flex gap-3 justify-center flex-wrap">
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, y: -1 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setIsChatOpen(!isChatOpen)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-200 shadow-lg"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md shadow-blue-200 transition-all duration-200"
               >
                 <Bot className="w-4 h-4" />
                 AI Assistant
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, y: -1 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white shadow-lg shadow-emerald-500/25 transition-all duration-200"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md shadow-emerald-200 transition-all duration-200"
               >
                 <Plus className="w-4 h-4" />
                 Create Demand
               </motion.button>
             </div>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100 mb-6" />
 
           {/* Stats Cards inside header */}
           <StatisticsCards
