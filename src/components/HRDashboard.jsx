@@ -69,37 +69,47 @@ import { SkillService } from "../services/SkillsService";
 const normalizeOptionName = (value) =>
   String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-// Search Filter Component
+// Search Filter Component — Premium glass style
 const SearchFilter = ({ value, onChange, placeholder = "Search..." }) => (
-  <div className="relative w-full max-w-md">
-    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+  <div className="relative w-full max-w-md group">
+    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-focus-within:opacity-100 transition-all duration-300 blur-sm" />
+    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 w-4 h-4 transition-colors duration-200" />
     <Input
       type="text"
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      className="relative pl-10 pr-4 py-2.5 w-full bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 focus:bg-white transition-all duration-200 text-sm placeholder:text-gray-400"
     />
+    {value && (
+      <button
+        onClick={() => onChange('')}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    )}
   </div>
 );
 
-// Pagination Component
+// Pagination Component — Premium pill style
 const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems, label = "requests" }) => {
   const itemsPerPageOptions = [5, 10, 20, 50];
+  const start = Math.min(((currentPage - 1) * itemsPerPage) + 1, totalItems);
+  const end = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-gray-50 rounded-lg">
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600">
-          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} {label}
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-gray-500 font-medium">
+          Showing <span className="text-gray-700 font-bold">{start}–{end}</span> of <span className="text-gray-700 font-bold">{totalItems}</span> {label}
         </span>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{label.charAt(0).toUpperCase() + label.slice(1)} per page:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400">Per page:</span>
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
           >
             {itemsPerPageOptions.map(option => (
               <option key={option} value={option}>{option}</option>
@@ -108,55 +118,49 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
+      <div className="flex items-center gap-1">
+        <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </Button>
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Prev
+        </button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 mx-1">
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
             let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
+            if (totalPages <= 5) pageNum = i + 1;
+            else if (currentPage <= 3) pageNum = i + 1;
+            else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+            else pageNum = currentPage - 2 + i;
 
+            const isActive = currentPage === pageNum;
             return (
-              <Button
+              <button
                 key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
                 onClick={() => onPageChange(pageNum)}
-                className={`w-8 h-8 p-0 ${currentPage === pageNum ? 'bg-blue-600 text-white' : ''}`}
+                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                }`}
               >
                 {pageNum}
-              </Button>
+              </button>
             );
           })}
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
           Next
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
@@ -479,7 +483,7 @@ const getAvatarStyle = (initials) => {
 };
 
 
-// Statistics Cards Component
+// Statistics Cards Component — Premium animated cards
 const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunityRequests, demands }) => {
   const getTabSpecificCounts = () => {
     switch (activeTab) {
@@ -680,37 +684,89 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
 
   const stats = getTabSpecificCounts();
 
+  const cardThemes = [
+    {
+      gradient: "from-violet-500 to-purple-600",
+      lightBg: "bg-gradient-to-br from-violet-50 to-purple-50",
+      border: "border-violet-200/60",
+      glow: "shadow-violet-100",
+      title: "text-violet-600",
+      val: "text-violet-900",
+      desc: "text-violet-500",
+      bar: "from-violet-400 to-purple-500",
+    },
+    {
+      gradient: "from-sky-500 to-blue-600",
+      lightBg: "bg-gradient-to-br from-sky-50 to-blue-50",
+      border: "border-sky-200/60",
+      glow: "shadow-sky-100",
+      title: "text-sky-600",
+      val: "text-sky-900",
+      desc: "text-sky-500",
+      bar: "from-sky-400 to-blue-500",
+    },
+    {
+      gradient: "from-amber-500 to-orange-500",
+      lightBg: "bg-gradient-to-br from-amber-50 to-orange-50",
+      border: "border-amber-200/60",
+      glow: "shadow-amber-100",
+      title: "text-amber-600",
+      val: "text-amber-900",
+      desc: "text-amber-500",
+      bar: "from-amber-400 to-orange-500",
+    },
+    {
+      gradient: "from-emerald-500 to-green-600",
+      lightBg: "bg-gradient-to-br from-emerald-50 to-green-50",
+      border: "border-emerald-200/60",
+      glow: "shadow-emerald-100",
+      title: "text-emerald-600",
+      val: "text-emerald-900",
+      desc: "text-emerald-500",
+      bar: "from-emerald-400 to-green-500",
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
-        const styles = getCardStyles(stat.color);
+        const theme = cardThemes[index % cardThemes.length];
         return (
           <motion.div
             key={index}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.08 }}
             whileHover={{ y: -4, scale: 1.02 }}
-            transition={{ duration: 0.2 }}
-            className={`${styles.bg} rounded-2xl border ${styles.border} shadow-sm hover:shadow-md p-5 flex flex-col justify-between transition-all duration-300 cursor-pointer text-left relative overflow-hidden`}
+            className={`${theme.lightBg} rounded-2xl border ${theme.border} shadow-md hover:shadow-lg ${theme.glow} p-4 md:p-5 flex flex-col justify-between transition-all duration-300 cursor-pointer text-left relative overflow-hidden group`}
             onClick={() => onTabChange(activeTab)}
           >
-            {/* Top decorative gradient bar */}
-            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color}`} />
+            {/* Top gradient bar */}
+            <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${theme.bar} rounded-t-2xl`} />
+            {/* Subtle bg glow on hover */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl`} />
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start relative">
               <div className="min-w-0 flex-1 pr-2">
-                <p className={`${styles.title} text-[10px] md:text-xs font-bold uppercase tracking-wider truncate`}>
+                <p className={`${theme.title} text-[10px] md:text-[11px] font-bold uppercase tracking-widest truncate`}>
                   {stat.title}
                 </p>
-                <h3 className={`text-2xl md:text-3xl font-extrabold ${styles.val} mt-2 tracking-tight leading-none`}>
+                <motion.h3
+                  className={`text-3xl md:text-4xl font-black ${theme.val} mt-2 tracking-tight leading-none`}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
+                >
                   {stat.value}
-                </h3>
+                </motion.h3>
               </div>
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-sm flex-shrink-0`}>
+              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center text-white shadow-md flex-shrink-0 group-hover:scale-110 transition-transform duration-200`}>
                 <Icon className="w-5 h-5" />
               </div>
             </div>
-            
-            <p className={`text-[10px] ${styles.desc} font-medium mt-3 border-t ${styles.borderT} pt-2.5 truncate`}>
+
+            <p className={`text-[10px] ${theme.desc} font-semibold mt-4 pt-2.5 border-t border-current/10 truncate relative`}>
               {stat.description}
             </p>
           </motion.div>
@@ -2309,7 +2365,32 @@ const DemandsTab = ({ demands, onEditDemand }) => {
     setCurrentPage(1);
   };
 
-  // Render Demand Card - Full width as before
+  // Status left-border color
+  const getDemandBorderColor = (status) => {
+    switch (status) {
+      case "Open": return "border-l-blue-500";
+      case "InProgress": return "border-l-amber-500";
+      case "Completed": return "border-l-emerald-500";
+      case "Rejected": return "border-l-red-500";
+      case "Hold": return "border-l-orange-500";
+      case "Closed": return "border-l-purple-500";
+      default: return "border-l-gray-400";
+    }
+  };
+
+  const getDemandStatusDot = (status) => {
+    switch (status) {
+      case "Open": return "bg-blue-500";
+      case "InProgress": return "bg-amber-500";
+      case "Completed": return "bg-emerald-500";
+      case "Rejected": return "bg-red-500";
+      case "Hold": return "bg-orange-500";
+      case "Closed": return "bg-purple-500";
+      default: return "bg-gray-400";
+    }
+  };
+
+  // Render Demand Card - Premium redesign
   const renderDemandCard = (demand, index) => (
     <motion.div
       key={demand.demandid}
@@ -2318,168 +2399,167 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card
-        className="bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+      <div
+        className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${getDemandBorderColor(demand.overallStatus)} shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden`}
         onClick={() => handleViewDemand(demand)}
       >
-        <CardContent className="p-3 md:p-4">
-          <div className="flex justify-between items-start mb-1.5">
-            <div className="flex-1 min-w-0 pr-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base md:text-lg font-bold text-gray-800 truncate" title={demand.demandTitle}>
+        <div className="p-4 md:p-5">
+          {/* Top Row: Title + badges + ID */}
+          <div className="flex justify-between items-start gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <h3 className="text-sm md:text-base font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors" title={demand.demandTitle}>
                   {demand.demandTitle}
                 </h3>
-                <Badge className={`${getStatusColor(demand.overallStatus)} border text-xs py-0.5 px-2`}>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {/* Status badge with dot */}
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(demand.overallStatus)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${getDemandStatusDot(demand.overallStatus)}`} />
                   {demand.overallStatus}
-                </Badge>
-                <Badge className={`${getPriorityColor(demand.priority)} text-xs py-0.5 px-2`}>
+                </span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${getPriorityColor(demand.priority)}`}>
                   {demand.priority}
-                </Badge>
-                <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs py-0.5 px-2">
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-600 border border-orange-200">
                   Demand
-                </Badge>
-                {/* Add Shared Resumes Badge */}
+                </span>
                 {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs py-0.5 px-2 flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">
                     <Users className="w-3 h-3" />
-                    {demand.sharedResumes.length} Profile Shared
-                  </Badge>
+                    {demand.sharedResumes.length} Profile{demand.sharedResumes.length > 1 ? 's' : ''} Shared
+                  </span>
                 )}
               </div>
             </div>
 
-            <div className="text-right flex-shrink-0 flex flex-col items-end pl-2">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider leading-none">Demand ID</p>
-              <p className="font-mono font-bold text-blue-600 text-base mt-1">DM-{demand.demandid}</p>
-              <div className="text-[10px] text-gray-400 font-medium mt-1.5 space-y-0.5">
-                <div>Created by: <span className="text-gray-500 font-semibold">{demand.requesterName}</span></div>
-                <div>Created at: <span className="text-gray-500 font-semibold">{formatDisplayDate(demand.createddt)}</span></div>
+            {/* Demand ID block */}
+            <div className="text-right flex-shrink-0">
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Demand ID</p>
+              <p className="font-mono font-black text-blue-600 text-base leading-tight">DM-{demand.demandid}</p>
+              <div className="text-[9px] text-gray-400 mt-1 space-y-0.5 text-right">
+                <div>By: <span className="text-gray-600 font-semibold">{demand.requesterName}</span></div>
+                <div>{formatDisplayDate(demand.createddt)}</div>
               </div>
             </div>
           </div>
 
-          {/* Meta Row - Clean inline elements with icons, spaced using gap class */}
-          <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-gray-500 mt-2.5 mb-2">
-            <span className="flex items-center gap-1.5 shrink-0">
-              <Users className="w-3.5 h-3.5 text-gray-400" />
-              <span><strong className="font-semibold text-gray-700">{demand.resourceRequestsCount}</strong> resources open</span>
+          {/* Meta pills row */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600 font-medium">
+              <Users className="w-3 h-3 text-gray-400" />
+              <strong className="text-gray-700">{demand.resourceRequestsCount}</strong> open
             </span>
-            
-            <span className="flex items-center gap-1.5 shrink-0">
-              <Target className="w-3.5 h-3.5 text-gray-400" />
-              <span className="font-semibold text-gray-700">{demand.accountName}</span>
-            </span>
-
-            <span className="flex items-center gap-1.5 shrink-0">
-              <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-              <span className="font-semibold text-gray-700">{demand.projectName}</span>
-            </span>
-
-            <span className="flex items-center gap-1.5 shrink-0">
-              <Building className="w-3.5 h-3.5 text-gray-400" />
-              <span className="font-semibold text-gray-700">{demand.departmentName}</span>
-            </span>
-
-            <span className="flex items-center gap-1.5 shrink-0">
-              <MapPin className="w-3.5 h-3.5 text-gray-400" />
-              <span className="font-semibold text-gray-700">{demand.workLocPref}</span>
-            </span>
-
-            {demand.locationType && (
-              <span className="flex items-center shrink-0">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                  {demand.locationType}
-                </span>
+            {demand.accountName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600 font-medium">
+                <Target className="w-3 h-3 text-gray-400" />
+                {demand.accountName}
               </span>
             )}
-
+            {demand.projectName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600 font-medium">
+                <Briefcase className="w-3 h-3 text-gray-400" />
+                {demand.projectName}
+              </span>
+            )}
+            {demand.departmentName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600 font-medium">
+                <Building className="w-3 h-3 text-gray-400" />
+                {demand.departmentName}
+              </span>
+            )}
+            {demand.workLocPref && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600 font-medium">
+                <MapPin className="w-3 h-3 text-gray-400" />
+                {demand.workLocPref}
+              </span>
+            )}
+            {demand.locationType && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                {demand.locationType}
+              </span>
+            )}
             {demand.workMode && (
-              <span className="flex items-center shrink-0">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                  {demand.workMode}
-                </span>
+              <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                {demand.workMode}
               </span>
             )}
           </div>
 
-          <div className="space-y-3">
-            {/* Highlighted Shared Resumes Horizontal Box */}
-            {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-              <div className="p-3 mt-4 bg-gradient-to-br from-blue-50/20 via-indigo-50/10 to-white rounded-xl border border-blue-100/60 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <h4 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
-                    Profiles Shared ({demand.sharedResumes.length})
-                  </h4>
+          {/* Shared Profiles — overlapping avatar stack */}
+          {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+            <div className="mb-3 p-3 bg-gradient-to-r from-indigo-50/50 to-blue-50/30 rounded-xl border border-indigo-100/70">
+              <div className="flex items-center gap-2 mb-2.5">
+                <div className="w-5 h-5 bg-indigo-100 rounded-md flex items-center justify-center">
+                  <Users className="w-3 h-3 text-indigo-600" />
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {demand.sharedResumes.map((resume, idx) => {
-                    const initials = resume.resourceName
-                      ? resume.resourceName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                      : 'R';
-                    const avatarStyle = getAvatarStyle(initials);
-                    return (
+                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                  Profiles Shared ({demand.sharedResumes.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {demand.sharedResumes.map((resume, idx) => {
+                  const initials = resume.resourceName
+                    ? resume.resourceName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                    : 'R';
+                  const avatarStyle = getAvatarStyle(initials);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 pl-1 pr-3 py-1.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all duration-200 group/profile"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div
-                        key={idx}
-                        className="flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-xl min-w-0 shadow-sm hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex-1 min-w-[220px] max-w-[280px] flex-shrink-0"
+                        style={avatarStyle}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ring-2 ring-white shadow-sm"
                       >
-                        {/* Circular Avatar using inline style to bypass purging */}
-                        <div
-                          style={avatarStyle}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm border border-black/10"
-                        >
-                          {initials}
-                        </div>
-                        
-                        {/* Resource Details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-800 truncate" title={resume.resourceName}>
-                            {resume.resourceName}
-                          </p>
-                          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-500 min-w-0">
-                            <Mail className="w-3 h-3 shrink-0 text-gray-400" />
-                            <span className="truncate" title={resume.resourceEmail}>
-                              {resume.resourceEmail}
-                            </span>
-                          </div>
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-gray-800 truncate max-w-[120px]" title={resume.resourceName}>
+                          {resume.resourceName}
+                        </p>
+                        <div className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                          <Mail className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate max-w-[140px]">{resume.resourceEmail}</span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Skill Tags - Dedicated line above the divider */}
-            {demand.skillName && demand.skillName.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {demand.skillName.slice(0, 5).map((skill, idx) => (
-                  <Badge key={idx} variant="outline" className="text-[11px] font-normal py-0 h-4.5 bg-gray-50/50">
-                    {skill}
-                  </Badge>
-                ))}
-                {demand.skillName.length > 5 && (
-                  <Badge variant="outline" className="text-[11px] font-normal py-0 h-4.5 bg-gray-50/50">
-                    +{demand.skillName.length - 5} more
-                  </Badge>
-                )}
-              </div>
-            )}
+          {/* Skill chips */}
+          {demand.skillName && demand.skillName.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {demand.skillName.slice(0, 6).map((skill, idx) => (
+                <span key={idx} className="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-medium border border-slate-200/80">
+                  {skill}
+                </span>
+              ))}
+              {demand.skillName.length > 6 && (
+                <span className="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[11px] font-medium border border-slate-200/80">
+                  +{demand.skillName.length - 6} more
+                </span>
+              )}
+            </div>
+          )}
 
-            {/* Working Skill Matcher Button */}
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSkillMatcher(demand);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full mt-1.5 h-10 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl flex items-center justify-center border border-blue-700/10"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Skill Matcher
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Premium Skill Matcher Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSkillMatcher(demand);
+            }}
+            className="w-full mt-1 h-10 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-200 hover:shadow-blue-300 hover:shadow-lg transition-all duration-300 group/btn"
+          >
+            <Sparkles className="w-4 h-4 group-hover/btn:rotate-12 transition-transform duration-200" />
+            Skill Matcher
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 
@@ -3971,53 +4051,67 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Integrated Dashboard Header & Statistics Card */}
+      {/* ── Premium Dashboard Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white rounded-3xl border border-gray-100 shadow-md overflow-hidden mb-6"
+        transition={{ duration: 0.55, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-3xl mb-6"
       >
-        {/* Top Header section with blue gradient background */}
-        <div className="text-center bg-gradient-to-br from-blue-50/80 via-indigo-50/50 to-white p-6 border-b border-gray-100">
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="mb-4"
-          >
-            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
-              <UserCheck className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tight mb-2">HR Manager Dashboard</h1>
-            <p className="text-xs md:text-sm text-gray-500 max-w-xl mx-auto leading-relaxed">
-              Review and approve resource and opportunity requests from project managers
-            </p>
-          </motion.div>
-          
-          <div className="flex gap-3 justify-center">
-            <Button
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-md text-sm font-semibold h-10 px-5 rounded-xl animate-none"
-            >
-              <Bot className="w-4 h-4 mr-2" />
-              AI Assistant
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingDemand(null);
-                setIsAddDemandOpen(true);
-              }}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md text-sm font-semibold h-10 px-5 rounded-xl animate-none"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Demand
-            </Button>
-          </div>
-        </div>
+        {/* Animated mesh gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900" />
+        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(ellipse at 20% 50%, #6366f1 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #3b82f6 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, #8b5cf6 0%, transparent 40%)' }} />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        {/* Bottom Statistics Cards section - rendered inside the same card */}
-        <div className="p-6 bg-gray-50/30">
+        <div className="relative p-6 md:p-8">
+          {/* Header text section */}
+          <div className="text-center mb-6">
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-4"
+            >
+              {/* Glowing icon */}
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 bg-blue-400/30 rounded-2xl blur-lg animate-pulse" />
+                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40">
+                  <UserCheck className="w-8 h-8 text-white" />
+                </div>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
+                HR Manager Dashboard
+              </h1>
+              <p className="text-sm text-blue-200/80 max-w-md mx-auto leading-relaxed">
+                Review and approve resource and opportunity requests from project managers
+              </p>
+            </motion.div>
+
+            {/* CTA Buttons */}
+            <div className="flex gap-3 justify-center flex-wrap">
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-200 shadow-lg"
+              >
+                <Bot className="w-4 h-4" />
+                AI Assistant
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white shadow-lg shadow-emerald-500/25 transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                Create Demand
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Stats Cards inside header */}
           <StatisticsCards
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -4028,23 +4122,24 @@ export default function HRDashboard() {
         </div>
       </motion.div>
 
-      {/* Tabs Section */}
-      <Tabs defaultValue="demands" className="space-y-6" onValueChange={setActiveTab}>
-        <TabsList className="flex bg-gray-100 rounded-lg p-1 gap-1 w-full max-w-md mx-auto">
-
-          <TabsTrigger
-            value="demands"
-            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
-          >
-            Demands
-          </TabsTrigger>
-          <TabsTrigger
-            value="opportunity"
-            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
-          >
-            Opportunities
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Premium Tab Switcher ── */}
+      <Tabs defaultValue="demands" className="space-y-5" onValueChange={setActiveTab}>
+        <div className="flex justify-center">
+          <TabsList className="inline-flex bg-white border border-gray-200 shadow-sm rounded-2xl p-1 gap-1">
+            <TabsTrigger
+              value="demands"
+              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+            >
+              Demands
+            </TabsTrigger>
+            <TabsTrigger
+              value="opportunity"
+              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+            >
+              Opportunities
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="opportunity">
           <RequestTab
