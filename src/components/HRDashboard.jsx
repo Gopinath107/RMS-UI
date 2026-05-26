@@ -72,21 +72,21 @@ const normalizeOptionName = (value) =>
 // Search Filter Component — Premium glass style
 const SearchFilter = ({ value, onChange, placeholder = "Search..." }) => (
   <div className="relative w-full max-w-md group">
-    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-focus-within:opacity-100 transition-all duration-300 blur-sm" />
-    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 w-4 h-4 transition-colors duration-200" />
+    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/10 to-blue-500/10 opacity-0 group-focus-within:opacity-100 transition-all duration-300 blur-sm" />
+    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 w-4 h-4 transition-colors duration-200" />
     <Input
       type="text"
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="relative pl-10 pr-4 py-2.5 w-full bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 focus:bg-white transition-all duration-200 text-sm placeholder:text-gray-400"
+      className="relative pl-11 pr-10 py-3 w-full bg-white/60 backdrop-blur-md border border-white/80 rounded-full shadow-sm focus:ring-2 focus:ring-indigo-400/50 focus:border-indigo-400 focus:bg-white/80 transition-all duration-200 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
     />
     {value && (
       <button
         onClick={() => onChange('')}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
       >
-        <X className="w-3.5 h-3.5" />
+        <X className="w-4 h-4" />
       </button>
     )}
   </div>
@@ -101,15 +101,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-xs text-gray-500 font-medium">
-          Showing <span className="text-gray-700 font-bold">{start}–{end}</span> of <span className="text-gray-700 font-bold">{totalItems}</span> {label}
+        <span className="text-xs text-slate-500 font-semibold">
+          Showing <span className="text-indigo-950 font-bold">{start}–{end}</span> of <span className="text-indigo-950 font-bold">{totalItems}</span> {label}
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-400">Per page:</span>
+          <span className="text-xs text-slate-400 font-semibold">Per page:</span>
           <select
             value={itemsPerPage}
-            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
+            onChange={(e) => onPageChange(1) || onItemsPerPageChange(Number(e.target.value))}
+            className="px-3 py-1 bg-white/60 backdrop-blur-sm border border-white/80 rounded-full text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-sm cursor-pointer"
           >
             {itemsPerPageOptions.map(option => (
               <option key={option} value={option}>{option}</option>
@@ -122,13 +122,13 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
+          className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold border border-white/80 bg-white/60 text-slate-700 hover:bg-white/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Prev
         </button>
 
-        <div className="flex items-center gap-1 mx-1">
+        <div className="flex items-center gap-1.5 mx-1">
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
             let pageNum;
             if (totalPages <= 5) pageNum = i + 1;
@@ -141,10 +141,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
               <button
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
-                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all duration-200 ${
+                className={`w-9 h-9 rounded-full text-xs font-black transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-100'
+                    : 'bg-white/60 backdrop-blur-sm border border-white/80 text-slate-700 hover:border-indigo-300 hover:text-indigo-600'
                 }`}
               >
                 {pageNum}
@@ -156,7 +156,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
+          className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-bold border border-white/80 bg-white/60 text-slate-700 hover:bg-white/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
           Next
           <ChevronRight className="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@ const ResourceGroupCard = ({
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-100">
+      <Card className="bg-white/50 backdrop-blur-md shadow-lg shadow-indigo-100/10 hover:shadow-xl hover:shadow-indigo-100/25 transition-all duration-300 border border-white/70 rounded-[28px]">
         <CardContent className="p-6">
           {/* Group Header */}
           <div className="flex items-start mb-4">
@@ -358,7 +358,7 @@ const ResourceGroupCard = ({
             >
               <div className="space-y-3">
                 {group.requests.map((request, index) => (
-                  <div key={request.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                  <div key={request.id} className="bg-white/40 border border-white/60 rounded-2xl p-4 hover:bg-white/70 transition-colors">
                     <div className="flex items-start">
                       <input
                         type="checkbox"
@@ -686,44 +686,44 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
 
   const cardThemes = [
     {
-      gradient: "from-violet-500 to-purple-600",
-      blobColor: "#8b5cf6",
-      titleColor: "#7c3aed",
-      numGradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-      bar: "from-violet-400 to-purple-500",
-      iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-      glow: "rgba(139,92,246,0.25)",
-      desc: "text-violet-600",
+      gradient: "from-violet-500 to-indigo-500",
+      lightBg: "bg-white/60 backdrop-blur-md",
+      border: "border-white/80 hover:border-violet-200/80",
+      glow: "shadow-md shadow-purple-100/40 hover:shadow-lg hover:shadow-purple-100/60",
+      title: "text-violet-800",
+      val: "text-violet-950",
+      desc: "text-violet-700/80",
+      bar: "from-violet-500 to-indigo-500",
     },
     {
-      gradient: "from-blue-500 to-cyan-500",
-      blobColor: "#3b82f6",
-      titleColor: "#1d4ed8",
-      numGradient: "linear-gradient(135deg, #2563eb, #0891b2)",
-      bar: "from-blue-400 to-cyan-400",
-      iconBg: "linear-gradient(135deg, #3b82f6, #06b6d4)",
-      glow: "rgba(59,130,246,0.25)",
-      desc: "text-blue-600",
+      gradient: "from-blue-500 to-sky-500",
+      lightBg: "bg-white/60 backdrop-blur-md",
+      border: "border-white/80 hover:border-blue-200/80",
+      glow: "shadow-md shadow-blue-100/40 hover:shadow-lg hover:shadow-blue-100/60",
+      title: "text-blue-800",
+      val: "text-blue-950",
+      desc: "text-blue-700/80",
+      bar: "from-blue-500 to-sky-500",
     },
     {
       gradient: "from-amber-500 to-orange-500",
-      blobColor: "#f59e0b",
-      titleColor: "#b45309",
-      numGradient: "linear-gradient(135deg, #d97706, #ea580c)",
-      bar: "from-amber-400 to-orange-500",
-      iconBg: "linear-gradient(135deg, #f59e0b, #f97316)",
-      glow: "rgba(245,158,11,0.25)",
-      desc: "text-amber-700",
+      lightBg: "bg-white/60 backdrop-blur-md",
+      border: "border-white/80 hover:border-amber-200/80",
+      glow: "shadow-md shadow-amber-100/40 hover:shadow-lg hover:shadow-amber-100/60",
+      title: "text-amber-800",
+      val: "text-amber-950",
+      desc: "text-amber-700/80",
+      bar: "from-amber-500 to-orange-500",
     },
     {
-      gradient: "from-emerald-500 to-teal-500",
-      blobColor: "#10b981",
-      titleColor: "#047857",
-      numGradient: "linear-gradient(135deg, #059669, #0d9488)",
-      bar: "from-emerald-400 to-teal-400",
-      iconBg: "linear-gradient(135deg, #10b981, #14b8a6)",
-      glow: "rgba(16,185,129,0.25)",
-      desc: "text-emerald-700",
+      gradient: "from-emerald-500 to-green-500",
+      lightBg: "bg-white/60 backdrop-blur-md",
+      border: "border-white/80 hover:border-emerald-200/80",
+      glow: "shadow-md shadow-emerald-100/40 hover:shadow-lg hover:shadow-emerald-100/60",
+      title: "text-emerald-800",
+      val: "text-emerald-950",
+      desc: "text-emerald-700/80",
+      bar: "from-emerald-500 to-green-500",
     },
   ];
 
@@ -735,70 +735,40 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
         return (
           <motion.div
             key={index}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: index * 0.09 }}
-            whileHover={{ y: -6, scale: 1.03 }}
-            className="relative overflow-hidden rounded-2xl cursor-pointer text-left group transition-all duration-300"
-            style={{
-              background: 'rgba(255,255,255,0.72)',
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,0.9)',
-              boxShadow: `0 4px 24px ${theme.glow}, 0 1px 0 rgba(255,255,255,0.95) inset`,
-            }}
+            transition={{ duration: 0.4, delay: index * 0.08 }}
+            whileHover={{ y: -4, scale: 1.02 }}
+            className={`${theme.lightBg} rounded-[24px] border ${theme.border} shadow-md hover:shadow-lg ${theme.glow} p-4 md:p-5 flex flex-col justify-between transition-all duration-300 cursor-pointer text-left relative overflow-hidden group`}
             onClick={() => onTabChange(activeTab)}
           >
-            {/* Vivid colour blob bleeding through glass */}
-            <div
-              className="absolute -bottom-4 -right-4 w-28 h-28 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-400"
-              style={{ background: theme.blobColor }}
-            />
-            {/* Coloured top bar */}
-            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.bar} rounded-t-2xl`} />
-            {/* Glass shine */}
-            <div className="absolute top-0 left-0 right-0 h-2/5 bg-gradient-to-b from-white/70 to-transparent rounded-t-2xl pointer-events-none" />
+            {/* Top gradient bar */}
+            <div className={`absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r ${theme.bar} rounded-t-[24px]`} />
+            {/* Subtle bg glow on hover */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 rounded-[24px]`} />
 
-            <div className="relative p-4 md:p-5 flex flex-col gap-3">
-              {/* Top row: label + icon */}
-              <div className="flex justify-between items-center">
-                <p
-                  className="text-[10px] md:text-[11px] font-extrabold uppercase tracking-[0.15em] truncate"
-                  style={{ color: theme.titleColor }}
-                >
+            <div className="flex justify-between items-start relative">
+              <div className="min-w-0 flex-1 pr-2">
+                <p className={`${theme.title} text-[10px] md:text-[11px] font-bold uppercase tracking-wider truncate`}>
                   {stat.title}
                 </p>
-                {/* Glowing icon badge */}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
-                  style={{
-                    background: theme.iconBg,
-                    boxShadow: `0 4px 14px ${theme.glow}, 0 1px 0 rgba(255,255,255,0.4) inset`,
-                  }}
-                >
-                  <Icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />
-                </div>
-              </div>
-
-              {/* Big bold number */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.55, delay: index * 0.1 + 0.2, type: 'spring', stiffness: 200 }}
-              >
-                <span
-                  className="text-5xl md:text-6xl font-black tracking-tight leading-none block"
-                  style={{ background: theme.numGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+                <motion.h3
+                  className={`text-3xl md:text-4xl font-extrabold ${theme.val} mt-2 tracking-tight leading-none`}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
                 >
                   {stat.value}
-                </span>
-              </motion.div>
-
-              {/* Description */}
-              <p className={`text-[11px] ${theme.desc} font-semibold truncate pt-2 border-t border-black/5`}>
-                {stat.description}
-              </p>
+                </motion.h3>
+              </div>
+              <div className={`w-10 h-10 rounded-[16px] bg-gradient-to-br ${theme.gradient} flex items-center justify-center text-white shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-200`}>
+                <Icon className="w-5 h-5" />
+              </div>
             </div>
+
+            <p className={`text-[10px] ${theme.desc} font-bold mt-4 pt-2.5 border-t border-slate-200/60 truncate relative`}>
+              {stat.description}
+            </p>
           </motion.div>
         );
       })}
@@ -1421,8 +1391,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card className={`bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${selectedRequests.includes(request.numericId) ? 'ring-2 ring-blue-500' : ''
-        }`}>
+      <Card className={`bg-white/50 backdrop-blur-md shadow-lg shadow-indigo-100/10 hover:shadow-xl hover:shadow-indigo-100/25 transition-all duration-300 cursor-pointer border border-white/60 rounded-[28px] ${selectedRequests.includes(request.numericId) ? 'ring-2 ring-indigo-500/80 border-transparent' : ''}`}>
         <CardContent className="p-6" onClick={() => handleViewRequest(request)}>
           <div className="flex items-start mb-4">
             <input
@@ -1529,7 +1498,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <Card className="bg-white/50 backdrop-blur-md shadow-lg shadow-indigo-100/10 hover:shadow-xl hover:shadow-indigo-100/25 transition-all duration-300 cursor-pointer border border-white/60 rounded-[28px]">
         <CardContent className="p-6" onClick={() => handleViewRequest(group)}>
           <div className="flex items-start mb-4">
             <div className="flex-1">
@@ -1928,7 +1897,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle>{selectedRequest?.requestTitle}</DialogTitle>
             <DialogDescription>
@@ -1984,7 +1953,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
           setApprovalComments("");
         }
       }}>
-        <DialogContent>
+        <DialogContent className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
@@ -2041,7 +2010,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
           setRejectionReason("");
         }
       }}>
-        <DialogContent>
+        <DialogContent className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <XCircle className="w-5 h-5" />
@@ -2096,7 +2065,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
 
       {/* Group Approval Modal */}
       <Dialog open={isGroupApprovalModalOpen} onOpenChange={setIsGroupApprovalModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
@@ -2139,7 +2108,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
 
       {/* Group Rejection Modal */}
       <Dialog open={isGroupRejectionModalOpen} onOpenChange={setIsGroupRejectionModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <XCircle className="w-5 h-5" />
@@ -2185,7 +2154,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
 
       {/* Success Alert */}
       <AlertDialog open={actionSuccess.show} onOpenChange={(open) => setActionSuccess({ ...actionSuccess, show: open })}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               {actionSuccess.type === "approved" ? (
@@ -2430,7 +2399,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <div
-        className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${getDemandBorderColor(demand.overallStatus)} shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden`}
+        className={`bg-white/50 backdrop-blur-md border border-white/60 border-l-4 ${getDemandBorderColor(demand.overallStatus)} shadow-lg shadow-indigo-100/10 hover:shadow-xl hover:shadow-indigo-100/25 rounded-[28px] transition-all duration-300 cursor-pointer group overflow-hidden`}
         onClick={() => handleViewDemand(demand)}
       >
         <div className="p-4 md:p-5">
@@ -2438,7 +2407,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           <div className="flex justify-between items-start gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <h3 className="text-sm md:text-base font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors" title={demand.demandTitle}>
+                <h3 className="text-sm md:text-base font-extrabold text-indigo-950 truncate group-hover:text-indigo-600 transition-colors" title={demand.demandTitle}>
                   {demand.demandTitle}
                 </h3>
               </div>
@@ -2583,7 +2552,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
               e.stopPropagation();
               handleSkillMatcher(demand);
             }}
-            className="w-full mt-1 h-10 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-200 hover:shadow-blue-300 hover:shadow-lg transition-all duration-300 group/btn"
+            className="w-full mt-2 h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-md shadow-indigo-100 hover:shadow-indigo-200/50 hover:shadow-lg transition-all duration-300 group/btn"
           >
             <Sparkles className="w-4 h-4 group-hover/btn:rotate-12 transition-transform duration-200" />
             Skill Matcher
@@ -2664,7 +2633,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] flex flex-col p-0 gap-0 bg-white rounded-2xl shadow-2xl border border-gray-100" style={{ maxHeight: '90vh' }}>
+        <DialogContent className="max-w-4xl w-[95vw] flex flex-col p-0 gap-0 bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/50" style={{ maxHeight: '90vh' }}>
           {/* Sticky header */}
           <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-gray-100">
             <DialogHeader>
@@ -2894,7 +2863,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
       {/* Skill Matcher Modal */}
       <Dialog open={isSkillMatcherOpen} onOpenChange={setIsSkillMatcherOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-purple-500" />
@@ -3016,7 +2985,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
       {/* Match Details Modal */}
       <Dialog open={!!selectedMatch} onOpenChange={(open) => !open && setSelectedMatch(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-xl border border-white/50 rounded-[32px] shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle>
               Employee Details - {selectedMatch?.firstName} {selectedMatch?.lastName}
@@ -3985,7 +3954,11 @@ export default function HRDashboard() {
   }
 
   return (
-    <div className="p-1 sm:p-2 space-y-3 relative w-full">
+    <div className="p-1 sm:p-2 space-y-3 relative w-full overflow-hidden">
+      {/* Background Liquid Glass Fluid Blobs */}
+      <div className="absolute top-10 left-10 w-96 h-96 rounded-full bg-pink-300/20 blur-[120px] pointer-events-none z-0" />
+      <div className="absolute top-[300px] right-20 w-[450px] h-[450px] rounded-full bg-blue-300/20 blur-[150px] pointer-events-none z-0" />
+      <div className="absolute bottom-40 left-20 w-[400px] h-[400px] rounded-full bg-purple-300/20 blur-[130px] pointer-events-none z-0" />
       {/* Chat Bot */}
       <AnimatePresence>
         {isChatOpen && (
@@ -4081,150 +4054,90 @@ export default function HRDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── BOLD PREMIUM HEADER — Liquid Glass Light Mode ── */}
+      {/* ── Premium Dashboard Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: -28 }}
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl mb-6"
-        style={{ isolation: 'isolate' }}
+        transition={{ duration: 0.55, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-[32px] mb-6 border border-white/50 bg-white/40 backdrop-blur-xl shadow-xl shadow-indigo-100/30"
       >
-        {/* ── VIVID Aurora background ── */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #faf5ff 40%, #f0fdfa 100%)' }} />
-        {/* Big vivid blobs — much higher opacity */}
-        <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full blur-3xl opacity-40" style={{ background: 'radial-gradient(circle, #818cf8, #6366f1)' }} />
-        <div className="absolute -top-10 right-10 w-80 h-80 rounded-full blur-3xl opacity-35" style={{ background: 'radial-gradient(circle, #c084fc, #e879f9)' }} />
-        <div className="absolute bottom-0 left-1/4 w-96 h-64 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #34d399, #06b6d4)' }} />
-        <div className="absolute -bottom-10 right-0 w-80 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #fbbf24, #f472b6)' }} />
-        {/* Noise texture for depth */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundSize: '200px' }} />
+        {/* Animated mesh gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-violet-200/20 via-pink-200/20 to-blue-200/20" />
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(ellipse at 20% 50%, #f472b6 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #60a5fa 0%, transparent 50%), radial-gradient(ellipse at 60% 80%, #c084fc 0%, transparent 40%)' }} />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        {/* ── Frosted glass card ── */}
-        <div
-          className="relative m-[2px] rounded-[22px] overflow-hidden"
-          style={{
-            background: 'rgba(255,255,255,0.50)',
-            backdropFilter: 'blur(40px) saturate(200%) brightness(1.05)',
-            WebkitBackdropFilter: 'blur(40px) saturate(200%) brightness(1.05)',
-            border: '1.5px solid rgba(255,255,255,0.80)',
-            boxShadow: '0 20px 60px rgba(99,102,241,0.12), 0 8px 32px rgba(0,0,0,0.06), 0 2px 0 rgba(255,255,255,1) inset',
-          }}
-        >
-          {/* Top prismatic shine */}
-          <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,1) 30%, rgba(200,200,255,0.8) 60%, transparent)' }} />
-          {/* Inner light sweep */}
-          <div className="absolute top-0 left-0 right-0 h-1/3 rounded-t-[22px]" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 100%)' }} />
-
-          <div className="relative p-7 md:p-9">
-            <div className="text-center mb-8">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.55, delay: 0.1 }}
-              >
-                {/* Glowing icon — bigger + stronger glow */}
-                <div className="relative w-20 h-20 mx-auto mb-5">
-                  <div
-                    className="absolute inset-0 rounded-3xl blur-2xl"
-                    style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', opacity: 0.5 }}
-                  />
-                  <div
-                    className="relative w-20 h-20 rounded-3xl flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #3b82f6 100%)',
-                      boxShadow: '0 16px 48px rgba(99,102,241,0.5), 0 2px 0 rgba(255,255,255,0.4) inset, 0 -2px 0 rgba(0,0,0,0.1) inset',
-                      border: '1.5px solid rgba(255,255,255,0.5)',
-                    }}
-                  >
-                    <UserCheck className="w-10 h-10 text-white drop-shadow-lg" />
-                  </div>
+        <div className="relative p-6 md:p-8">
+          {/* Header text section */}
+          <div className="text-center mb-6">
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-4"
+            >
+              {/* Glowing icon */}
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 bg-indigo-500/10 rounded-2xl blur-lg animate-pulse" />
+                <div className="relative w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                  <UserCheck className="w-8 h-8 text-white" />
                 </div>
-
-                {/* Bold gradient title */}
-                <h1
-                  className="text-3xl md:text-4xl font-black tracking-tight mb-3 pb-0.5"
-                  style={{
-                    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #6d28d9 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
-                  HR Manager Dashboard
-                </h1>
-                <p className="text-sm text-gray-500/90 max-w-sm mx-auto leading-relaxed font-medium">
-                  Review &amp; approve resource requests from project managers
-                </p>
-              </motion.div>
-
-              {/* CTA Buttons — glass + gradient */}
-              <div className="flex gap-3 justify-center flex-wrap mt-6">
-                <motion.button
-                  whileHover={{ scale: 1.06, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => setIsChatOpen(!isChatOpen)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
-                    boxShadow: '0 6px 24px rgba(99,102,241,0.45), 0 1px 0 rgba(255,255,255,0.35) inset',
-                  }}
-                >
-                  <Bot className="w-4 h-4" />
-                  AI Assistant
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.06, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    boxShadow: '0 6px 24px rgba(16,185,129,0.45), 0 1px 0 rgba(255,255,255,0.35) inset',
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Demand
-                </motion.button>
               </div>
+              <h1 className="text-2xl md:text-3xl font-black text-indigo-950 tracking-tight mb-2">
+                HR Manager Dashboard
+              </h1>
+              <p className="text-sm text-indigo-900/70 max-w-md mx-auto font-medium leading-relaxed">
+                Review and approve resource and opportunity requests from project managers
+              </p>
+            </motion.div>
+
+            {/* CTA Buttons */}
+            <div className="flex gap-3 justify-center flex-wrap">
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold bg-white/60 hover:bg-indigo-50/50 text-indigo-950 border border-white/80 hover:border-indigo-200/50 backdrop-blur-sm transition-all duration-200 shadow-sm"
+              >
+                <Bot className="w-4 h-4" />
+                AI Assistant
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-md shadow-indigo-100 transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                Create Demand
+              </motion.button>
             </div>
-
-            {/* Divider with glow */}
-            <div className="relative mb-7">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" style={{ borderColor: 'rgba(99,102,241,0.12)' }} />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ background: 'rgba(255,255,255,0.5)', color: '#6366f1', backdropFilter: 'blur(8px)' }}>
-                  Live Metrics
-                </span>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <StatisticsCards
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              resourceRequests={resourceRequests}
-              opportunityRequests={opportunityRequests}
-              demands={demands}
-            />
           </div>
+
+          {/* Stats Cards inside header */}
+          <StatisticsCards
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            resourceRequests={resourceRequests}
+            opportunityRequests={opportunityRequests}
+            demands={demands}
+          />
         </div>
       </motion.div>
 
       {/* ── Premium Tab Switcher ── */}
       <Tabs defaultValue="demands" className="space-y-5" onValueChange={setActiveTab}>
         <div className="flex justify-center">
-          <TabsList className="inline-flex bg-white border border-gray-200 shadow-sm rounded-2xl p-1 gap-1">
+          <TabsList className="inline-flex bg-white/60 backdrop-blur-md border border-white/80 shadow-md shadow-indigo-100/20 rounded-[20px] p-1 gap-1">
             <TabsTrigger
               value="demands"
-              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+              className="cursor-pointer px-7 py-2.5 rounded-[16px] text-sm font-bold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-indigo-100 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-indigo-950"
             >
               Demands
             </TabsTrigger>
             <TabsTrigger
               value="opportunity"
-              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+              className="cursor-pointer px-7 py-2.5 rounded-[16px] text-sm font-bold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-indigo-100 data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:text-indigo-950"
             >
               Opportunities
             </TabsTrigger>
@@ -4251,8 +4164,8 @@ export default function HRDashboard() {
         setIsAddDemandOpen(open);
         if (!open) resetDemandForm();
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
-          <DialogHeader className="p-6 pb-4 border-b border-gray-200 bg-white z-10">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 bg-white/95 backdrop-blur-xl shadow-2xl rounded-[32px] border border-white/50 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-gray-200 bg-white/40 backdrop-blur-md z-10">
             <DialogTitle className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Plus className="w-8 h-8 text-emerald-600 bg-emerald-100 p-1 rounded-full" />
               {editingDemand ? `Edit Demand - ${editingDemand.demandTitle}` : 'Create New Demand'}
@@ -4618,7 +4531,7 @@ export default function HRDashboard() {
             </form>
           </div>
 
-          <div className="flex gap-4 justify-end p-6 border-t border-gray-200 bg-gray-50/80 rounded-b-2xl">
+          <div className="flex gap-4 justify-end p-6 border-t border-gray-200 bg-white/40 backdrop-blur-md rounded-b-[32px]">
             <Button
               variant="outline"
               size="lg"
