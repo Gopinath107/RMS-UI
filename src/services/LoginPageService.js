@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { APIConfigurations } from '../constant/AuthPath';
 import { setAuthData } from '../utils/authUtils';
-import { hashPassword } from '../utils/securityUtils';
+// NOTE: Passwords are sent as plaintext over HTTPS — BCrypt hashing is done server-side.
 
 export const loginUser = async (email, password, roleId = null) => {
   try {
@@ -10,14 +10,10 @@ export const loginUser = async (email, password, roleId = null) => {
       baseURL: APIConfigurations.rootURL,
     });
 
-   
-    
-    const hashedPassword = await hashPassword(password);
 
-   
     const payload = {
       email,
-      password: hashedPassword,
+      password,  // plaintext — BCrypt comparison done server-side
     };
 
     if (roleId != null && roleId !== '') {
