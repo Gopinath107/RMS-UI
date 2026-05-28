@@ -262,7 +262,7 @@ html {
   }
   
   .main-content {
-    @apply min-h-screen max-h-screen overflow-hidden;
+    @apply min-h-screen max-h-screen overflow-y-auto;
   }
   
   .content-scroll {

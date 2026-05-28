@@ -163,6 +163,14 @@ const RequestResource = ({ setCurrentPage }) => {
       newErrors.skills = "Please add at least one skill";
       isValid = false;
     }
+    // Budget validation
+    if (!formData.estimatedCost || formData.estimatedCost === "") {
+      newErrors.estimatedCost = "Estimated cost / budget is required";
+      isValid = false;
+    } else if (isNaN(parseFloat(formData.estimatedCost)) || parseFloat(formData.estimatedCost) < 0) {
+      newErrors.estimatedCost = "Budget must be a valid positive number";
+      isValid = false;
+    }
 
     setErrors(newErrors);
     if (!isValid) {
@@ -418,20 +426,20 @@ const RequestResource = ({ setCurrentPage }) => {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+      <Card style={{ overflow: 'visible' }}>
+        <CardContent className="pt-6" style={{ overflow: 'visible' }}>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search resource requests..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 w-full text-sm"
               />
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-10">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -718,8 +726,10 @@ const RequestResource = ({ setCurrentPage }) => {
                     setFormData({ ...formData, estimatedCost: e.target.value })
                   }
                   placeholder="Enter estimated cost"
+                  aria-invalid={!!errors.estimatedCost}
                   required
                 />
+                {errors.estimatedCost && <p className="text-xs text-red-500 mt-1">{errors.estimatedCost}</p>}
               </div>
             </div>
 

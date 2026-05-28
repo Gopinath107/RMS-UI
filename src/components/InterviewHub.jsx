@@ -478,8 +478,8 @@ const InterviewHub = ({ setCurrentPage }) => {
       </div>
 
       {/* 2. Filters Section (Aligned like image_55843d.png) */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative max-w-sm w-full">
+      <div className="flex flex-wrap gap-4 mb-6 items-center">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search by candidate, client..."
@@ -488,27 +488,30 @@ const InterviewHub = ({ setCurrentPage }) => {
             className="pl-10 bg-gray-50 border-gray-200"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px] bg-gray-50 border-gray-200">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="Scheduled">Scheduled</SelectItem>
-            <SelectItem value="Selected">Selected</SelectItem>
-            <SelectItem value="Rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
-        {/* Placeholder for other filters shown in first image */}
-        <Select disabled>
-          <SelectTrigger className="w-[180px] bg-gray-50 border-gray-200">
-            <SelectValue placeholder="All Request Types" />
-          </SelectTrigger>
-        </Select>
+        <div className="flex-1 min-w-[150px]">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full bg-gray-50 border-gray-200">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Scheduled">Scheduled</SelectItem>
+              <SelectItem value="Selected">Selected</SelectItem>
+              <SelectItem value="Rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-1 min-w-[150px]">
+          <Select disabled>
+            <SelectTrigger className="w-full bg-gray-50 border-gray-200">
+              <SelectValue placeholder="All Request Types" />
+            </SelectTrigger>
+          </Select>
+        </div>
       </div>
 
       {/* 3. Main Content Table (Restyled Header) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
         {isLoading ? (
           <div className="text-center py-20 text-gray-500">Loading interviews...</div>
         ) : error ? (
