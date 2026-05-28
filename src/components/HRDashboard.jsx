@@ -2635,12 +2635,12 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           className="group cursor-pointer"
           style={{
             background: '#ffffff',
-            borderRadius: '0px',
+            borderRadius: '16px',
             border: '1px solid #e8edf5',
-            borderLeft: `4px solid ${statusCfg.dot}`,
             boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             overflow: 'hidden',
+            position: 'relative',
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
@@ -2651,6 +2651,19 @@ const DemandsTab = ({ demands, onEditDemand }) => {
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
           }}
         >
+          {/* Left accent strip (yellow for InProgress, green for Open, statusCfg.dot otherwise) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: '4px',
+              background: demand.overallStatus === 'InProgress' ? '#f59e0b' : (demand.overallStatus === 'Open' ? '#22c55e' : statusCfg.dot),
+              zIndex: 10,
+            }}
+          />
+
           {/* ── Main Content ── */}
           <div style={{ padding: '18px 20px 14px 20px' }}>
 
