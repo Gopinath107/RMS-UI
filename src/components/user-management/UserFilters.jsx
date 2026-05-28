@@ -16,7 +16,7 @@ export default function UserFilters({
     <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search */}
-        <div className="relative flex-[2] min-w-0">
+        <div className="relative flex-1 min-w-0 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           <input
             type="text"
@@ -33,7 +33,7 @@ export default function UserFilters({
         </div>
 
         {/* Role filter */}
-        <div className="flex-1 min-w-[160px]">
+        <div className="flex-1 min-w-0 w-full">
           <Select value={filterRole} onValueChange={onFilterRoleChange}>
             <SelectTrigger className="h-10 rounded-xl bg-gray-50 border-gray-200 text-sm"><SelectValue placeholder="All Roles" /></SelectTrigger>
             <SelectContent>
@@ -46,7 +46,7 @@ export default function UserFilters({
         </div>
 
         {/* Status filter */}
-        <div className="flex-1 min-w-[130px]">
+        <div className="flex-1 min-w-0 w-full">
           <Select value={filterStatus} onValueChange={onFilterStatusChange}>
             <SelectTrigger className="h-10 rounded-xl bg-gray-50 border-gray-200 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
             <SelectContent>

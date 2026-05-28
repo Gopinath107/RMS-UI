@@ -77,9 +77,9 @@ export default function UserTable({
                       <span className="truncate block max-w-[140px]" title={user.companyName}>{user.companyName || '—'}</span>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${ user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${ user.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400' }`} />
-                        {user.status}
+                      <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold h-6 ${ user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ user.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400' }`}></span>
+                        <span className="leading-none">{user.status}</span>
                       </span>
                     </TableCell>
                     <TableCell className="text-xs text-gray-400">{user.lastLogin === 'N/A' ? '—' : user.lastLogin}</TableCell>
