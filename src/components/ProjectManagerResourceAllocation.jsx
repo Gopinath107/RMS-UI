@@ -993,100 +993,104 @@ const handleRefresh = async () => {
         </Card>
       </div>
 
-      <Card className="shadow-md bg-white/95 backdrop-blur-sm border border-gray-200" style={{ overflow: 'visible' }}>
+      <Card className="shadow-md bg-white/95 backdrop-blur-sm border border-gray-200" style={{ overflow: 'visible', position: 'relative', zIndex: 10 }}>
         <CardContent className="pt-6" style={{ overflow: 'visible' }}>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
+            {/* Row 1: Search | All Status | All Results */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="relative flex-1 min-w-0 w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <Input 
                   placeholder="Search by email, request ID, project, or candidate name..." 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)} 
-                  className="pl-10 sm:pl-12 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base" 
+                  className="pl-10 sm:pl-12 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base w-full" 
                 />
               </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-48 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Scheduled">Scheduled</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  {/* <SelectItem value="Pending Feedback">Pending Feedback</SelectItem> */}
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  <SelectItem value="NoShow">No Show</SelectItem>
-                  <SelectItem value="Selected">Selected</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterResult} onValueChange={setFilterResult}>
-                <SelectTrigger className="w-full sm:w-48 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
-                  <SelectValue placeholder="Filter by result" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Results</SelectItem>
-                  <SelectItem value="cleared">Cleared</SelectItem>
-                  <SelectItem value="not-cleared">Not Cleared</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex-1 min-w-0 w-full">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    {/* <SelectItem value="Pending Feedback">Pending Feedback</SelectItem> */}
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="NoShow">No Show</SelectItem>
+                    <SelectItem value="Selected">Selected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 min-w-0 w-full">
+                <Select value={filterResult} onValueChange={setFilterResult}>
+                  <SelectTrigger className="w-full h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
+                    <SelectValue placeholder="Filter by result" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Results</SelectItem>
+                    <SelectItem value="cleared">Cleared</SelectItem>
+                    <SelectItem value="not-cleared">Not Cleared</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Select value={filterRequestType} onValueChange={setFilterRequestType}>
-                <SelectTrigger className="w-full sm:w-48 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
-                  <SelectValue placeholder="Request Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Request Types</SelectItem>
-                  <SelectItem value="OPP">Opportunity (OPP)</SelectItem>
-                  <SelectItem value="DR">Demand Request (DR)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterResourceType} onValueChange={setFilterResourceType}>
-  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
-    <SelectValue placeholder="Resource Type" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="all">All Resource Types</SelectItem>
-    <SelectItem value="Internal">Internal</SelectItem>
-    <SelectItem value="External">External</SelectItem>
-  </SelectContent>
-</Select>
-              
-
-              <div className="flex flex-1 gap-2 items-center">
-                <div className="flex-1">
-                  {/* <Label htmlFor="dateFrom" className="text-xs text-gray-600">From Date</Label> */}
-                  <Input
-                    id="dateFrom"
-                    type="date"
-                    value={dateRange.from}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
-                    className="h-8 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base"
-                  />
-                </div>
-                <div className="flex-1">
-                  {/* <Label htmlFor="dateTo" className="text-xs text-gray-600">To Date</Label> */}
-                  <Input
-                    id="dateTo"
-                    type="date"
-                    value={dateRange.to}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
-                    className="h-8 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base"
-                  />
-                </div>
-                {(dateRange.from || dateRange.to) && (
-                  <Button
-                    variant="outline"
-                    onClick={clearDateFilters}
-                    className="h-10 sm:h-12 mt-6 text-xs sm:text-sm border-gray-300 text-gray-700"
-                  >
-                    Clear
-                  </Button>
-                )}
+            {/* Row 2: Request Type | Resource Type | Start Date | End Date */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="flex-1 min-w-0 w-full">
+                <Select value={filterRequestType} onValueChange={setFilterRequestType}>
+                  <SelectTrigger className="w-full h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
+                    <SelectValue placeholder="Request Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Request Types</SelectItem>
+                    <SelectItem value="OPP">Opportunity (OPP)</SelectItem>
+                    <SelectItem value="DR">Demand Request (DR)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="flex-1 min-w-0 w-full">
+                <Select value={filterResourceType} onValueChange={setFilterResourceType}>
+                  <SelectTrigger className="w-full h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base">
+                    <SelectValue placeholder="Resource Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Resource Types</SelectItem>
+                    <SelectItem value="Internal">Internal</SelectItem>
+                    <SelectItem value="External">External</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 min-w-0 w-full">
+                <Input
+                  id="dateFrom"
+                  type="date"
+                  value={dateRange.from}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                  className="h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base w-full"
+                />
+              </div>
+              <div className="flex-1 min-w-0 w-full">
+                <Input
+                  id="dateTo"
+                  type="date"
+                  value={dateRange.to}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                  className="h-10 sm:h-12 border-gray-300 focus:border-green-500 text-sm sm:text-base w-full"
+                />
+              </div>
+              {(dateRange.from || dateRange.to) && (
+                <Button
+                  variant="outline"
+                  onClick={clearDateFilters}
+                  className="h-10 sm:h-12 text-xs sm:text-sm border-gray-300 text-gray-700 whitespace-nowrap"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
