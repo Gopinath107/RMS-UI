@@ -2635,7 +2635,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           className="group cursor-pointer"
           style={{
             background: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '0px',
             border: '1px solid #e8edf5',
             borderLeft: `4px solid ${statusCfg.dot}`,
             boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
