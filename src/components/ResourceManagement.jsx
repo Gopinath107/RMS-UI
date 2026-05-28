@@ -410,6 +410,499 @@ const isSystemAdminUser = () => {
     );
 };
 
+// Collapsible Resource Details Component
+const ResourceDetails = ({
+    resource,
+    resourceType,
+    onEditResource,
+    onViewResume,
+    onSkillMatcher,
+    allInterviewsRaw,
+    onScheduleInterviewFromAudit,
+    onEditInterviewFromRow,
+    getStatusColor,
+    isSystemAdmin
+}) => {
+    const [openSection, setOpenSection] = useState(null);
+
+    const isPersonalInfoOpen = openSection === 'personal';
+    const isProjectInfoOpen = openSection === 'project';
+    const isProfileSummaryOpen = openSection === 'profile';
+    const isSkillsOpen = openSection === 'skills';
+    const isPrevProjectsOpen = openSection === 'prevProjects';
+
+    const auditList = resource.resumeShareAudit || [];
+    // Sort descending — newest first
+    const sortedAudits = [...auditList].sort((a, b) => {
+        const dA = new Date(a.sharedAt || a.sharedDate || a.createdAt || 0).getTime();
+        const dB = new Date(b.sharedAt || b.sharedDate || b.createdAt || 0).getTime();
+        return dB - dA;
+    });
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* Left Column: Personal Information, Profile Summary, Previous Projects, Profile Shared */}
+            <div className="flex flex-col gap-4">
+                {/* 1. Personal Information */}
+                <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setOpenSection(isPersonalInfoOpen ? null : 'personal')}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-all font-semibold text-gray-700"
+                    >
+                        <span className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-blue-500" />
+                            Personal Information
+                        </span>
+                        {isPersonalInfoOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </Button>
+                    {isPersonalInfoOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 border-t border-gray-100 bg-gray-50/30"
+                        >
+                            <PersonalInfoCard
+                                resource={resource}
+                                resourceType={resourceType}
+                                onEditResource={onEditResource}
+                            />
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* 3. Profile Summary */}
+                <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setOpenSection(isProfileSummaryOpen ? null : 'profile')}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-all font-semibold text-gray-700"
+                    >
+                        <span className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-purple-600" />
+                            Profile Summary
+                        </span>
+                        {isProfileSummaryOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </Button>
+                    {isProfileSummaryOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 border-t border-gray-100 bg-gray-50/30"
+                        >
+                            <div className="flex flex-col gap-2 mt-2 text-sm flex-1">
+                                <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Profile</span>
+                                    <p className="text-gray-700 mt-1 leading-relaxed">{resource.profileSummary || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* 5. Previous Projects */}
+                {resourceType === "internal" && (
+                    <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setOpenSection(isPrevProjectsOpen ? null : 'prevProjects')}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-all font-semibold text-gray-700"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Briefcase className="w-4 h-4 text-orange-500" />
+                                Previous Projects
+                            </span>
+                            {isPrevProjectsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                        </Button>
+                        {isPrevProjectsOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="p-4 border-t border-gray-100 bg-gray-50/30"
+                            >
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-500 font-medium">Project History</span>
+                                        <span className="text-xs font-bold bg-white text-gray-800 px-2 py-0.5 rounded-full border border-gray-200">
+                                            Total: {resource.previousProjects?.length || 0}
+                                        </span>
+                                    </div>
+                                    {resource.previousProjects && resource.previousProjects.length > 0 ? (
+                                        <div className="overflow-x-auto mt-2 w-full">
+                                            <table className="w-full text-sm text-left text-gray-700 border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
+                                                <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-gray-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2 font-bold">Project Name</th>
+                                                        <th className="px-4 py-2 font-bold">Client Name</th>
+                                                        <th className="px-4 py-2 font-bold">Start Date</th>
+                                                        <th className="px-4 py-2 font-bold">End Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {resource.previousProjects.map((proj, index) => (
+                                                        <tr key={index} className="bg-white border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-2 font-medium text-gray-900">
+                                                                {proj.projectName?.trim() || "Unnamed Project"}
+                                                            </td>
+                                                            <td className="px-4 py-2 text-gray-600">
+                                                                {proj.clientName || "N/A"}
+                                                            </td>
+                                                            <td className="px-4 py-2 text-gray-500">
+                                                                {proj.startDate || "N/A"}
+                                                            </td>
+                                                            <td className="px-4 py-2 text-gray-500">
+                                                                {proj.endDate || "Ongoing"}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic text-center py-4 bg-white rounded-lg border border-gray-100">
+                                            No previous projects found
+                                        </p>
+                                    )}
+                                    <div className="flex justify-center mt-3">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => onSkillMatcher(resource)}
+                                            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 border-0"
+                                        >
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            AI Skill Matcher
+                                        </Button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Right Column: Project Information, Skills & Expertise */}
+            <div className="flex flex-col gap-4">
+                {/* 2. Project Information */}
+                <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setOpenSection(isProjectInfoOpen ? null : 'project')}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-all font-semibold text-gray-700"
+                    >
+                        <span className="flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-green-600" />
+                            Project Information
+                        </span>
+                        {isProjectInfoOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </Button>
+                    {isProjectInfoOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 border-t border-gray-100 bg-gray-50/30"
+                        >
+                            <div className="space-y-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500 font-medium">Status:</span>
+                                    <Badge className={`ml-2 ${getStatusColor(resource.status)}`}>
+                                        {resource.status}
+                                    </Badge>
+                                </div>
+                                {resourceType === "internal" && (
+                                    <div>
+                                        <span className="text-gray-500 font-medium">Current Project:</span>
+                                        <p className="font-semibold text-gray-800 mt-0.5">{resource.currentProject || "Not assigned"}</p>
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="text-gray-500 font-medium">Client:</span>
+                                    <p className="font-semibold text-gray-800 mt-0.5">{resource.currentClient || resource.client || "Not assigned"}</p>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 font-medium">Employement Type:</span>
+                                    <Badge variant="outline" className="ml-2 bg-slate-50">
+                                        {resource.projectType || "Regular"}
+                                    </Badge>
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                    <div className="flex items-center px-1 gap-2 mb-2">
+                                        <span className="text-gray-500 text-sm font-medium">Resume Status:</span>
+                                        <Badge className={
+                                            resource.resumeStatus === 'shared'
+                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                : resource.resumeStatus === 'rejected'
+                                                    ? 'bg-red-100 text-red-700 border-red-200'
+                                                    : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                        }>
+                                            {resource.resumeStatus?.toUpperCase() || 'PENDING'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                {/* External: Employment Details inline */}
+                                {resourceType === "external" && (
+                                    <>
+                                        <div className="pt-3 border-t border-gray-100">
+                                            <h3 className="font-semibold mb-2 flex items-center gap-2 text-gray-700">
+                                                <Briefcase className="w-4 h-4 text-blue-600" />
+                                                Employment Details
+                                            </h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-lg border border-gray-100">
+                                            <div>
+                                                <span className="text-xs text-gray-500">Current Company:</span>
+                                                <p className="font-medium text-gray-800">{resource.currentCompany || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Preferred Location:</span>
+                                                <p className="font-medium text-gray-800">{resource.preferredLocation || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Current CTC:</span>
+                                                <p className="font-medium text-gray-800">
+                                                    {resource.currentCtc ? `₹${Number(resource.currentCtc).toLocaleString('en-IN')}` : "N/A"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Expected CTC:</span>
+                                                <p className="font-medium text-gray-800">
+                                                    {resource.expectedCtc ? `₹${Number(resource.expectedCtc).toLocaleString('en-IN')}` : "N/A"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Notice Period:</span>
+                                                <p className="font-medium text-gray-800">{resource.noticePeriod || "N/A"}</p>
+                                            </div>
+                                        </div>
+                                        {resource.comments && (
+                                            <div className="mt-2">
+                                                <span className="text-xs text-gray-500">Comments:</span>
+                                                <p className="font-medium mt-1 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-700">
+                                                    {resource.comments}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* 4. Skills & Expertise */}
+                <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setOpenSection(isSkillsOpen ? null : 'skills')}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-all font-semibold text-gray-700"
+                    >
+                        <span className="flex items-center gap-2">
+                            <Star className="w-4 h-4 text-yellow-500" />
+                            Skills &amp; Expertise
+                        </span>
+                        {isSkillsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </Button>
+                    {isSkillsOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 border-t border-gray-100 bg-gray-50/30"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs text-gray-500 font-medium">Assigned Skills</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onViewResume(resource.id)}
+                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    <span>View Resume</span>
+                                </Button>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignContent: 'flex-start' }}>
+                                {resource.skills?.length > 0 ? (
+                                    resource.skills.map((skill, idx) => (
+                                        <span
+                                            key={idx}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                background: '#EEF2FF',
+                                                color: '#4F46E5',
+                                                border: '1px solid #C7D2FE',
+                                                borderRadius: '999px',
+                                                padding: '4px 14px',
+                                                fontSize: '13px',
+                                                fontWeight: 500,
+                                                lineHeight: '1.4',
+                                                whiteSpace: 'nowrap',
+                                                cursor: 'default',
+                                                transition: 'background 0.15s, border-color 0.15s',
+                                            }}
+                                        >
+                                            {skill}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-gray-500 text-sm">No skills assigned</span>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            </div>
+
+            {/* 6. Profile Shared History (occupies full width at the bottom of the grid) */}
+            <Card className="p-4 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm" style={{ gridColumn: '1 / -1', width: '100%', minHeight: '200px' }}>
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-3 flex-shrink-0 border-b border-gray-100 pb-3">
+                    <Share2 className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-sm text-gray-800">Profile Shared</h3>
+                    <Badge variant="secondary" className="ml-auto text-xs bg-blue-50 text-blue-700 border-blue-100">
+                        {auditList.length} {auditList.length === 1 ? 'Share' : 'Shares'}
+                    </Badge>
+                </div>
+
+                {sortedAudits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400 flex-1">
+                        <Share2 className="w-8 h-8 mb-2 opacity-30" />
+                        <p className="text-sm italic">No profile sharing history found</p>
+                    </div>
+                ) : (
+                    <div
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pr-1"
+                        style={{ maxHeight: '420px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}
+                    >
+                        {sortedAudits.map((audit, index) => {
+                            const isOpportunity = audit.type === 'GROUP' || audit.type === 'OPPORTUNITY';
+                            const sharedDateTime = audit.sharedAt || audit.sharedDate || audit.createdAt;
+                            const resourceIdNum = parseInt(resource.id, 10);
+                            const auditRequestId = audit.requestId || audit.resourceRequestId;
+                            const matchingInterviews = allInterviewsRaw.filter(iv => {
+                                const matchesRequest = auditRequestId
+                                    ? String(iv.requestId) === String(auditRequestId) ||
+                                      String(iv.requestId) === String(auditRequestId).replace(/^REQ-0*/, '')
+                                    : false;
+                                const matchesResource =
+                                    (resourceType === 'internal' && iv.employeeId === resourceIdNum) ||
+                                    (resourceType === 'external' && iv.candidateId === resourceIdNum);
+                                return matchesRequest && matchesResource;
+                            });
+                            const activeInterview = matchingInterviews.find(iv =>
+                                !['selected', 'completed', 'rejected'].includes((iv.status || '').toLowerCase())
+                            );
+                            return (
+                                <div
+                                    key={index}
+                                    className={`border rounded-xl p-3 transition-colors flex-shrink-0 ${isOpportunity
+                                        ? 'hover:bg-purple-50 border-purple-100 bg-purple-50/40'
+                                        : 'hover:bg-blue-50 border-blue-100 bg-blue-50/30'
+                                    }`}
+                                >
+                                    {/* Top row: badges + icon */}
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <Badge className={
+                                                audit.status === 'Shared'
+                                                    ? 'bg-green-100 text-green-700 border-green-200 text-xs'
+                                                    : audit.status === 'Rejected'
+                                                        ? 'bg-red-100 text-red-700 border-red-200 text-xs'
+                                                        : 'bg-yellow-100 text-yellow-700 border-yellow-200 text-xs'
+                                            }>
+                                                {audit.status}
+                                            </Badge>
+                                            <Badge variant="outline" className={`text-xs ${isOpportunity
+                                                ? 'border-purple-300 text-purple-700 bg-purple-50'
+                                                : 'border-blue-300 text-blue-700 bg-blue-50'
+                                            }`}>
+                                                {isOpportunity ? 'Opportunity' : 'Demand'}
+                                            </Badge>
+                                            <span className={`text-xs font-bold font-mono ${isOpportunity ? 'text-purple-700' : 'text-blue-700'}`}>
+                                                {isOpportunity
+                                                    ? (audit.groupId ? `GRP-${audit.groupId}` : '')
+                                                    : (audit.demandId ? `DM-${audit.demandId}` : '')}
+                                            </span>
+                                        </div>
+                                        <div className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full ${isOpportunity ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                                            {isOpportunity
+                                                ? <Users className="w-3.5 h-3.5 text-purple-600" />
+                                                : <FileText className="w-3.5 h-3.5 text-blue-600" />}
+                                        </div>
+                                    </div>
+
+                                    {/* Title */}
+                                    <p
+                                        className={`text-sm font-semibold truncate mb-1 ${isOpportunity ? 'text-purple-800' : 'text-blue-800'}`}
+                                        title={isOpportunity
+                                            ? (audit.title || audit.projectName || 'Untitled Opportunity')
+                                            : (audit.demandTitle || audit.title || 'Untitled Demand')}
+                                    >
+                                        {isOpportunity
+                                            ? (audit.title || audit.projectName || 'Untitled Opportunity')
+                                            : (audit.demandTitle || audit.title || 'Untitled Demand')}
+                                    </p>
+
+                                    {/* Client + Date */}
+                                    <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mb-2">
+                                        <span className="flex items-center gap-1 truncate">
+                                            <span className="font-medium text-gray-600">Client:</span>
+                                            {audit.clientName || 'N/A'}
+                                        </span>
+                                        {sharedDateTime && (
+                                            <span className="flex items-center gap-1 flex-shrink-0 text-gray-400">
+                                                <Calendar className="w-3 h-3" />
+                                                {new Date(sharedDateTime).toLocaleDateString('en-IN', {
+                                                    day: '2-digit', month: 'short', year: 'numeric'
+                                                })}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Interview action */}
+                                    {audit.status === 'Shared' && !isSystemAdmin && (
+                                        activeInterview ? (
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Interview Scheduled
+                                                </span>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={(e) => { e.stopPropagation(); onEditInterviewFromRow(activeInterview, resource); }}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium h-6 px-2"
+                                                >
+                                                    Edit
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                onClick={(e) => { e.stopPropagation(); onScheduleInterviewFromAudit(resource, audit); }}
+                                                className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-xs h-6 mt-1"
+                                            >
+                                                Schedule
+                                            </Button>
+                                        )
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </Card>
+        </div>
+
+    );
+};
+
 // Resource Table Component to avoid code duplication
 const ResourceTable = ({
     resources,
@@ -615,398 +1108,18 @@ const ResourceTable = ({
                                                 <TableCell colSpan={visibleCols.length} className="p-0">
                                                     <Card className="m-4">
                                                         <CardContent className="p-4">
-                                                            {/* ── 2-column responsive grid layout ── */}
-                                                            <div style={{
-                                                                display: 'grid',
-                                                                gridTemplateColumns: 'repeat(2, 1fr)',
-                                                                gap: '16px',
-                                                                alignItems: 'stretch',
-                                                            }}>
-                                                                {/* ── ROW 1 COL 1: Personal Information ── */}
-                                                                <Card className="p-4" style={{ minHeight: '100%' }}>
-                                                                    <PersonalInfoCard
-                                                                        resource={resource}
-                                                                        resourceType={resourceType}
-                                                                        onEditResource={onEditResource}
-                                                                    />
-                                                                </Card>
-
-                                                                {/* ── ROW 1 COL 2: Project Information ── */}
-                                                                <Card className="p-4" style={{ minHeight: '100%' }}>
-                                                                    {resourceType === "internal" && (
-                                                                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                                                            <Briefcase className="w-5 h-5 text-green-600" />
-                                                                            Project Information
-                                                                        </h3>
-                                                                    )}
-                                                                    <div className="space-y-2 text-sm">
-                                                                        <div>
-                                                                            <span className="text-gray-500">Status:</span>
-                                                                            <Badge className={`ml-2 ${getStatusColor(resource.status)}`}>
-                                                                                {resource.status}
-                                                                            </Badge>
-                                                                        </div>
-                                                                        {resourceType === "internal" && (
-                                                                            <div>
-                                                                                <span className="text-gray-500">Current Project:</span>
-                                                                                <p className="font-medium">{resource.currentProject || "Not assigned"}</p>
-                                                                            </div>
-                                                                        )}
-                                                                        <div>
-                                                                            <span className="text-gray-500">Client:</span>
-                                                                            <p className="font-medium">{resource.currentClient || resource.client || "Not assigned"}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-gray-500">Employement Type:</span>
-                                                                            <Badge variant="outline" className="ml-2">
-                                                                                {resource.projectType || "Regular"}
-                                                                            </Badge>
-                                                                        </div>
-                                                                        <div className="mt-3 pt-3 border-t">
-                                                                            <div className="flex items-center px-1 gap-2 mb-2">
-                                                                                <span className="text-gray-500 text-sm">Resume Status:</span>
-                                                                                <Badge className={
-                                                                                    resource.resumeStatus === 'shared'
-                                                                                        ? 'bg-green-100 text-green-700 border-green-200'
-                                                                                        : resource.resumeStatus === 'rejected'
-                                                                                            ? 'bg-red-100 text-red-700 border-red-200'
-                                                                                            : 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                                                                                }>
-                                                                                    {resource.resumeStatus?.toUpperCase() || 'PENDING'}
-                                                                                </Badge>
-                                                                            </div>
-                                                                        </div>
-                                                                        {/* External: Employment Details inline */}
-                                                                        {resourceType === "external" && (
-                                                                            <>
-                                                                                <div className="pt-3 border-t">
-                                                                                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                                                                                        <Briefcase className="w-4 h-4 text-blue-600" />
-                                                                                        Employment Details
-                                                                                    </h3>
-                                                                                </div>
-                                                                                <div className="grid grid-cols-2 gap-3">
-                                                                                    <div>
-                                                                                        <span className="text-sm text-gray-500">Current Company:</span>
-                                                                                        <p className="font-medium">{resource.currentCompany || "N/A"}</p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <span className="text-sm text-gray-500">Preferred Location:</span>
-                                                                                        <p className="font-medium">{resource.preferredLocation || "N/A"}</p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <span className="text-sm text-gray-500">Current CTC:</span>
-                                                                                        <p className="font-medium">
-                                                                                            {resource.currentCtc ? `₹${Number(resource.currentCtc).toLocaleString('en-IN')}` : "N/A"}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <span className="text-sm text-gray-500">Expected CTC:</span>
-                                                                                        <p className="font-medium">
-                                                                                            {resource.expectedCtc ? `₹${Number(resource.expectedCtc).toLocaleString('en-IN')}` : "N/A"}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <span className="text-sm text-gray-500">Notice Period:</span>
-                                                                                        <p className="font-medium">{resource.noticePeriod || "N/A"}</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                                {resource.comments && (
-                                                                                    <div className="mt-2">
-                                                                                        <span className="text-sm text-gray-500">Comments:</span>
-                                                                                        <p className="font-medium mt-1 text-sm bg-gray-50 p-3 rounded-lg">
-                                                                                            {resource.comments}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </Card>
-
-                                                                {/* ── ROW 2 COL 1: Profile Summary ── */}
-                                                                <Card className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                                                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                                                        <Briefcase className="w-5 h-5 text-green-600" />
-                                                                        Profile Summary
-                                                                    </h3>
-                                                                    <div className="flex flex-col gap-2 mt-2 text-sm flex-1">
-                                                                        <div className="bg-slate-50 rounded-lg p-2">
-                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Profile</span>
-                                                                            <p className="text-gray-700 mt-0.5">{resource.profileSummary || 'N/A'}</p>
-                                                                        </div>
-                                                                        {/* <div className="bg-slate-50 rounded-lg p-2">
-                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Training Summary</span>
-                                                                            <p className="text-gray-700 mt-0.5">{resource.trainingSummary || 'N/A'}</p>
-                                                                        </div> */}
-                                                                        {/* <div className="bg-slate-50 rounded-lg p-2">
-                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certifications</span>
-                                                                            <p className="text-gray-700 mt-0.5">{resource.certificationSummary || 'N/A'}</p>
-                                                                        </div> */}
-                                                                    </div>
-                                                                </Card>
-
-                                                                {/* ── ROW 2 COL 2: Skills & Expertise ── */}
-                                                                <Card className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                                                    <div className="flex items-center justify-between mb-3">
-                                                                        <h3 className="font-semibold flex items-center gap-2">
-                                                                            <Star className="w-5 h-5 text-yellow-600" />
-                                                                            Skills &amp; Expertise
-                                                                        </h3>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            onClick={() => onViewResume(resource.id)}
-                                                                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
-                                                                        >
-                                                                            <FileText className="h-4 w-4" />
-                                                                            <span>View Resume</span>
-                                                                        </Button>
-                                                                    </div>
-                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignContent: 'flex-start' }}>
-                                                                        {resource.skills?.length > 0 ? (
-                                                                            resource.skills.map((skill, idx) => (
-                                                                                <span
-                                                                                    key={idx}
-                                                                                    style={{
-                                                                                        display: 'inline-flex',
-                                                                                        alignItems: 'center',
-                                                                                        background: '#EEF2FF',
-                                                                                        color: '#4F46E5',
-                                                                                        border: '1px solid #C7D2FE',
-                                                                                        borderRadius: '999px',
-                                                                                        padding: '4px 14px',
-                                                                                        fontSize: '13px',
-                                                                                        fontWeight: 500,
-                                                                                        lineHeight: '1.4',
-                                                                                        whiteSpace: 'nowrap',
-                                                                                        cursor: 'default',
-                                                                                        transition: 'background 0.15s, border-color 0.15s',
-                                                                                    }}
-                                                                                >
-                                                                                    {skill}
-                                                                                </span>
-                                                                            ))
-                                                                        ) : (
-                                                                            <span className="text-gray-500 text-sm">No skills assigned</span>
-                                                                        )}
-                                                                    </div>
-                                                                </Card>
-
-                                                                {/* ── ROW 3 COL 1: Previous Projects ── */}
-                                                                {resourceType === "internal" && (
-                                                                    <Card className="p-4" style={{ height: '100%' }}>
-                                                                        <div className="flex flex-col gap-2">
-                                                                            <div className="flex items-center justify-between">
-                                                                                <h4 className="font-semibold text-lg text-black">Previous Projects</h4>
-                                                                                <span className="text-sm text-black">
-                                                                                    Total: {resource.previousProjects?.length || 0}
-                                                                                </span>
-                                                                            </div>
-                                                                            {resource.previousProjects && resource.previousProjects.length > 0 ? (
-                                                                                <div className="overflow-x-auto mt-2 flex justify-center">
-                                                                                    <table className="w-full max-w-3xl text-sm text-left text-black border-4 border-black rounded-lg shadow-lg">
-                                                                                        <thead className="text-xs text-black uppercase bg-gradient-to-r from-blue-400 to-blue-600 border-b-2 border-black">
-                                                                                            <tr>
-                                                                                                <th className="px-4 py-3 border-r-2 border-black font-bold">Project Name</th>
-                                                                                                <th className="px-4 py-3 border-r-2 border-black font-bold">Client Name</th>
-                                                                                                <th className="px-4 py-3 border-r-2 border-black font-bold">Start Date</th>
-                                                                                                <th className="px-4 py-3 font-bold">End Date</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody>
-                                                                                            {resource.previousProjects.map((proj, index) => (
-                                                                                                <tr key={index} className="bg-white border-b-2 border-black hover:bg-blue-50 transition-colors">
-                                                                                                    <td className="px-4 py-3 font-medium text-black border-r-2 border-black">
-                                                                                                        {proj.projectName?.trim() || "Unnamed Project"}
-                                                                                                    </td>
-                                                                                                    <td className="px-4 py-3 border-r-2 border-black">
-                                                                                                        {proj.clientName || "N/A"}
-                                                                                                    </td>
-                                                                                                    <td className="px-4 py-3 border-r-2 border-black">
-                                                                                                        {proj.startDate || "N/A"}
-                                                                                                    </td>
-                                                                                                    <td className="px-4 py-3">
-                                                                                                        {proj.endDate || "Ongoing"}
-                                                                                                    </td>
-                                                                                                </tr>
-                                                                                            ))}
-                                                                                        </tbody>
-                                                                                    </table>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <p className="text-sm text-black italic text-center py-4">
-                                                                                    No previous projects found
-                                                                                </p>
-                                                                            )}
-                                                                                <div className="flex justify-center mt-3">
-                                                                                <Button
-                                                                                    variant="outline"
-                                                                                    size="sm"
-                                                                                    onClick={() => onSkillMatcher(resource)}
-                                                                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600"
-                                                                                >
-                                                                                    <Sparkles className="w-4 h-4 mr-2" />
-                                                                                    AI Skill Matcher
-                                                                                </Button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </Card>
-                                                                )}
-
-                                                                {/* ── ROW 3 COL 2: Resume Sharing History ── */}
-                                                                {(() => {
-                                                                    const auditList = resource.resumeShareAudit || [];
-                                                                    // Sort descending — newest first
-                                                                    const sortedAudits = [...auditList].sort((a, b) => {
-                                                                        const dA = new Date(a.sharedAt || a.sharedDate || a.createdAt || 0).getTime();
-                                                                        const dB = new Date(b.sharedAt || b.sharedDate || b.createdAt || 0).getTime();
-                                                                        return dB - dA;
-                                                                    });
-                                                                    return (
-                                                                        <Card className="p-4 flex flex-col" style={{ minHeight: 0 }}>
-                                                                            {/* Header */}
-                                                                            <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-                                                                                <Share2 className="w-5 h-5 text-blue-600" />
-                                                                                <h3 className="font-semibold text-sm">Resume Sharing History</h3>
-                                                                                <Badge variant="secondary" className="ml-1 text-xs">
-                                                                                    {auditList.length} {auditList.length === 1 ? 'Share' : 'Shares'}
-                                                                                </Badge>
-                                                                            </div>
-
-                                                                            {sortedAudits.length === 0 ? (
-                                                                                <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-                                                                                    <Share2 className="w-8 h-8 mb-2 opacity-30" />
-                                                                                    <p className="text-sm italic">No resume sharing history found</p>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div
-                                                                                    className="flex flex-col gap-2 overflow-y-auto"
-                                                                                    style={{ maxHeight: '280px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}
-                                                                                >
-                                                                                    {sortedAudits.map((audit, index) => {
-                                                                                        const isOpportunity = audit.type === 'GROUP' || audit.type === 'OPPORTUNITY';
-                                                                                        const sharedDateTime = audit.sharedAt || audit.sharedDate || audit.createdAt;
-                                                                                        const resourceIdNum = parseInt(resource.id, 10);
-                                                                                        const auditRequestId = audit.requestId || audit.resourceRequestId;
-                                                                                        const matchingInterviews = allInterviewsRaw.filter(iv => {
-                                                                                            const matchesRequest = auditRequestId
-                                                                                                ? String(iv.requestId) === String(auditRequestId) ||
-                                                                                                  String(iv.requestId) === String(auditRequestId).replace(/^REQ-0*/, '')
-                                                                                                : false;
-                                                                                            const matchesResource =
-                                                                                                (resourceType === 'internal' && iv.employeeId === resourceIdNum) ||
-                                                                                                (resourceType === 'external' && iv.candidateId === resourceIdNum);
-                                                                                            return matchesRequest && matchesResource;
-                                                                                        });
-                                                                                        const activeInterview = matchingInterviews.find(iv =>
-                                                                                            !['selected', 'completed', 'rejected'].includes((iv.status || '').toLowerCase())
-                                                                                        );
-                                                                                        return (
-                                                                                            <div
-                                                                                                key={index}
-                                                                                                className={`border rounded-xl p-3 transition-colors flex-shrink-0 ${isOpportunity
-                                                                                                    ? 'hover:bg-purple-50 border-purple-100 bg-purple-50/40'
-                                                                                                    : 'hover:bg-blue-50 border-blue-100 bg-blue-50/30'
-                                                                                                }`}
-                                                                                            >
-                                                                                                {/* Top row: badges + icon */}
-                                                                                                <div className="flex items-center justify-between gap-2 mb-2">
-                                                                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                                                                        <Badge className={
-                                                                                                            audit.status === 'Shared'
-                                                                                                                ? 'bg-green-100 text-green-700 border-green-200 text-xs'
-                                                                                                                : audit.status === 'Rejected'
-                                                                                                                    ? 'bg-red-100 text-red-700 border-red-200 text-xs'
-                                                                                                                    : 'bg-yellow-100 text-yellow-700 border-yellow-200 text-xs'
-                                                                                                        }>
-                                                                                                            {audit.status}
-                                                                                                        </Badge>
-                                                                                                        <Badge variant="outline" className={`text-xs ${isOpportunity
-                                                                                                            ? 'border-purple-300 text-purple-700 bg-purple-50'
-                                                                                                            : 'border-blue-300 text-blue-700 bg-blue-50'
-                                                                                                        }`}>
-                                                                                                            {isOpportunity ? 'Opportunity' : 'Demand'}
-                                                                                                        </Badge>
-                                                                                                        <span className={`text-xs font-bold font-mono ${isOpportunity ? 'text-purple-700' : 'text-blue-700'}`}>
-                                                                                                            {isOpportunity
-                                                                                                                ? (audit.groupId ? `GRP-${audit.groupId}` : '')
-                                                                                                                : (audit.demandId ? `DM-${audit.demandId}` : '')}
-                                                                                                        </span>
-                                                                                                    </div>
-                                                                                                    <div className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full ${isOpportunity ? 'bg-purple-100' : 'bg-blue-100'}`}>
-                                                                                                        {isOpportunity
-                                                                                                            ? <Users className="w-3.5 h-3.5 text-purple-600" />
-                                                                                                            : <FileText className="w-3.5 h-3.5 text-blue-600" />}
-                                                                                                    </div>
-                                                                                                </div>
-
-                                                                                                {/* Title */}
-                                                                                                <p
-                                                                                                    className={`text-sm font-semibold truncate mb-1 ${isOpportunity ? 'text-purple-800' : 'text-blue-800'}`}
-                                                                                                    title={isOpportunity
-                                                                                                        ? (audit.title || audit.projectName || 'Untitled Opportunity')
-                                                                                                        : (audit.demandTitle || audit.title || 'Untitled Demand')}
-                                                                                                >
-                                                                                                    {isOpportunity
-                                                                                                        ? (audit.title || audit.projectName || 'Untitled Opportunity')
-                                                                                                        : (audit.demandTitle || audit.title || 'Untitled Demand')}
-                                                                                                </p>
-
-                                                                                                {/* Client + Date */}
-                                                                                                <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mb-2">
-                                                                                                    <span className="flex items-center gap-1 truncate">
-                                                                                                        <span className="font-medium text-gray-600">Client:</span>
-                                                                                                        {audit.clientName || 'N/A'}
-                                                                                                    </span>
-                                                                                                    {sharedDateTime && (
-                                                                                                        <span className="flex items-center gap-1 flex-shrink-0 text-gray-400">
-                                                                                                            <Calendar className="w-3 h-3" />
-                                                                                                            {new Date(sharedDateTime).toLocaleDateString('en-IN', {
-                                                                                                                day: '2-digit', month: 'short', year: 'numeric'
-                                                                                                            })}
-                                                                                                        </span>
-                                                                                                    )}
-                                                                                                </div>
-
-                                                                                                {/* Interview action */}
-                                                                                                {audit.status === 'Shared' && !isSystemAdmin && (
-                                                                                                    activeInterview ? (
-                                                                                                        <div className="flex items-center gap-2 mt-1">
-                                                                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                                                                                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                                                                                </svg>
-                                                                                                                Interview Scheduled
-                                                                                                            </span>
-                                                                                                            <Button
-                                                                                                                size="sm"
-                                                                                                                onClick={(e) => { e.stopPropagation(); onEditInterviewFromRow(activeInterview); }}
-                                                                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium h-6 px-2"
-                                                                                                            >
-                                                                                                                Edit
-                                                                                                            </Button>
-                                                                                                        </div>
-                                                                                                    ) : (
-                                                                                                        <Button
-                                                                                                            size="sm"
-                                                                                                            onClick={(e) => { e.stopPropagation(); onScheduleInterviewFromAudit(resource, audit); }}
-                                                                                                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-xs h-6 mt-1"
-                                                                                                        >
-                                                                                                            Schedule
-                                                                                                        </Button>
-                                                                                                    )
-                                                                                                )}
-                                                                                            </div>
-                                                                                        );
-                                                                                    })}
-                                                                                </div>
-                                                                            )}
-                                                                        </Card>
-                                                                    );
-                                                                })()}
-                                                            </div>{/* end 2-column grid */}
-
+                                                            <ResourceDetails
+                                                                resource={resource}
+                                                                resourceType={resourceType}
+                                                                onEditResource={onEditResource}
+                                                                onViewResume={onViewResume}
+                                                                onSkillMatcher={onSkillMatcher}
+                                                                allInterviewsRaw={allInterviewsRaw}
+                                                                onScheduleInterviewFromAudit={onScheduleInterviewFromAudit}
+                                                                onEditInterviewFromRow={onEditInterviewFromRow}
+                                                                getStatusColor={getStatusColor}
+                                                                isSystemAdmin={isSystemAdmin}
+                                                            />
                                                         </CardContent>
                                                     </Card>
                                                 </TableCell>
@@ -1233,6 +1346,8 @@ export default function ResourceManagement() {
         demandId: '',
         requestId: '',
         candidateId: '',
+        candidateName: '',
+        resourceType: '',
         interviewLevels: [],
         levelsDetails: [],
         originalLevels: [],
@@ -2418,6 +2533,7 @@ export default function ResourceManagement() {
             requestId: '',      // Auto-fills once demand is selected
             candidateId: resource.id.toString(),  // Locked from row context
             candidateName: resource.name,         // For display
+            resourceType: activeTab,
             interviewLevels: [],
             levelsDetails: [],
             originalLevels: [],
@@ -2451,7 +2567,7 @@ export default function ResourceManagement() {
     };
 
     // Edit an already-scheduled interview from the expanded row audit card
-    const handleEditInterviewFromRow = (interview) => {
+    const handleEditInterviewFromRow = (interview, resource) => {
         // interview is a raw API interview object from allInterviewsRaw
         const isDemand = !!interview.demandId;
         const interviewType = isDemand ? 'demand' : 'opportunity';
@@ -2483,6 +2599,7 @@ export default function ResourceManagement() {
             id: interview.interviewId?.toString() || '',
             requestId: interview.requestId?.toString() || '',
             candidateId,
+            candidateName: resource?.name || '',
             interviewLevels: interview.interviewLevels || [],
             levelsDetails: details,
             originalLevels: interview.interviewLevels || [],
@@ -2524,6 +2641,8 @@ export default function ResourceManagement() {
             id: '',
             requestId: request.requestId.toString(),
             candidateId: resource.id,
+            candidateName: resource.name,
+            resourceType: activeTab,
             interviewLevels: [],
             levelsDetails: [],
             originalLevels: [],
@@ -4728,8 +4847,12 @@ export default function ResourceManagement() {
                                 <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                 <span className="font-medium text-gray-800">
                                     {interviewFormData.candidateName || (
-                                        // Fallback: look up name from resources
-                                        [...internalResources, ...externalResources].find(r => r.id?.toString() === interviewFormData.candidateId?.toString())?.name
+                                        // Fallback: look up name from resources depending on type
+                                        interviewFormData.resourceType === 'internal'
+                                            ? internalResources.find(r => r.id?.toString() === interviewFormData.candidateId?.toString())?.name
+                                            : interviewFormData.resourceType === 'external'
+                                                ? externalResources.find(r => r.id?.toString() === interviewFormData.candidateId?.toString())?.name
+                                                : [...internalResources, ...externalResources].find(r => r.id?.toString() === interviewFormData.candidateId?.toString())?.name
                                     ) || 'Candidate'}
                                 </span>
                                 <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Locked</span>
@@ -4975,6 +5098,8 @@ export default function ResourceManagement() {
                                     id: '',
                                     requestId: '',
                                     candidateId: '',
+                                    candidateName: '',
+                                    resourceType: '',
                                     interviewLevels: [],
                                     levelsDetails: [],
                                     originalLevels: [],

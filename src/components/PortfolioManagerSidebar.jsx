@@ -59,7 +59,7 @@ export default function PortfolioManagerSidebar({
   const menuItems = [
     { id: 'dashboard',        label: 'Portfolio Dashboard', icon: LayoutDashboard, description: 'Strategic Overview',      path: '/portfolio' },
     { id: 'client-portfolio', label: 'Client Portfolio',    icon: Building2,       description: 'Client Relations',       path: '/portfolio/clients', badge: projectCount > 0 ? projectCount : null },
-    { id: 'interview-hub',   label: 'Interview Hub',       icon: MessageSquare,   description: 'My Assigned Interviews', path: '/portfolio', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    { id: 'interview-hub',   label: 'Interview Hub',       icon: MessageSquare,   description: 'My Assigned Interviews', path: '/portfolio/interview-hub', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
     { id: 'reports',          label: 'Reports',             icon: FileBarChart2,   description: 'Demand & Resource Report', path: '/portfolio/reports' },  
   ];
 
@@ -114,7 +114,7 @@ export default function PortfolioManagerSidebar({
 
       {/* Navigation Menu */}
       <nav
-        className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+        className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
           ? 'px-3 overflow-y-auto overflow-x-hidden'
           : 'px-2 overflow-visible'
           }`}
@@ -236,25 +236,52 @@ export default function PortfolioManagerSidebar({
           </motion.div>
         )}
 
-        <Button
-          onClick={onLogout}
-          variant="outline"
-          className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
-            } py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`}
-          title={!isExpanded ? 'Logout' : undefined}
-        >
-          <LogOut className="w-5 h-5" />
-          {isExpanded && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, delay: 0.1 }}
-              className="truncate"
+        <div className="relative group overflow-visible">
+          <Button
+            onClick={onLogout}
+            variant="outline"
+            className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
+              } py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`}
+          >
+            <LogOut className="w-5 h-5" />
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="truncate"
+              >
+                Logout
+              </motion.span>
+            )}
+          </Button>
+
+          {/* Collapsed Logout tooltip (same ChatGPT-style dark) */}
+          {!isExpanded && (
+            <span
+              className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+              style={{
+                backgroundColor: '#1f1f1f',
+                color: '#fff',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                bottom: '1rem',
+              }}
             >
+              <span
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{
+                  left: '-6px',
+                  width: 0,
+                  height: 0,
+                  borderTop: '6px solid transparent',
+                  borderBottom: '6px solid transparent',
+                  borderRight: '6px solid #1f1f1f',
+                }}
+              />
               Logout
-            </motion.span>
+            </span>
           )}
-        </Button>
+        </div>
       </div>
     </motion.div>
   );

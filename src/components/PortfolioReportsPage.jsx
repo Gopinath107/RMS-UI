@@ -149,18 +149,30 @@ const COLUMN_DEFS = [
     { key: '#',              label: '#',               minW: 36,   sortKey: null,            filter: null,                                      fixed: true  },
     { key: 'name',           label: 'Demand Name',     minW: 140,  sortKey: 'name',           filter: 'text'                                                  },
     { key: 'client',         label: 'Client',          minW: 80,   sortKey: 'client',         filter: 'text'                                                  },
-    { key: 'project',        label: 'Project',         minW: 80,   sortKey: 'project',        filter: 'text'                                                  },
-    { key: 'due_date',       label: 'Due Date',        minW: 80,   sortKey: 'due_date',       filter: 'text'                                                  },
-    { key: 'priority',       label: 'Priority',        minW: 80,   sortKey: 'priority',       filter: 'select', opts: ['All','High','Medium','Low']           },
+    { key: 'project',        label: 'Skill Set',       minW: 80,   sortKey: 'project',        filter: 'text'                                                  },
     { key: 'status',         label: 'Status',          minW: 96,   sortKey: 'status',         filter: 'select', opts: ['All','Open','In Progress','Completed','On Hold'] },
     { key: 'requested',      label: 'Req',             minW: 44,   sortKey: 'requested',      filter: null,     center: true                                 },
     { key: 'internal',       label: 'Int',             minW: 40,   sortKey: 'internal',       filter: null,     center: true                                 },
     { key: 'external',       label: 'Ext',             minW: 40,   sortKey: 'external',       filter: null,     center: true                                 },
     { key: 'scheduled',      label: 'Sch',             minW: 40,   sortKey: 'scheduled',      filter: null,     center: true                                 },
-    { key: 'selected_cnt',   label: 'Sel',             minW: 40,   sortKey: 'selected',       filter: null,     center: true                                 },
-    { key: 'rejected_cnt',   label: 'Rej',             minW: 40,   sortKey: 'rejected',       filter: null,     center: true                                 },
+    /* ── Level-wise Selected counts ── */
+    { key: 'l1_sel',         label: 'L1 Sel',          minW: 52,   sortKey: 'l1_sel',         filter: null,     center: true,  levelFilter: { level: 'L1', status: 'Selected' } },
+    { key: 'l2_sel',         label: 'L2 Sel',          minW: 52,   sortKey: 'l2_sel',         filter: null,     center: true,  levelFilter: { level: 'L2', status: 'Selected' } },
+    { key: 'l3_sel',         label: 'L3 Sel',          minW: 52,   sortKey: 'l3_sel',         filter: null,     center: true,  levelFilter: { level: 'L3', status: 'Selected' } },
+    /* ── Level-wise Rejected counts ── */
+    { key: 'l1_rej',         label: 'L1 Rej',          minW: 52,   sortKey: 'l1_rej',         filter: null,     center: true,  levelFilter: { level: 'L1', status: 'Rejected' } },
+    { key: 'l2_rej',         label: 'L2 Rej',          minW: 52,   sortKey: 'l2_rej',         filter: null,     center: true,  levelFilter: { level: 'L2', status: 'Rejected' } },
+    { key: 'l3_rej',         label: 'L3 Rej',          minW: 52,   sortKey: 'l3_rej',         filter: null,     center: true,  levelFilter: { level: 'L3', status: 'Rejected' } },
+    /* ── Allocated count (Cleared + Onboarded + Allocated to project) ── */
+    { key: 'allocated',      label: 'Onboarded',        minW: 68,   sortKey: 'allocated',      filter: null,     center: true  },
 ];
 const DEFAULT_COL_ORDER = COLUMN_DEFS.map(c => c.key);
+
+/* Helper: count candidates with a specific interview level+status */
+const countLevelStatus = (resources, level, status) =>
+    resources.filter(r =>
+        r.interviewLevels.some(il => il.level === level && il.status === status)
+    ).length;
 
 /* ───────────────────────────────────────────────────────────────── */
 /*  EMAIL CHIP INPUT                                               */
@@ -227,9 +239,11 @@ const EmailChipInput = ({ label, emails, setEmails, placeholder, autoFocus = fal
 /* ─────────────────────────────────────────────────────────────── */
 /*  DETAILED SIDE DRAWER FOR PIPELINE                              */
 /* ─────────────────────────────────────────────────────────────── */
-const DemandDetailDrawer = ({ demand, onClose }) => {
+const DemandDetailDrawer = ({ demand, onClose, initialFilter = null }) => {
     const [resourceSearch, setResourceSearch] = useState("");
     const [expandedResourceId, setExpandedResourceId] = useState(null);
+    // levelFilter: { level: 'L1'|'L2'|'L3', status: 'Selected'|'Rejected' } | null
+    const [levelFilter, setLevelFilter] = useState(initialFilter);
 
     // Scroll lock when drawer is active
     useEffect(() => {
@@ -244,15 +258,25 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
     const externalCount = demand.resources.filter(r => r.type === "CANDIDATE").length;
 
     const filteredResources = useMemo(() => {
-        if (!resourceSearch.trim()) return demand.resources;
+        let list = demand.resources;
+        // Apply level filter first (from clicking a count badge in the table)
+        if (levelFilter) {
+            list = list.filter(r =>
+                r.interviewLevels.some(
+                    il => il.level === levelFilter.level && il.status === levelFilter.status
+                )
+            );
+        }
+        // Then apply text search
+        if (!resourceSearch.trim()) return list;
         const query = resourceSearch.toLowerCase();
-        return demand.resources.filter(r =>
+        return list.filter(r =>
             r.name.toLowerCase().includes(query) ||
             r.resourceId.toLowerCase().includes(query) ||
             (r.skills || []).some(s => s.toLowerCase().includes(query)) ||
             (r.location || "").toLowerCase().includes(query)
         );
-    }, [demand.resources, resourceSearch]);
+    }, [demand.resources, resourceSearch, levelFilter]);
 
     // Format helper for dates inside drawer
     const formatDrawerDate = (dateString) => {
@@ -331,7 +355,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             {[{ label: 'Due Date', value: formatDrawerDate(demand.fulfilmentDt), icon: '📅' },
                               { label: 'Opened', value: formatDrawerDate(demand.demandOpenDt), icon: '🗓' }].map(({ label, value }) => (
-                                <div key={label} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px' }}>
+                                <div key={label} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '10px 12px' }}>
                                     <p style={{ fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</p>
                                     <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: 'monospace' }}>{value}</p>
                                 </div>
@@ -349,7 +373,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                                 { label: 'Selected', value: demand.statusSummary.selected, color: '#16a34a', bg: '#f0fdf4' },
                                 { label: 'Rejected', value: demand.statusSummary.rejected, color: '#dc2626', bg: '#fef2f2' },
                             ].map(({ label, value, color, bg }) => (
-                                <div key={label} style={{ background: bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                                <div key={label} style={{ background: bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
                                     <p style={{ fontSize: 18, fontWeight: 800, color, fontFamily: 'monospace', lineHeight: 1 }}>{value}</p>
                                     <p style={{ fontSize: 9, color: '#6b7280', fontWeight: 600, marginTop: 4 }}>{label}</p>
                                 </div>
@@ -374,7 +398,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                     {demand.description ? (
                         <div style={{ padding: '14px 20px 0' }}>
                             <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Description</p>
-                            <div style={{ background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px' }}>
+                            <div style={{ background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 12, padding: '10px 12px' }}>
                                 <p style={{ fontSize: 11, color: '#374151', lineHeight: 1.6 }}>{demand.description}</p>
                             </div>
                         </div>
@@ -396,6 +420,22 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                             </div>
                         </div>
 
+                        {/* Active level filter indicator */}
+                        {levelFilter && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, padding: '5px 10px', background: levelFilter.status === 'Selected' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${levelFilter.status === 'Selected' ? '#86efac' : '#fca5a5'}`, borderRadius: 8 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: levelFilter.status === 'Selected' ? '#15803d' : '#dc2626' }}>
+                                    Showing: {levelFilter.level} {levelFilter.status} candidates ({filteredResources.length})
+                                </span>
+                                <button
+                                    onClick={() => { setLevelFilter(null); setExpandedResourceId(null); }}
+                                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0, display: 'flex', alignItems: 'center' }}
+                                    title="Clear filter"
+                                >
+                                    <X style={{ width: 12, height: 12 }} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Search */}
                         <div style={{ position: 'relative', marginBottom: 10 }}>
                             <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#9ca3af', pointerEvents: 'none' }} />
@@ -416,7 +456,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
 
                         {/* Candidate cards */}
                         {filteredResources.length === 0 ? (
-                            <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 11, color: '#9ca3af', background: '#fafafa', borderRadius: 10, border: '1px dashed #e5e7eb' }}>
+                            <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 11, color: '#9ca3af', background: '#fafafa', borderRadius: 12, border: '1px dashed #e5e7eb' }}>
                                 No candidates match &ldquo;{resourceSearch}&rdquo;
                             </div>
                         ) : (
@@ -510,7 +550,7 @@ const DemandDetailDrawer = ({ demand, onClose }) => {
                                                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                                                     <span style={{ fontSize: 10, fontWeight: 700, color: '#1f2937' }}>{il.level}</span>
-                                                                                    <span style={{ fontSize: 8, fontWeight: 700, color: pillStyle.text, background: '#fff', border: `1px solid ${pillStyle.bd}`, borderRadius: 10, padding: '1px 6px', whiteSpace: 'nowrap' }}>{il.status}</span>
+                                                                                    <span style={{ fontSize: 8, fontWeight: 700, color: pillStyle.text, background: '#fff', border: `1px solid ${pillStyle.bd}`, borderRadius: 12, padding: '1px 6px', whiteSpace: 'nowrap' }}>{il.status}</span>
                                                                                 </div>
                                                                                 <div style={{ display: 'flex', gap: 12, marginTop: 3, flexWrap: 'wrap' }}>
                                                                                     <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#6b7280' }}>
@@ -635,6 +675,7 @@ export default function PortfolioReportsPage() {
 
     // Drawer State
     const [drawerDemand, setDrawerDemand] = useState(null);
+    const [drawerFilter, setDrawerFilter]   = useState(null); // { level, status } for level-wise pipeline filter
 
     // Dropdown Spinner / Save State
     const [savingDropdowns, setSavingDropdowns] = useState({});
@@ -642,7 +683,7 @@ export default function PortfolioReportsPage() {
 
     // ── Excel Grid: column order (drag-drop), per-column filters ──
     const [columnOrder, setColumnOrder]     = useState(DEFAULT_COL_ORDER);
-    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', due_date: '', priority: 'All', status: 'All' });
+    const [colFilters, setColFilters]       = useState({ name: '', client: '', project: '', status: 'All' });
     const [showColFilters, setShowColFilters] = useState(false);
     const [dragCol, setDragCol]             = useState(null);
     const [dragOverCol, setDragOverCol]     = useState(null);
@@ -821,12 +862,9 @@ export default function PortfolioReportsPage() {
         setCurrentPage(1);
     }, [selectedClient, startDate, endDate, statusFilter, priorityFilter, searchTerm, itemsPerPage]);
 
-    // ── Client-side filter mapping for local/extended filters (Search, Priority) ──
+    // ── Client-side filter mapping for local/extended filters ──
     const filtered = useMemo(() => {
         let list = allDemands;
-
-        // Top-level Priority Filter
-        if (priorityFilter !== 'All') list = list.filter(d => d.priority === priorityFilter);
 
         // Top-level Text Search
         if (searchTerm.trim()) {
@@ -843,11 +881,6 @@ export default function PortfolioReportsPage() {
         if (colFilters.name.trim())    list = list.filter(d => d.name.toLowerCase().includes(colFilters.name.toLowerCase()));
         if (colFilters.client.trim())  list = list.filter(d => d.client.toLowerCase().includes(colFilters.client.toLowerCase()));
         if (colFilters.project.trim()) list = list.filter(d => d.project.toLowerCase().includes(colFilters.project.toLowerCase()));
-        if (colFilters.due_date && colFilters.due_date.trim()) {
-            const q = colFilters.due_date.trim().toLowerCase();
-            list = list.filter(d => formatDemandDate(d.fulfilmentDt).toLowerCase().includes(q));
-        }
-        if (colFilters.priority !== 'All') list = list.filter(d => d.priority === colFilters.priority);
         if (colFilters.status !== 'All') {
             const s = colFilters.status;
             list = list.filter(d => d.status === s || (s === 'In Progress' && (d.status === 'InProgress' || d.status === 'In Progress')));
@@ -855,7 +888,7 @@ export default function PortfolioReportsPage() {
 
 
         return list;
-    }, [allDemands, priorityFilter, searchTerm, colFilters]);
+    }, [allDemands, searchTerm, colFilters]);
 
     // Header sort handler
     const handleSort = (key) => {
@@ -973,22 +1006,19 @@ export default function PortfolioReportsPage() {
                 } else if (sortConfig.key === 'scheduled') {
                     aVal = a.resources.filter(r => r.interviewLevels.some(l => l.status === "Scheduled")).length;
                     bVal = b.resources.filter(r => r.interviewLevels.some(l => l.status === "Scheduled")).length;
-                } else if (sortConfig.key === 'selected') {
-                    aVal = a.resources.filter(r => r.overallStatus === "Selected").length;
-                    bVal = b.resources.filter(r => r.overallStatus === "Selected").length;
-                } else if (sortConfig.key === 'rejected') {
-                    aVal = a.resources.filter(r => r.overallStatus === "Rejected").length;
-                    bVal = b.resources.filter(r => r.overallStatus === "Rejected").length;
+                } else if (sortConfig.key === 'allocated') {
+                    aVal = a.statusSummary.allocated;
+                    bVal = b.statusSummary.allocated;
+                } else if (['l1_sel','l2_sel','l3_sel','l1_rej','l2_rej','l3_rej'].includes(sortConfig.key)) {
+                    // Parse level-wise sort key: e.g. 'l1_sel' → level='L1', status='Selected'
+                    const lvlNum  = sortConfig.key[1]; // '1', '2', '3'
+                    const lvlKey  = `L${lvlNum}`;
+                    const lvlStat = sortConfig.key.endsWith('_sel') ? 'Selected' : 'Rejected';
+                    aVal = countLevelStatus(a.resources, lvlKey, lvlStat);
+                    bVal = countLevelStatus(b.resources, lvlKey, lvlStat);
                 } else if (sortConfig.key === 'requested') {
                     aVal = a.totalRequested;
                     bVal = b.totalRequested;
-                } else if (sortConfig.key === 'due_date') {
-                    aVal = new Date(a.fulfilmentDt || 0).getTime();
-                    bVal = new Date(b.fulfilmentDt || 0).getTime();
-                } else if (sortConfig.key === 'priority') {
-                    const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-                    aVal = priorityOrder[a.priority] || 0;
-                    bVal = priorityOrder[b.priority] || 0;
                 } else if (sortConfig.key === 'status') {
                     const statusOrder = { Open: 3, InProgress: 2, "On Hold": 1, Completed: 0, Closed: 0 };
                     aVal = statusOrder[a.status] || 0;
@@ -1030,6 +1060,13 @@ export default function PortfolioReportsPage() {
         const totalSelected = filtered.reduce((s, d) => s + d.resources.filter(r => r.overallStatus === "Selected").length, 0);
         const totalScheduled = filtered.reduce((s, d) => s + d.resources.filter(r => r.interviewLevels.some(l => l.status === "Scheduled")).length, 0);
         return { total: filtered.length, totalInternal, totalExternal, totalSelected, totalScheduled };
+    }, [filtered]);
+
+    const levelSelectedCounts = useMemo(() => {
+        const l1 = filtered.reduce((sum, demand) => sum + countLevelStatus(demand.resources, 'L1', 'Selected'), 0);
+        const l2 = filtered.reduce((sum, demand) => sum + countLevelStatus(demand.resources, 'L2', 'Selected'), 0);
+        const l3 = filtered.reduce((sum, demand) => sum + countLevelStatus(demand.resources, 'L3', 'Selected'), 0);
+        return { l1, l2, l3 };
     }, [filtered]);
 
     // Dropdown auto-save handler
@@ -1214,7 +1251,7 @@ export default function PortfolioReportsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent p-6 md:p-8">
+        <div className="min-h-screen bg-transparent py-4 md:py-6">
             
             {/* Custom Responsive Table Frozen Columns Style Tag */}
             <style>{`
@@ -1451,7 +1488,7 @@ export default function PortfolioReportsPage() {
                 }
 
                 .btn-premium-export {
-                    background: linear-gradient(135deg, #fb923c, #ea580c);
+                    background: linear-gradient(135deg, #fb923c, #f97316);
                     color: #ffffff;
                     border: none;
                     border-radius: 10px;
@@ -1540,57 +1577,57 @@ export default function PortfolioReportsPage() {
             )}
 
             {/* KPI Strip — Premium Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
                 {[
                     {
                         label: "Active Demands",
                         value: kpis.total,
                         icon: Target,
-                        gradient: "linear-gradient(135deg, #fff7ed, #ffedd5)",
-                        iconBg: "linear-gradient(135deg, #fb923c, #ea580c)",
+                        gradient: "linear-gradient(135deg, #f7e5cf, #f3dcc0)",
+                        iconBg: "linear-gradient(135deg, #fb923c, #f97316)",
                         borderColor: "#fb923c",
                         valueColor: "#ea580c",
-                        ringColor: "rgba(251,146,60,0.25)",
+                        ringColor: "rgba(251,146,60,0.22)",
                     },
                     {
                         label: "Internal Resources",
                         value: kpis.totalInternal,
                         icon: UserCheck,
-                        gradient: "linear-gradient(135deg, #eff6ff, #dbeafe)",
-                        iconBg: "linear-gradient(135deg, #60a5fa, #2563eb)",
-                        borderColor: "#60a5fa",
+                        gradient: "linear-gradient(135deg, #dbe8f7, #cfe0f1)",
+                        iconBg: "linear-gradient(135deg, #3b82f6, #0ea5e9)",
+                        borderColor: "#3b82f6",
                         valueColor: "#2563eb",
-                        ringColor: "rgba(96,165,250,0.25)",
+                        ringColor: "rgba(59,130,246,0.2)",
                     },
                     {
                         label: "External Resources",
                         value: kpis.totalExternal,
                         icon: Users,
-                        gradient: "linear-gradient(135deg, #faf5ff, #f3e8ff)",
+                        gradient: "linear-gradient(135deg, #e9deef, #ddd1e6)",
                         iconBg: "linear-gradient(135deg, #a78bfa, #7c3aed)",
-                        borderColor: "#a78bfa",
+                        borderColor: "#9f7aea",
                         valueColor: "#7c3aed",
-                        ringColor: "rgba(167,139,250,0.25)",
+                        ringColor: "rgba(159,122,234,0.2)",
                     },
                     {
                         label: "Interviews Ongoing",
                         value: kpis.totalScheduled,
                         icon: Clock,
-                        gradient: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                        gradient: "linear-gradient(135deg, #f6ebc8, #efe1b5)",
                         iconBg: "linear-gradient(135deg, #fbbf24, #d97706)",
                         borderColor: "#fbbf24",
                         valueColor: "#d97706",
-                        ringColor: "rgba(251,191,36,0.25)",
+                        ringColor: "rgba(245,158,11,0.2)",
                     },
                     {
-                        label: "Selected",
+                        label: "ON-BOARDED",
                         value: kpis.totalSelected,
                         icon: Award,
-                        gradient: "linear-gradient(135deg, #ecfdf5, #d1fae5)",
-                        iconBg: "linear-gradient(135deg, #34d399, #059669)",
-                        borderColor: "#34d399",
+                        gradient: "linear-gradient(135deg, #d2f0e5, #c3e7d9)",
+                        iconBg: "linear-gradient(135deg, #10b981, #059669)",
+                        borderColor: "#10b981",
                         valueColor: "#059669",
-                        ringColor: "rgba(52,211,153,0.25)",
+                        ringColor: "rgba(16,185,129,0.2)",
                     },
                 ].map((k, i) => {
                     const Icon = k.icon;
@@ -1601,43 +1638,46 @@ export default function PortfolioReportsPage() {
                                 background: k.gradient,
                                 borderLeft: `4px solid ${k.borderColor}`,
                                 borderRadius: 16,
-                                padding: '20px 18px',
+                                padding: '14px 14px',
                                 position: 'relative',
                                 overflow: 'hidden',
                                 cursor: 'default',
-                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+                                boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
                             }}
                             onMouseEnter={e => {
-                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                e.currentTarget.style.boxShadow = `0 8px 30px ${k.ringColor}, 0 2px 8px rgba(0,0,0,0.08)`;
+                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                e.currentTarget.style.boxShadow = `0 6px 22px ${k.ringColor}, 0 1px 6px rgba(0,0,0,0.08)`;
                             }}
                             onMouseLeave={e => {
                                 e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)';
+                                e.currentTarget.style.boxShadow = '0 1px 6px rgba(0,0,0,0.07)';
                             }}
                         >
                             {/* Decorative background circle */}
                             <div style={{
                                 position: 'absolute',
-                                top: -18,
-                                right: -18,
-                                width: 80,
-                                height: 80,
+                                top: -16,
+                                right: -14,
+                                width: 66,
+                                height: 66,
                                 borderRadius: '50%',
                                 background: k.ringColor,
-                                opacity: 0.5,
+                                opacity: 0.45,
                                 pointerEvents: 'none',
                             }} />
                             <div style={{
                                 position: 'absolute',
-                                bottom: -24,
-                                right: 20,
-                                width: 50,
-                                height: 50,
+                                bottom: -18,
+                                right: 28,
+                                width: 48,
+                                height: 48,
                                 borderRadius: '50%',
                                 background: k.ringColor,
-                                opacity: 0.3,
+                                opacity: 0.28,
                                 pointerEvents: 'none',
                             }} />
 
@@ -1646,41 +1686,42 @@ export default function PortfolioReportsPage() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 40,
-                                height: 40,
+                                width: 38,
+                                height: 38,
                                 borderRadius: 12,
                                 background: k.iconBg,
-                                boxShadow: `0 4px 14px ${k.ringColor}`,
-                                marginBottom: 14,
+                                boxShadow: `0 3px 10px ${k.ringColor}`,
                                 flexShrink: 0,
-                            }}>
-                                <Icon style={{ width: 20, height: 20, color: '#fff', strokeWidth: 2.2 }} />
-                            </div>
-
-                            {/* Label */}
-                            <p style={{
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: '#64748b',
-                                letterSpacing: '0.02em',
-                                marginBottom: 4,
-                                textTransform: 'uppercase',
-                            }}>
-                                {k.label}
-                            </p>
-
-                            {/* Value */}
-                            <p style={{
-                                fontSize: 30,
-                                fontWeight: 800,
-                                color: k.valueColor,
-                                lineHeight: 1.1,
-                                letterSpacing: '-0.02em',
                                 position: 'relative',
                                 zIndex: 1,
                             }}>
-                                {k.value}
-                            </p>
+                                <Icon style={{ width: 17, height: 17, color: '#fff', strokeWidth: 2.2 }} />
+                            </div>
+
+                            <div style={{ position: 'relative', zIndex: 1, minWidth: 0 }}>
+                                <p style={{
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: '#4b5563',
+                                    letterSpacing: '0.05em',
+                                    margin: 0,
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1.0,
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {k.label}
+                                </p>
+                                <p style={{
+                                    fontSize: 34,
+                                    fontWeight: 800,
+                                    color: k.valueColor,
+                                    lineHeight: 1,
+                                    letterSpacing: '-0.03em',
+                                    margin: '6px 0 0',
+                                }}>
+                                    {k.value}
+                                </p>
+                            </div>
                         </div>
                     );
                 })}
@@ -1692,9 +1733,21 @@ export default function PortfolioReportsPage() {
             <div ref={tableAnchorRef} className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 {/* Left: count + filters */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm text-gray-600">
-                        Showing <span className="font-bold text-gray-900">{paginated.length}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> demands
+                    <p className="text-sm font-bold text-black">
+                        Showing <span className="font-bold text-black">{paginated.length}</span> of <span className="font-bold text-black">{filtered.length}</span> <span className="font-bold text-black">demands</span>
                     </p>
+                    <span
+                        className="text-xs border px-2 py-0.5 rounded-full font-bold shadow-sm"
+                        style={{ background: '#dcfce7', color: '#51a070', borderColor: '#4ade80' }}
+                    >
+                        L1 Selected: {levelSelectedCounts.l1}
+                    </span>
+                    <span className="text-xs bg-green-300 text-green-950 border border-green-500 px-2 py-0.5 rounded-full font-bold shadow-sm">
+                        L2 Selected: {levelSelectedCounts.l2}
+                    </span>
+                    <span className="text-xs bg-green-500 text-white border border-green-700 px-2 py-0.5 rounded-full font-bold shadow-sm">
+                        L3 Selected: {levelSelectedCounts.l3}
+                    </span>
                     {hasActiveFilters && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Filtered</span>
                     )}
@@ -1706,7 +1759,7 @@ export default function PortfolioReportsPage() {
                         <Filter style={{ width: 11, height: 11 }} />
                         Column Filters
                         {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
-                            <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', marginLeft: 2 }}>
+                            <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 12, fontSize: 9, fontWeight: 700, padding: '1px 5px', marginLeft: 2 }}>
                                 {Object.values(colFilters).filter(v => v !== '' && v !== 'All').length}
                             </span>
                         )}
@@ -1714,7 +1767,7 @@ export default function PortfolioReportsPage() {
                     {/* Clear column filters — only when active */}
                     {Object.values(colFilters).some(v => v !== '' && v !== 'All') && (
                         <button
-                            onClick={() => setColFilters({ name: '', client: '', project: '', due_date: '', priority: 'All', status: 'All', interviewLevel: 'All' })}
+                            onClick={() => setColFilters({ name: '', client: '', project: '', status: 'All', interviewLevel: 'All' })}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
                         >
                             <X style={{ width: 9, height: 9 }} /> Clear filters
@@ -1770,6 +1823,9 @@ export default function PortfolioReportsPage() {
                                         const isSorted = sortConfig.key === col.sortKey;
                                         const isDragging  = dragCol === key;
                                         const isDropTarget = dragOverCol === key && dragCol !== null && dragCol !== '#';
+                                        const isSelCol = ['l1_sel','l2_sel','l3_sel'].includes(key);
+                                        const isRejCol = ['l1_rej','l2_rej','l3_rej'].includes(key);
+                                        const isAllocCol = key === 'allocated';
                                         return (
                                             <th
                                                 key={key}
@@ -1783,14 +1839,14 @@ export default function PortfolioReportsPage() {
                                                     textAlign: col.center ? 'center' : 'left',
                                                     fontSize: 10,
                                                     fontWeight: 700,
-                                                    color: isSorted ? '#6d28d9' : '#475569',
+                                                    color: isSorted ? '#6d28d9' : isSelCol ? '#15803d' : isRejCol ? '#b91c1c' : isAllocCol ? '#4338ca' : '#475569',
                                                     letterSpacing: '0.04em',
                                                     textTransform: 'uppercase',
                                                     borderRight: '1px solid #ddd6f5',
                                                     userSelect: 'none',
                                                     cursor: col.fixed ? 'default' : 'grab',
                                                     opacity: isDragging ? 0.45 : 1,
-                                                    background: isDropTarget ? '#ede9fe' : (isSorted ? '#e9e3fc' : 'transparent'),
+                                                    background: isDropTarget ? '#ede9fe' : isSorted ? '#e9e3fc' : isSelCol ? '#f0fdf4' : isRejCol ? '#fff0f0' : isAllocCol ? '#eef2ff' : 'transparent',
                                                     borderLeft: isDropTarget ? '2px solid #7c3aed' : '1px solid transparent',
                                                     position: 'relative',
                                                     transition: 'background 0.1s',
@@ -1885,8 +1941,13 @@ export default function PortfolioReportsPage() {
                                     const internalCount  = demand.resources.filter(r => r.type === 'EMPLOYEE').length;
                                     const externalCount  = demand.resources.filter(r => r.type === 'CANDIDATE').length;
                                     const scheduledCount = demand.resources.filter(r => r.interviewLevels.some(l => l.status === 'Scheduled')).length;
-                                    const selectedCount  = demand.resources.filter(r => r.overallStatus === 'Selected').length;
-                                    const rejectedCount  = demand.resources.filter(r => r.overallStatus === 'Rejected').length;
+                                    // Level-wise selected / rejected counts (source of truth: interviewLevels)
+                                    const l1SelCount = countLevelStatus(demand.resources, 'L1', 'Selected');
+                                    const l2SelCount = countLevelStatus(demand.resources, 'L2', 'Selected');
+                                    const l3SelCount = countLevelStatus(demand.resources, 'L3', 'Selected');
+                                    const l1RejCount = countLevelStatus(demand.resources, 'L1', 'Rejected');
+                                    const l2RejCount = countLevelStatus(demand.resources, 'L2', 'Rejected');
+                                    const l3RejCount = countLevelStatus(demand.resources, 'L3', 'Rejected');
                                     const isEven = idx % 2 === 0;
 
                                     const cellVal = (key) => {
@@ -1895,15 +1956,18 @@ export default function PortfolioReportsPage() {
                                             case 'name':          return null;
                                             case 'client':        return demand.client;
                                             case 'project':       return demand.project;
-                                            case 'due_date':      return formatDemandDate(demand.fulfilmentDt);
-                                            case 'priority':      return null;   // badge
                                             case 'status':        return null;   // badge
                                             case 'requested':     return demand.totalRequested;
                                             case 'internal':      return internalCount;
                                             case 'external':      return externalCount;
                                             case 'scheduled':     return scheduledCount;
-                                            case 'selected_cnt':  return selectedCount;
-                                            case 'rejected_cnt':  return rejectedCount;
+                                            case 'l1_sel':        return l1SelCount;
+                                            case 'l2_sel':        return l2SelCount;
+                                            case 'l3_sel':        return l3SelCount;
+                                            case 'allocated':     return demand.statusSummary.allocated;
+                                            case 'l1_rej':        return l1RejCount;
+                                            case 'l2_rej':        return l2RejCount;
+                                            case 'l3_rej':        return l3RejCount;
                                             default:              return null;
                                         }
                                     };
@@ -1918,7 +1982,7 @@ export default function PortfolioReportsPage() {
                                     return (
                                         <tr
                                             key={demand.id}
-                                            onClick={() => setDrawerDemand(demand)}
+                                            onClick={() => { setDrawerFilter(null); setDrawerDemand(demand); }}
                                             style={rowBase}
                                             onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
                                             onMouseLeave={e => e.currentTarget.style.background = isEven ? '#fff' : '#fafafa'}
@@ -1946,20 +2010,93 @@ export default function PortfolioReportsPage() {
                                                         </div>
                                                     </td>
                                                 );
-                                                if (key === 'priority') return (
-                                                    <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                                        <PriorityBadge priority={demand.priority} />
-                                                    </td>
-                                                );
                                                 if (key === 'status') return (
                                                     <td key={key} style={{ ...baseCell, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                                                         <StatusBadge status={demand.status} />
                                                     </td>
                                                 );
 
-                                                // Number columns
-                                                const numKeys = ['requested','internal','external','scheduled','selected_cnt','rejected_cnt'];
-                                                const numColors = { requested: '#475569', internal: '#2563eb', external: '#7c3aed', scheduled: '#d97706', selected_cnt: '#16a34a', rejected_cnt: '#dc2626' };
+                                                // Level-wise clickable count columns
+                                                // Allocated column — styled with indigo/teal, no drill-down filter
+                                                if (key === 'allocated') {
+                                                    const v = cellVal(key);
+                                                    return (
+                                                        <td
+                                                            key={key}
+                                                            style={{ ...baseCell, textAlign: 'center', padding: '6px 4px' }}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    minWidth: 26,
+                                                                    height: 22,
+                                                                    borderRadius: 6,
+                                                                    fontFamily: 'monospace',
+                                                                    fontSize: 11,
+                                                                    fontWeight: v > 0 ? 700 : 400,
+                                                                    background: v > 0 ? '#eef2ff' : 'transparent',
+                                                                    color: v > 0 ? '#4338ca' : '#cbd5e1',
+                                                                    border: v > 0 ? '1px solid #a5b4fc' : 'none',
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                            >
+                                                                {v}
+                                                            </span>
+                                                        </td>
+                                                    );
+                                                }
+
+                                                const levelKeys = ['l1_sel','l2_sel','l3_sel','l1_rej','l2_rej','l3_rej'];
+                                                if (levelKeys.includes(key)) {
+                                                    const v = cellVal(key);
+                                                    const isSelType = key.endsWith('_sel');
+                                                    const colDef = COLUMN_DEFS.find(c => c.key === key);
+                                                    const lf = colDef?.levelFilter;
+                                                    const activeColor = isSelType ? '#16a34a' : '#dc2626';
+                                                    const activeBg   = isSelType ? '#f0fdf4'  : '#fef2f2';
+                                                    const activeBd   = isSelType ? '#86efac'  : '#fca5a5';
+                                                    return (
+                                                        <td
+                                                            key={key}
+                                                            style={{ ...baseCell, textAlign: 'center', padding: '6px 4px' }}
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                if (v > 0 && lf) {
+                                                                    setDrawerFilter(lf);
+                                                                    setDrawerDemand(demand);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    minWidth: 26,
+                                                                    height: 22,
+                                                                    borderRadius: 6,
+                                                                    fontFamily: 'monospace',
+                                                                    fontSize: 11,
+                                                                    fontWeight: v > 0 ? 700 : 400,
+                                                                    cursor: v > 0 ? 'pointer' : 'default',
+                                                                    background: v > 0 ? activeBg : 'transparent',
+                                                                    color: v > 0 ? activeColor : '#cbd5e1',
+                                                                    border: v > 0 ? `1px solid ${activeBd}` : 'none',
+                                                                    transition: 'all 0.15s',
+                                                                }}
+                                                                title={v > 0 ? `Click to view ${lf?.level} ${lf?.status} candidates` : undefined}
+                                                            >
+                                                                {v}
+                                                            </span>
+                                                        </td>
+                                                    );
+                                                }
+
+                                                // Plain numeric columns (requested, internal, external, scheduled)
+                                                const numKeys = ['requested','internal','external','scheduled'];
+                                                const numColors = { requested: '#475569', internal: '#2563eb', external: '#7c3aed', scheduled: '#d97706' };
                                                 if (numKeys.includes(key)) {
                                                     const v = cellVal(key);
                                                     return (
@@ -2025,7 +2162,8 @@ export default function PortfolioReportsPage() {
             {drawerDemand && (
                 <DemandDetailDrawer
                     demand={drawerDemand}
-                    onClose={() => setDrawerDemand(null)}
+                    onClose={() => { setDrawerDemand(null); setDrawerFilter(null); }}
+                    initialFilter={drawerFilter}
                 />
             )}
 

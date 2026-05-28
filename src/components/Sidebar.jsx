@@ -79,10 +79,10 @@ const menuItems = [
         }}
         transition={{ duration: 0.3 }}
         className={`fixed left-0 top-0 h-full ${
-          isExpanded ? 'w-64' : 'w-16'
-        } bg-gradient-to-b from-sky-900/98 via-blue-900/98 to-indigo-900/98 backdrop-blur-md shadow-2xl border-r border-sky-300/20 z-50 flex flex-col overflow-hidden ${
-          isExpanded ? 'lg:translate-x-0' : 'translate-x-0'
-        }`}
+        isExpanded ? 'w-64 overflow-hidden' : 'w-16 overflow-visible'
+      } bg-gradient-to-b from-sky-900/98 via-blue-900/98 to-indigo-900/98 backdrop-blur-md shadow-2xl border-r border-sky-300/20 z-50 flex flex-col ${
+        isExpanded ? 'lg:translate-x-0' : 'translate-x-0'
+      }`}
       >
       {/* Header with Toggle Button */}
       <div className={`${isExpanded ? 'p-4' : 'p-3'} border-b border-blue-300/20`}>
@@ -119,13 +119,16 @@ const menuItems = [
 
         {/* Navigation Menu */}
         <nav 
-          className={`mt-4 ${isExpanded ? 'px-3' : 'px-2'} overflow-y-auto flex-1`} 
+          className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
+          ? 'px-3 overflow-y-auto overflow-x-hidden'
+          : 'px-2 overflow-visible'
+          }`} 
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
         >
-          <style jsx>{`
+          <style>{`
             nav::-webkit-scrollbar {
               display: none;
             }
@@ -138,7 +141,7 @@ const menuItems = [
               const hasActiveSubItem = item.subItems?.some(sub => getCurrentPage() === sub.id);
               
               return (
-                <div key={item.id} className="relative">
+                <div key={item.id} className="relative overflow-visible">
                   {/* Main Menu Item */}
                   <motion.button
                     onClick={() => handleNavigation(item)}
@@ -151,9 +154,33 @@ const menuItems = [
                     }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    title={!isExpanded ? item.label : undefined}
                   >
                     <Icon className={`w-5 h-5 flex-shrink-0 ${isActive || hasActiveSubItem ? 'text-sky-300' : ''}`} />
+                    {/* ── COLLAPSED TOOLTIP (ChatGPT-style dark) ── */}
+                    {!isExpanded && (
+                      <span
+                        className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+                        style={{
+                          backgroundColor: '#1f1f1f',
+                          color: '#fff',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                        }}
+                      >
+                        {/* Left arrow */}
+                        <span
+                          className="absolute top-1/2 -translate-y-1/2"
+                          style={{
+                            left: '-6px',
+                            width: 0,
+                            height: 0,
+                            borderTop: '6px solid transparent',
+                            borderBottom: '6px solid transparent',
+                            borderRight: '6px solid #1f1f1f',
+                          }}
+                        />
+                        {item.label}
+                      </span>
+                    )}
                     {isExpanded && (
                       <>
                         <motion.span 
@@ -280,26 +307,53 @@ const menuItems = [
           </motion.div>
         )}
         
-        <Button
-          onClick={onLogout}
-          variant="outline"
-          className={`w-full flex items-center ${
-            isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
-          } py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`}
-          title={!isExpanded ? 'Logout' : undefined}
-        >
-          <LogOut className="w-5 h-5" />
-          {isExpanded && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, delay: 0.1 }}
-              className="truncate"
+        <div className="relative group overflow-visible">
+          <Button
+            onClick={onLogout}
+            variant="outline"
+            className={`w-full flex items-center ${
+              isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
+            } py-3 border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-300/50 hover:text-white transition-all duration-200`}
+          >
+            <LogOut className="w-5 h-5" />
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="truncate"
+              >
+                Logout
+              </motion.span>
+            )}
+          </Button>
+
+          {/* Collapsed Logout tooltip (same ChatGPT-style dark) */}
+          {!isExpanded && (
+            <span
+              className="pointer-events-none fixed left-16 ml-3 z-[9999] flex items-center whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out"
+              style={{
+                backgroundColor: '#1f1f1f',
+                color: '#fff',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                bottom: '1rem',
+              }}
             >
+              <span
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{
+                  left: '-6px',
+                  width: 0,
+                  height: 0,
+                  borderTop: '6px solid transparent',
+                  borderBottom: '6px solid transparent',
+                  borderRight: '6px solid #1f1f1f',
+                }}
+              />
               Logout
-            </motion.span>
+            </span>
           )}
-        </Button>
+        </div>
       </div>
       </motion.div>
     </>

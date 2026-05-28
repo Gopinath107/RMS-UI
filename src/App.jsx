@@ -40,6 +40,7 @@ import InterviewsManagement from './components/InterviewsManagement.jsx';
 import InterviewHub from './components/InterviewHub.jsx';
 import OpportunityRequests from './components/OpportunityRequests.jsx';
 import RequestResource from './components/RequestResource.jsx';
+import UserActivityTracking from './components/UserActivityTracking.jsx';
 
 // Sidebars
 import ProjectManagerSidebar from './components/ProjectManagerSidebar.jsx';
@@ -55,6 +56,7 @@ import Sidebar from './components/Sidebar.jsx';
 import { Toaster } from './components/ui/sonner.jsx';
 import { getDashboardPath } from './config/routes.js';
 import { useGlobalTableResizer } from './hooks/useGlobalTableResizer.js';
+import { useActivityTracker } from './hooks/useActivityTracker.js';
 
 // ─── Role-specific theme colours ────────────────────────────────────────────
 const ROLE_THEMES = {
@@ -121,7 +123,7 @@ const Placeholder = ({ title, color = 'text-gray-600' }) => (
 
 // ─── Authenticated App Shell ─────────────────────────────────────────────────
 function AppShell({ userRole, onLogout }) {
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const theme = ROLE_THEMES[userRole] || DEFAULT_THEME;
   const roleTitle = ROLE_TITLES[userRole] || 'Dashboard';
 
@@ -212,12 +214,14 @@ function AppShell({ userRole, onLogout }) {
                 <Route path="/admin/resources" element={<ProtectedRoute allowedRoles={['system-admin']}><ResourceManagement /></ProtectedRoute>} />
                 <Route path="/admin/resources/add" element={<ProtectedRoute allowedRoles={['system-admin']}><AddResourcePage /></ProtectedRoute>} />
                 <Route path="/admin/interview-hub" element={<ProtectedRoute allowedRoles={['system-admin']}><InterviewHub /></ProtectedRoute>} />
+                <Route path="/admin/user-activity" element={<ProtectedRoute allowedRoles={['system-admin']}><div className="min-h-screen bg-gray-50 -mx-2 sm:-mx-4 lg:-mx-6 -my-4 px-2 sm:px-4 lg:px-6 py-4"><UserActivityTracking /></div></ProtectedRoute>} />
                 <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={['system-admin']}><Placeholder title="System Settings" color="text-red-600" /></ProtectedRoute>} />
 
                 {/* ── Portfolio Manager ── */}
                 <Route path="/portfolio" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioManagerDashboard /></ProtectedRoute>} />
                 <Route path="/portfolio/projects" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ProjectPortfolio /></ProtectedRoute>} />
                 <Route path="/portfolio/clients" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><ClientList /></ProtectedRoute>} />
+                <Route path="/portfolio/interview-hub" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><InterviewHub /></ProtectedRoute>} />
                <Route path="/portfolio/reports" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><PortfolioReportsPage /></ProtectedRoute>} />
                 <Route path="/portfolio/strategic-planning" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Strategic Planning" color="text-orange-600" /></ProtectedRoute>} />
                 <Route path="/portfolio/financial-overview" element={<ProtectedRoute allowedRoles={['portfolio-manager']}><Placeholder title="Financial Overview" color="text-orange-600" /></ProtectedRoute>} />
@@ -271,6 +275,9 @@ function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(initial.isAuthenticated);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Track user activity in the background
+  useActivityTracker(isAuthenticated);
 
   // Keep state in sync if localStorage is modified externally (e.g. another tab)
   useEffect(() => {

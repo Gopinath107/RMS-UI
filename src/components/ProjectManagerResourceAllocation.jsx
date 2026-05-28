@@ -1219,7 +1219,7 @@ const handleRefresh = async () => {
         </DialogContent>
       </Dialog>
 
-      <style jsx>{`
+      <style>{`
         .scrollbar-thin{scrollbar-width:thin;scrollbar-color:#d1d5db #f3f4f6;}
         .scrollbar-thin::-webkit-scrollbar{width:6px;height:6px;}
         .scrollbar-thin::-webkit-scrollbar-track{background:#f3f4f6;border-radius:3px;}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -52,7 +53,8 @@ import {
   ChevronUp,
   Mail,
   ExternalLink,
-  Calendar
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { SearchableSelect } from "./ui/select";
@@ -68,37 +70,47 @@ import { SkillService } from "../services/SkillsService";
 const normalizeOptionName = (value) =>
   String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-// Search Filter Component
+// Search Filter Component — Premium glass style
 const SearchFilter = ({ value, onChange, placeholder = "Search..." }) => (
-  <div className="relative w-full max-w-md">
-    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+  <div className="relative w-full max-w-md group">
+    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-focus-within:opacity-100 transition-all duration-300 blur-sm" />
+    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 w-4 h-4 transition-colors duration-200" />
     <Input
       type="text"
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      className="relative pl-10 pr-4 py-2.5 w-full bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 focus:bg-white transition-all duration-200 text-sm placeholder:text-gray-400"
     />
+    {value && (
+      <button
+        onClick={() => onChange('')}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    )}
   </div>
 );
 
-// Pagination Component
+// Pagination Component — Premium pill style
 const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems, label = "requests" }) => {
   const itemsPerPageOptions = [5, 10, 20, 50];
+  const start = Math.min(((currentPage - 1) * itemsPerPage) + 1, totalItems);
+  const end = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-gray-50 rounded-lg">
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600">
-          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} {label}
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-gray-500 font-medium">
+          Showing <span className="text-gray-700 font-bold">{start}–{end}</span> of <span className="text-gray-700 font-bold">{totalItems}</span> {label}
         </span>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{label.charAt(0).toUpperCase() + label.slice(1)} per page:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400">Per page:</span>
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
           >
             {itemsPerPageOptions.map(option => (
               <option key={option} value={option}>{option}</option>
@@ -107,55 +119,49 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
+      <div className="flex items-center gap-1">
+        <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </Button>
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Prev
+        </button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 mx-1">
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
             let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
+            if (totalPages <= 5) pageNum = i + 1;
+            else if (currentPage <= 3) pageNum = i + 1;
+            else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+            else pageNum = currentPage - 2 + i;
 
+            const isActive = currentPage === pageNum;
             return (
-              <Button
+              <button
                 key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
                 onClick={() => onPageChange(pageNum)}
-                className={`w-8 h-8 p-0 ${currentPage === pageNum ? 'bg-blue-600 text-white' : ''}`}
+                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                }`}
               >
                 {pageNum}
-              </Button>
+              </button>
             );
           })}
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
         >
           Next
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
@@ -284,7 +290,7 @@ const ResourceGroupCard = ({
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Submitted: {group.submittedDate}
+                Submitted: {formatDisplayDate(group.submittedDate)}
               </p>
             </div>
           </div>
@@ -448,7 +454,37 @@ const ResourceGroupCard = ({
   );
 };
 
-// Statistics Cards Component
+const formatDisplayDate = (dateVal) => {
+  if (!dateVal) return "N/A";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return dateVal;
+    return format(d, "MM/dd/yyyy");
+  } catch (e) {
+    return dateVal;
+  }
+};
+
+const getAvatarStyle = (initials) => {
+  if (!initials) return { backgroundColor: "#6b7280", color: "#ffffff" }; // gray-500
+  const clean = initials.trim().toUpperCase();
+  if (clean === "RV") return { backgroundColor: "#7c3aed", color: "#ffffff" }; // purple-600
+  if (clean === "AS") return { backgroundColor: "#0d9488", color: "#ffffff" }; // teal-600
+  
+  const charSum = clean.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const colors = [
+    "#7c3aed", // purple-600
+    "#0d9488", // teal-600
+    "#2563eb", // blue-600
+    "#4f46e5", // indigo-600
+    "#db2777", // pink-600
+    "#059669"  // emerald-600
+  ];
+  return { backgroundColor: colors[charSum % colors.length], color: "#ffffff" };
+};
+
+
+// Statistics Cards Component — Liquid Glass / Glassmorphism
 const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunityRequests, demands }) => {
   const getTabSpecificCounts = () => {
     switch (activeTab) {
@@ -528,9 +564,6 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
         const openDemands = demands.filter(demand => demand.overallStatus === "Open").length;
         const inProgressDemands = demands.filter(demand => demand.overallStatus === "InProgress").length;
         const completedDemands = demands.filter(demand => demand.overallStatus === "Completed").length;
-        const rejectedDemands = demands.filter(demand => demand.overallStatus === "Rejected").length;
-        const holdDemands = demands.filter(demand => demand.overallStatus === "Hold").length;
-        const closedDemands = demands.filter(demand => demand.overallStatus === "Closed").length;
 
         return [
           {
@@ -601,39 +634,160 @@ const StatisticsCards = ({ activeTab, onTabChange, resourceRequests, opportunity
 
   const stats = getTabSpecificCounts();
 
+  // Light, airy card themes — very soft near-white gradients
+  const cardThemes = [
+    {
+      // Total — whisper lavender
+      bg: 'linear-gradient(150deg, #faf8ff 0%, #f0ecff 100%)',
+      border: 'rgba(196,181,253,0.5)',
+      labelColor: '#8b7ec8',
+      valueColor: '#4c3d8f',
+      descColor: '#a094cc',
+      iconBg: 'rgba(139,126,200,0.1)',
+      iconColor: '#9b8fd4',
+      hoverShadow: '0 12px 32px rgba(139,126,200,0.18)',
+      topBorder: '#c4b5fd',
+    },
+    {
+      // Open — whisper sky
+      bg: 'linear-gradient(150deg, #f7fbff 0%, #eaf4ff 100%)',
+      border: 'rgba(147,210,250,0.5)',
+      labelColor: '#5ea8d6',
+      valueColor: '#1e5f8a',
+      descColor: '#7dbfe8',
+      iconBg: 'rgba(94,168,214,0.1)',
+      iconColor: '#6ab4e0',
+      hoverShadow: '0 12px 32px rgba(94,168,214,0.18)',
+      topBorder: '#93d2fb',
+    },
+    {
+      // In Progress — whisper peach/amber
+      bg: 'linear-gradient(150deg, #fffdf5 0%, #fff8e0 100%)',
+      border: 'rgba(251,211,141,0.5)',
+      labelColor: '#c9933a',
+      valueColor: '#7a5212',
+      descColor: '#d4a554',
+      iconBg: 'rgba(201,147,58,0.1)',
+      iconColor: '#d4a554',
+      hoverShadow: '0 12px 32px rgba(201,147,58,0.16)',
+      topBorder: '#fcd16a',
+    },
+    {
+      // Completed — whisper mint
+      bg: 'linear-gradient(150deg, #f4fdf9 0%, #e6f9f1 100%)',
+      border: 'rgba(134,225,182,0.5)',
+      labelColor: '#4aaa7c',
+      valueColor: '#1a5e40',
+      descColor: '#68c49a',
+      iconBg: 'rgba(74,170,124,0.1)',
+      iconColor: '#5dbb8d',
+      hoverShadow: '0 12px 32px rgba(74,170,124,0.16)',
+      topBorder: '#86e1b6',
+    },
+  ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: '12px', padding: '4px 4px 8px 4px' }}>
       {stats.map((stat, index) => {
         const Icon = stat.icon;
+        const theme = cardThemes[index % cardThemes.length];
         return (
-          <Card
+          <motion.div
             key={index}
-            className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-200"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.42, delay: index * 0.07 }}
+            whileHover={{
+              y: -5,
+              boxShadow: theme.hoverShadow,
+              transition: { duration: 0.22, ease: 'easeOut' }
+            }}
             onClick={() => onTabChange(activeTab)}
+            className="relative cursor-pointer overflow-hidden group"
+            style={{
+              borderRadius: '18px',
+              background: theme.bg,
+              border: `1.5px solid ${theme.border}`,
+              borderTop: `3.5px solid ${theme.topBorder}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+            }}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-gray-600 text-xs font-medium mb-1 truncate">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</p>
-                  <p className="text-xs text-gray-500 truncate">{stat.description}</p>
-                </div>
-                <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-lg flex-shrink-0 ml-2`}
+            {/* Subtle shine overlay */}
+            <div
+              className="absolute inset-0 opacity-60 pointer-events-none"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, transparent 55%)',
+                borderRadius: '18px',
+              }}
+            />
+
+            <div className="relative flex flex-col justify-between" style={{ padding: '18px 20px 14px 20px' }}>
+              {/* Top row: label + icon */}
+              <div className="flex justify-between items-start mb-3">
+                <p
+                  className="truncate"
+                  style={{
+                    color: theme.labelColor,
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    letterSpacing: '0.7px',
+                    textTransform: 'uppercase',
+                    opacity: 0.85,
+                  }}
                 >
-                  <Icon className="w-6 h-6 text-white" />
+                  {stat.title}
+                </p>
+                <div
+                  className="flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '10px',
+                    background: theme.iconBg,
+                    marginLeft: '8px',
+                  }}
+                >
+                  <Icon style={{ color: theme.iconColor, width: '15px', height: '15px' }} />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Value */}
+              <motion.div
+                style={{
+                  fontSize: '42px',
+                  fontWeight: 800,
+                  color: theme.valueColor,
+                  lineHeight: 1,
+                  letterSpacing: '-1px',
+                }}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.45, delay: index * 0.09 + 0.15 }}
+              >
+                {stat.value}
+              </motion.div>
+
+              {/* Description */}
+              <p
+                className="mt-2 truncate"
+                style={{
+                  color: theme.descColor,
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  opacity: 0.75,
+                  paddingTop: '8px',
+                  borderTop: `1px solid ${theme.border}`,
+                  marginTop: '10px',
+                }}
+              >
+                {stat.description}
+              </p>
+            </div>
+          </motion.div>
         );
       })}
-    </motion.div>
+    </div>
   );
 };
 
@@ -1301,7 +1455,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
             <div className="text-right">
               <p className="text-sm text-gray-500">Request ID</p>
               <p className="font-mono font-bold text-blue-600">{request.requestId}</p>
-              <p className="text-xs text-gray-500">Submitted: {request.submittedDate}</p>
+              <p className="text-xs text-gray-500">Submitted: {formatDisplayDate(request.submittedDate)}</p>
               {request.groupId && (
                 <p className="text-xs text-gray-500">Group ID: {request.groupId}</p>
               )}
@@ -1386,7 +1540,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
             <div className="text-right">
               <p className="text-sm text-gray-500">Group ID</p>
               <p className="font-mono font-bold text-blue-600">GRP-{group.groupId}</p>
-              <p className="text-xs text-gray-500">Submitted: {group.submittedDate}</p>
+              <p className="text-xs text-gray-500">Submitted: {formatDisplayDate(group.submittedDate)}</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -1785,7 +1939,7 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
               <div>
                 <h3 className="font-semibold mb-2">Timeline</h3>
                 <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Submitted:</span> {selectedRequest?.submittedDate}</p>
+                  <p><span className="font-medium">Submitted:</span> {formatDisplayDate(selectedRequest?.submittedDate)}</p>
                   <p><span className="font-medium">Created By:</span> {selectedRequest?.requestedBy}</p>
                 </div>
               </div>
@@ -2042,6 +2196,176 @@ const RequestTab = ({ type, service, approverUserId, requests, refresh }) => {
   );
 };
 
+const MiniProfileGrid = ({ demand }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  if (!demand.sharedResumes || demand.sharedResumes.length === 0) return null;
+
+  const totalResumes = demand.sharedResumes.length;
+  const totalPages = Math.ceil(totalResumes / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedResumes = demand.sharedResumes.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
+  };
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    if (currentPage > 1) setCurrentPage(prev => prev - 1);
+  };
+
+  return (
+    <div style={{ borderTop: '1px solid #eef0f4', padding: '14px 20px', background: '#fafaff' }} onClick={e => e.stopPropagation()}>
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div style={{ width: '22px', height: '22px', background: '#eef2ff', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users style={{ width: '11px', height: '11px', color: '#6366f1' }} />
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', letterSpacing: '0.4px' }}>
+            Profiles Shared
+          </span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#6366f1', background: '#eef2ff', borderRadius: '99px', padding: '1px 8px' }}>
+            {totalResumes}
+          </span>
+        </div>
+      </div>
+
+      {/* Grid table */}
+      <div style={{ borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden', background: '#fff' }}>
+        {/* Table header */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '32px 1.4fr 120px 100px',
+            background: '#f8f9fb',
+            borderBottom: '1px solid #e5e7eb',
+            padding: '6px 14px',
+            gap: '12px',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>#</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Name</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase', textAlign: 'center' }}>Status</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase', textAlign: 'right' }}>Shared At</span>
+        </div>
+
+        {/* Table body */}
+        <div>
+          {paginatedResumes.map((resume, idx) => {
+            const initials = resume.resourceName
+              ? resume.resourceName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+              : 'R';
+            const avatarStyle = getAvatarStyle(initials);
+            const rawStatus = resume.status || 'Shared';
+            const statusText = rawStatus.toLowerCase() === 'shared' ? 'Submitted' : rawStatus;
+            const isCleared = statusText.toLowerCase().includes('clear') || statusText.toLowerCase().includes('accept') || statusText.toLowerCase().includes('select') || statusText.toLowerCase().includes('complete');
+            const isRejected = statusText.toLowerCase().includes('reject') || statusText.toLowerCase().includes('decline');
+
+            return (
+              <div
+                key={idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '32px 1.4fr 120px 100px',
+                  padding: '5px 14px',
+                  gap: '12px',
+                  alignItems: 'center',
+                  background: idx % 2 === 0 ? '#ffffff' : '#fafbfd',
+                  borderBottom: idx < paginatedResumes.length - 1 ? '1px solid #f1f3f5' : 'none',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f0f4ff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#fafbfd'; }}
+              >
+                {/* # — Avatar */}
+                <div
+                  style={{ ...avatarStyle, width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, flexShrink: 0 }}
+                >
+                  {initials}
+                </div>
+
+                {/* Name */}
+                <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={resume.resourceName}>
+                  {resume.resourceName}
+                </span>
+
+                {/* Status badge */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: '9.5px',
+                      fontWeight: 600,
+                      padding: '2px 10px',
+                      borderRadius: '99px',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-block',
+                      lineHeight: '16px',
+                      background: isCleared ? '#f0fdf4' : isRejected ? '#fef2f2' : '#eef2ff',
+                      color: isCleared ? '#15803d' : isRejected ? '#b91c1c' : '#4338ca',
+                      border: `1px solid ${isCleared ? '#bbf7d0' : isRejected ? '#fecaca' : '#c7d2fe'}`,
+                    }}
+                  >
+                    {statusText}
+                  </span>
+                </div>
+
+                {/* Shared At */}
+                <span style={{ fontSize: '10.5px', color: '#6b7280', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                  {formatDisplayDate(resume.sharedAt)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Pagination Controls */}
+        {totalResumes > itemsPerPage && (
+          <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
+            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
+              Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalResumes)} of {totalResumes} profiles
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handlePrev}
+                disabled={currentPage === 1}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px',
+                  borderRadius: '6px', border: '1px solid #e2e8f0', background: currentPage === 1 ? '#f8fafc' : '#fff',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer', color: currentPage === 1 ? '#cbd5e1' : '#64748b'
+                }}
+              >
+                <ChevronLeft style={{ width: '12px', height: '12px' }} />
+              </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '6px', background: '#eef2ff', color: '#4f46e5', fontSize: '11px', fontWeight: 700 }}>
+                {currentPage}
+              </div>
+
+              <button
+                onClick={handleNext}
+                disabled={currentPage === totalPages}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px',
+                  borderRadius: '6px', border: '1px solid #e2e8f0', background: currentPage === totalPages ? '#f8fafc' : '#fff',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', color: currentPage === totalPages ? '#cbd5e1' : '#64748b'
+                }}
+              >
+                <ChevronRight style={{ width: '12px', height: '12px' }} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // DemandsTab Component with Pagination
 const DemandsTab = ({ demands, onEditDemand }) => {
   const [selectedDemand, setSelectedDemand] = useState(null);
@@ -2052,7 +2376,23 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [resumeCurrentPage, setResumeCurrentPage] = useState(1);
-  const [resumeItemsPerPage, setResumeItemsPerPage] = useState(5);
+  const [resumeItemsPerPage, setResumeItemsPerPage] = useState(10);
+  const [isDemandDetailsOpen, setIsDemandDetailsOpen] = useState(false);
+  const [expandedProfiles, setExpandedProfiles] = useState(new Set());
+  const [cardResumePages, setCardResumePages] = useState({});
+
+  const toggleProfiles = (demandId, e) => {
+    e.stopPropagation();
+    setExpandedProfiles(prev => {
+      const next = new Set(prev);
+      if (next.has(demandId)) {
+        next.delete(demandId);
+      } else {
+        next.add(demandId);
+      }
+      return next;
+    });
+  };
 
   const [isSkillMatcherOpen, setIsSkillMatcherOpen] = useState(false);
   const [skillMatches, setSkillMatches] = useState(null);
@@ -2095,6 +2435,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   const handleViewDemand = (demand) => {
     setSelectedDemand(demand);
     setResumeCurrentPage(1);
+    setIsDemandDetailsOpen(false);
     setIsViewModalOpen(true);
   };
 
@@ -2224,141 +2565,419 @@ const DemandsTab = ({ demands, onEditDemand }) => {
     setCurrentPage(1);
   };
 
-  // Render Demand Card - Full width as before
-  const renderDemandCard = (demand, index) => (
-    <motion.div
-      key={demand.demandid}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-    >
-      <Card
-        className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-        onClick={() => handleViewDemand(demand)}
+  // Status left-border color
+  const getDemandBorderColor = (status) => {
+    switch (status) {
+      case "Open": return "border-l-blue-500";
+      case "InProgress": return "border-l-amber-500";
+      case "Completed": return "border-l-emerald-500";
+      case "Rejected": return "border-l-red-500";
+      case "Hold": return "border-l-orange-500";
+      case "Closed": return "border-l-purple-500";
+      default: return "border-l-gray-400";
+    }
+  };
+
+  const getDemandStatusDot = (status) => {
+    switch (status) {
+      case "Open": return "bg-blue-500";
+      case "InProgress": return "bg-amber-500";
+      case "Completed": return "bg-emerald-500";
+      case "Rejected": return "bg-red-500";
+      case "Hold": return "bg-orange-500";
+      case "Closed": return "bg-purple-500";
+      default: return "bg-gray-400";
+    }
+  };
+
+  // Premium status config
+  const getDemandStatusConfig = (status) => {
+    switch (status) {
+      case "Open":        return { bg: '#eff6ff', color: '#1d4ed8', dot: '#3b82f6', border: '#bfdbfe' };
+      case "InProgress":  return { bg: '#fffbeb', color: '#b45309', dot: '#f59e0b', border: '#fde68a' };
+      case "Completed":   return { bg: '#f0fdf4', color: '#15803d', dot: '#22c55e', border: '#bbf7d0' };
+      case "Rejected":    return { bg: '#fef2f2', color: '#b91c1c', dot: '#ef4444', border: '#fecaca' };
+      case "Hold":        return { bg: '#fff7ed', color: '#c2410c', dot: '#f97316', border: '#fed7aa' };
+      case "Closed":      return { bg: '#faf5ff', color: '#7e22ce', dot: '#a855f7', border: '#e9d5ff' };
+      default:            return { bg: '#f9fafb', color: '#6b7280', dot: '#9ca3af', border: '#e5e7eb' };
+    }
+  };
+
+  const getPriorityConfig = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "high":    return { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' };
+      case "medium":  return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+      case "low":     return { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' };
+      default:        return { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' };
+    }
+  };
+
+  // Render Demand Card — Premium redesign
+  const renderDemandCard = (demand, index) => {
+    const statusCfg = getDemandStatusConfig(demand.overallStatus);
+    const priorityCfg = getPriorityConfig(demand.priority);
+    const totalCardResumes = demand.sharedResumes ? demand.sharedResumes.length : 0;
+    const cardPage = cardResumePages[demand.demandid] || 1;
+    const cardItemsPerPage = 5;
+    const cardTotalPages = Math.ceil(totalCardResumes / cardItemsPerPage);
+    const startIndex = (cardPage - 1) * cardItemsPerPage;
+    const paginatedCardResumes = demand.sharedResumes ? demand.sharedResumes.slice(startIndex, startIndex + cardItemsPerPage) : [];
+    return (
+      <motion.div
+        key={demand.demandid}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.32, delay: index * 0.045 }}
       >
-        <CardContent className="p-6">
-          <div className="flex items-start mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xl font-bold text-gray-800">{demand.demandTitle}</h3>
-                <Badge className={`${getStatusColor(demand.overallStatus)} border`}>
-                  {demand.overallStatus}
-                </Badge>
-                <Badge className={getPriorityColor(demand.priority)}>
-                  {demand.priority}
-                </Badge>
-                <Badge className="bg-orange-100 text-orange-700 border-orange-200">
-                  Demand
-                </Badge>
-                {/* Add Shared Resumes Badge */}
-                {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                    <Users className="w-3 h-3 mr-1" />
-                    {demand.sharedResumes.length} Shared
-                  </Badge>
-                )}
-              </div>
-              <p className="text-gray-600 mb-2">{demand.projectName}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  {demand.resourceRequestsCount} resources
-                </span>
-                <span className="flex items-center gap-1">
-                  <Target className="w-4 h-4" />
-                  {demand.accountName}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Building className="w-4 h-4" />
-                  {demand.departmentName}
-                </span>
-              </div>
-            </div>
+        <div
+          onClick={() => handleViewDemand(demand)}
+          className="group cursor-pointer"
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #e8edf5',
+            borderLeft: `4px solid ${statusCfg.dot}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            overflow: 'hidden',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+          }}
+        >
+          {/* ── Main Content ── */}
+          <div style={{ padding: '18px 20px 14px 20px' }}>
 
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Demand ID</p>
-              <p className="font-mono font-bold text-blue-600">DM-{demand.demandid}</p>
+            {/* Row 1: Title + ID badge */}
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3
+                  className="font-bold truncate group-hover:text-blue-700 transition-colors"
+                  style={{ fontSize: '15px', color: '#111827', letterSpacing: '-0.2px' }}
+                  title={demand.demandTitle}
+                >
+                  {demand.demandTitle}
+                </h3>
 
-              <p className="text-xs text-gray-500 mt-1">
-                Created: {new Date(demand.createddt).toLocaleDateString()}
-              </p>
-              <p className="text-xs text-gray-500">
-                Pending: {demand.pendingDays} days
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{demand.workLocPref}</span>
-                <span>•</span>
-                <span>{demand.locationType}</span>
-                <span>•</span>
-                <span>{demand.workMode}</span>
-              </div>
-              <span>Created by: {demand.requesterName}</span>
-            </div>
+                {/* Status + Priority + Demand tag chips */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {/* Status chip */}
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{
+                      background: statusCfg.bg,
+                      color: statusCfg.color,
+                      border: `1px solid ${statusCfg.border}`,
+                      borderRadius: '99px',
+                      padding: '3px 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.dot, display: 'inline-block', flexShrink: 0 }} />
+                    {demand.overallStatus}
+                  </span>
 
-            {demand.skillName && demand.skillName.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {demand.skillName.slice(0, 3).map((skill, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {skill}
-                  </Badge>
-                ))}
-                {demand.skillName.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{demand.skillName.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            )}
-
-            {/* Shared Resumes Preview */}
-            {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-amber-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                    <Users className="w-3 h-3 mr-1" />
-                    {demand.sharedResumes.length} Resume{demand.sharedResumes.length !== 1 ? 's' : ''} Shared
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {demand.sharedResumes.slice(0, 2).map((resume, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm truncate max-w-[150px]">
-                      {resume.resourceName}
+                  {/* Priority chip */}
+                  {demand.priority && (
+                    <span
+                      style={{
+                        background: priorityCfg.bg,
+                        color: priorityCfg.color,
+                        border: `1px solid ${priorityCfg.border}`,
+                        borderRadius: '99px',
+                        padding: '3px 10px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {demand.priority}
                     </span>
-                  ))}
-                  {demand.sharedResumes.length > 2 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
-                      +{demand.sharedResumes.length - 2} more
-                    </span>
+                  )}
+
+                  {/* Profiles shared chip — Click to expand */}
+                  {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+                    <button
+                      onClick={(e) => toggleProfiles(demand.demandid, e)}
+                      className="inline-flex items-center gap-1 hover:bg-indigo-100 transition-colors"
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4338ca',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '99px',
+                        padding: '3px 10px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Users style={{ width: '11px', height: '11px' }} />
+                      {demand.sharedResumes.length} Profile{demand.sharedResumes.length > 1 ? 's' : ''} Shared
+                      {expandedProfiles.has(demand.demandid) ? (
+                        <ChevronUp style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                      ) : (
+                        <ChevronDown style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Working Skill Matcher Button */}
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSkillMatcher(demand);
-              }}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 w-full mt-2"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Skill Matcher
-            </Button>
+              {/* Right: ID + meta */}
+              <div className="flex-shrink-0 text-right" style={{ minWidth: '96px' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase' }}>Demand ID</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb', fontSize: '15px', lineHeight: 1.3 }}>DM-{demand.demandid}</div>
+                <div style={{ fontSize: '10.5px', color: '#6b7280', marginTop: '4px', lineHeight: 1.7 }}>
+                  <span style={{ fontSize: '9px', color: '#9ca3af', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Created By</span>
+                  <br />
+                  <span style={{ color: '#374151', fontWeight: 600 }}>{demand.requesterName}</span>
+                  <br />
+                  <span style={{ fontSize: '9px', color: '#9ca3af', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '2px', display: 'inline-block' }}>Created At</span>
+                  <br />
+                  {formatDisplayDate(demand.createddt)}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Meta pills */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-0">
+              {demand.resourceRequestsCount !== undefined && (
+                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
+                  <Users style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
+                  <strong style={{ color: '#1e293b' }}>{demand.resourceRequestsCount}</strong>&nbsp;open
+                </span>
+              )}
+              {demand.accountName && (
+                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
+                  <Target style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
+                  {demand.accountName}
+                </span>
+              )}
+              {demand.projectName && (
+                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
+                  <Briefcase style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
+                  {demand.projectName}
+                </span>
+              )}
+              {demand.departmentName && (
+                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
+                  <Building style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
+                  {demand.departmentName}
+                </span>
+              )}
+              {demand.workLocPref && (
+                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
+                  <MapPin style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
+                  {demand.workLocPref}
+                </span>
+              )}
+              {demand.locationType && (
+                <span style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '10.5px', color: '#64748b', fontWeight: 700, letterSpacing: '0.4px' }}>
+                  {demand.locationType}
+                </span>
+              )}
+              {demand.workMode && (
+                <span style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '10.5px', color: '#64748b', fontWeight: 700, letterSpacing: '0.4px' }}>
+                  {demand.workMode}
+                </span>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+
+          {/* ── Shared Profiles — Mini Data Grid ── */}
+          {expandedProfiles.has(demand.demandid) && demand.sharedResumes && demand.sharedResumes.length > 0 && (
+            <div style={{ borderTop: '1px solid #eef0f4', padding: '14px 20px', background: '#fafaff' }} onClick={e => e.stopPropagation()}>
+              {/* Section header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div style={{ width: '22px', height: '22px', background: '#eef2ff', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users style={{ width: '11px', height: '11px', color: '#6366f1' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', letterSpacing: '0.4px' }}>
+                    Profiles Shared
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#6366f1', background: '#eef2ff', borderRadius: '99px', padding: '1px 8px' }}>
+                    {demand.sharedResumes.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid table */}
+              <div style={{ borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                {/* Table header */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '32px 1.4fr 120px 100px',
+                    background: '#f8f9fb',
+                    borderBottom: '1px solid #e5e7eb',
+                    padding: '6px 14px',
+                    gap: '12px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>#</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Name</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase', textAlign: 'center' }}>Status</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textTransform: 'uppercase', textAlign: 'right' }}>Shared At</span>
+                </div>
+
+                {/* Table body — paginated 5 items per page */}
+                <div
+                  style={{
+                    minHeight: 'auto',
+                  }}
+                >
+                  {paginatedCardResumes.map((resume, idx) => {
+                    const initials = resume.resourceName
+                      ? resume.resourceName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : 'R';
+                    const avatarStyle = getAvatarStyle(initials);
+                    const rawStatus = resume.status || 'Shared';
+                    const statusText = rawStatus.toLowerCase() === 'shared' ? 'Submitted' : rawStatus;
+                    const isCleared = statusText.toLowerCase().includes('clear') || statusText.toLowerCase().includes('accept') || statusText.toLowerCase().includes('select') || statusText.toLowerCase().includes('complete');
+                    const isRejected = statusText.toLowerCase().includes('reject') || statusText.toLowerCase().includes('decline');
+
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '32px 1.4fr 120px 100px',
+                          padding: '5px 14px',
+                          gap: '12px',
+                          alignItems: 'center',
+                          background: idx % 2 === 0 ? '#ffffff' : '#fafbfd',
+                          borderBottom: idx < paginatedCardResumes.length - 1 ? '1px solid #f1f3f5' : 'none',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f0f4ff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#fafbfd'; }}
+                      >
+                        {/* # — Avatar */}
+                        <div
+                          style={{ ...avatarStyle, width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 800, flexShrink: 0 }}
+                        >
+                          {initials}
+                        </div>
+
+                        {/* Name */}
+                        <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={resume.resourceName}>
+                          {resume.resourceName}
+                        </span>
+
+                        {/* Status badge */}
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <span
+                            style={{
+                              fontSize: '9.5px',
+                              fontWeight: 600,
+                              padding: '2px 10px',
+                              borderRadius: '99px',
+                              textAlign: 'center',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-block',
+                              lineHeight: '16px',
+                              background: isCleared ? '#f0fdf4' : isRejected ? '#fef2f2' : '#eef2ff',
+                              color: isCleared ? '#15803d' : isRejected ? '#b91c1c' : '#4338ca',
+                              border: `1px solid ${isCleared ? '#bbf7d0' : isRejected ? '#fecaca' : '#c7d2fe'}`,
+                            }}
+                          >
+                            {statusText}
+                          </span>
+                        </div>
+
+                        {/* Shared At */}
+                        <span style={{ fontSize: '10.5px', color: '#6b7280', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                          {formatDisplayDate(resume.sharedAt)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pagination — visible below table when there are more resumes than page size */}
+              {totalCardResumes > 0 && (
+                <div className="mt-3 flex justify-end" onClick={e => e.stopPropagation()}>
+                  <Pagination
+                    currentPage={cardPage}
+                    totalPages={cardTotalPages}
+                    onPageChange={(pageNum) => {
+                      setCardResumePages(prev => ({
+                        ...prev,
+                        [demand.demandid]: pageNum
+                      }));
+                    }}
+                    itemsPerPage={cardItemsPerPage}
+                    onItemsPerPageChange={() => {}}
+                    totalItems={totalCardResumes}
+                    label="profiles"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Skills Row ── */}
+          {demand.skillName && demand.skillName.length > 0 && (
+            <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px' }}>
+              <div className="flex flex-wrap gap-1.5">
+                {demand.skillName.slice(0, 6).map((skill, idx) => (
+                  <span key={idx} style={{ background: '#f0f4ff', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: '6px', padding: '3px 9px', fontSize: '11px', fontWeight: 600 }}>
+                    {skill}
+                  </span>
+                ))}
+                {demand.skillName.length > 6 && (
+                  <span style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 9px', fontSize: '11px', fontWeight: 600 }}>
+                    +{demand.skillName.length - 6} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Skill Matcher CTA ── */}
+          <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px' }}>
+            <button
+              onClick={e => { e.stopPropagation(); handleSkillMatcher(demand); }}
+              style={{
+                width: '100%',
+                height: '36px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)',
+                color: '#1e3a8a',
+                fontWeight: 600,
+                fontSize: '12.5px',
+                border: '1px solid #bfdbfe',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(96,165,250,0.25)',
+                transition: 'opacity 0.18s ease, box-shadow 0.18s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(96,165,250,0.4)'; e.currentTarget.style.opacity = '0.92'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; e.currentTarget.style.opacity = '1'; }}
+            >
+              <Sparkles style={{ width: '13px', height: '13px' }} />
+              Skill Matcher
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Search and Sort Controls */}
       <div className="px-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -2405,7 +3024,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       )}
 
       {/* Demands List - Full width cards */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {paginatedDemands.length > 0 ? (
           paginatedDemands.map((demand, index) => renderDemandCard(demand, index))
         ) : (
@@ -2428,15 +3047,13 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] flex flex-col p-0 gap-0 bg-white rounded-2xl shadow-2xl border border-gray-100" style={{ maxHeight: '90vh' }}>
+        <DialogContent className="max-w-5xl w-[95vw] flex flex-col p-0 gap-0 bg-white rounded-2xl shadow-2xl border border-gray-100" style={{ maxHeight: '90vh' }}>
           {/* Sticky header */}
           <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-gray-100">
             <DialogHeader>
-              <DialogTitle>{selectedDemand?.demandTitle}</DialogTitle>
-              <DialogDescription>
-                Status: <Badge className={getStatusColor(selectedDemand?.overallStatus)}>
-                  {selectedDemand?.overallStatus}
-                </Badge>
+              <DialogTitle className="text-xl font-bold text-gray-800">{selectedDemand?.demandTitle}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Demand details for {selectedDemand?.demandTitle}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -2444,54 +3061,61 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           <div className="flex-1 overflow-y-auto px-6 py-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
           {selectedDemand && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Demand Details & Collapsible Button */}
+              <div className="space-y-4">
+                {/* Collapsible Demand Details Section */}
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Demand Details</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="font-medium text-gray-700">Project & Account</span>
-                      <p className="text-gray-600">{selectedDemand.projectName} - {selectedDemand.accountName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Role:</span>
-                      <p className="text-gray-600">{selectedDemand.departmentName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Description:</span>
-                      <p className="text-gray-600">{selectedDemand.description}</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Requirements</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="font-medium text-gray-700">Years of Experience:</span>
-                      <p className="text-gray-600">{selectedDemand.yearsofexp}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Project Duration:</span>
-                      <p className="text-gray-600">{selectedDemand.roleDuration}</p>
-                    </div>
-
-                    {/* Request IDs Section */}
-                    {/* {selectedDemand.requestsSummary && selectedDemand.requestsSummary.length > 0 && (
-                      <div>
-                        <span className="font-medium text-gray-700">Request IDs:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {selectedDemand.requestsSummary.map((req) => (
-                            <Badge
-                              key={req.requestId}
-                              variant="outline"
-                              className="font-mono text-blue-600 border-blue-200 bg-blue-50"
-                            >
-                              REQ-{req.requestId}
-                            </Badge>
-                          ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDemandDetailsOpen(!isDemandDetailsOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50/50 hover:text-gray-900 transition-all font-semibold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      Demand Details
+                    </span>
+                    {isDemandDetailsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </Button>
+                  
+                  {isDemandDetailsOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-3 border border-gray-100 rounded-xl p-4 bg-gray-50/50 space-y-4 shadow-inner"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Project & Account</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.projectName} - {selectedDemand.accountName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Role</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.departmentName}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Years of Experience</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.yearsofexp}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Project Duration</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{selectedDemand.roleDuration}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Budget</span>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">
+                            {selectedDemand.budget ? `$${selectedDemand.budget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : "N/A"}
+                          </p>
                         </div>
                       </div>
-                    )} */}
-                  </div>
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</span>
+                        <div className="mt-1.5 p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-sm">
+                          {selectedDemand.description}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -2510,33 +3134,10 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-800">Timeline</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Demand Open:</span>
-                      <span className="text-gray-600">{selectedDemand.demandOpenDt}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Target Fulfillment:</span>
-                      <span className="text-gray-600">{selectedDemand.fulfilmentDt || "Not specified"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Created:</span>
-                      <span className="text-gray-600">
-                        {new Date(selectedDemand.createddt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Pending Days:</span>
-                      <span className="text-gray-600">{selectedDemand.pendingDays} days</span>
-                    </div>
-                  </div>
-                </div>
-                <div>
                   <h3 className="font-semibold mb-3 text-gray-800">Resource Status</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="font-medium text-gray-700">Target Headcount:</span>
+                      <span className="font-medium text-gray-700">Number of Openings:</span>
                       <span className="text-gray-600">{selectedDemand.resourceRequestsCount}</span>
                     </div>
                     <div className="flex justify-between">
@@ -2561,6 +3162,25 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                     )}
                   </div>
                 </div>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-800">Timeline</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Demand Open:</span>
+                      <span className="text-gray-600">{formatDisplayDate(selectedDemand.demandOpenDt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Target Fulfillment:</span>
+                      <span className="text-gray-600">{formatDisplayDate(selectedDemand.fulfilmentDt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Created:</span>
+                      <span className="text-gray-600">
+                        {formatDisplayDate(selectedDemand.createddt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {selectedDemand?.sharedResumes && selectedDemand.sharedResumes.length > 0 && (() => {
@@ -2572,45 +3192,61 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 return (
                   <div className="mt-6">
                     <h3 className="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">
-                      Shared Resumes
+                      Profile Shared
                       <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{totalResumes}</span>
                     </h3>
 
-                    {/* Table with sticky header + internal body scroll */}
+                    {/* Unified single Table with sticky header */}
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="overflow-x-auto">
-                        <table className="w-full bg-white" style={{ minWidth: '520px' }}>
-                          <thead className="bg-gray-50 border-b-2 border-gray-100">
+                      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '350px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}>
+                        <table className="w-full bg-white table-auto" style={{ minWidth: '650px' }}>
+                          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Resource Name</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Email</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared By</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared At</th>
-                          </tr>
-                        </thead>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Resource Name</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Status</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Email</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared By</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wide">Shared At</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {paginatedResumes.map((resume, index) => (
+                              <tr key={index} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30`}>
+                                <td className="px-4 py-3 text-sm text-gray-800 font-medium">{resume.resourceName}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  {(() => {
+                                    const rawStatus = resume.status || 'Shared';
+                                    const displayStatus = rawStatus.toLowerCase() === 'shared' ? 'Submitted' : rawStatus;
+                                    const lowerStatus = displayStatus.toLowerCase();
+                                    
+                                    const isCleared = lowerStatus.includes('clear') || lowerStatus.includes('pass') || lowerStatus.includes('select') || lowerStatus.includes('onboard') || lowerStatus.includes('complete');
+                                    const isRejected = lowerStatus.includes('reject') || lowerStatus.includes('drop') || lowerStatus.includes('fail');
+                                    
+                                    return (
+                                      <Badge className={`${
+                                        isCleared ? 'bg-green-100 text-green-700 border-green-200'
+                                        : isRejected ? 'bg-red-100 text-red-700 border-red-200'
+                                        : 'bg-blue-100 text-blue-700 border-blue-200'
+                                      } border text-xs py-0.5 px-2 whitespace-nowrap`}>
+                                        {displayStatus}
+                                      </Badge>
+                                    );
+                                  })()}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <a href={`mailto:${resume.resourceEmail}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                                    {resume.resourceEmail}
+                                  </a>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  <div className="font-medium">{resume.sharedBy || 'N/A'}</div>
+                                  {resume.sharedByEmail && <div className="text-xs text-gray-400 truncate max-w-[160px]" title={resume.sharedByEmail}>{resume.sharedByEmail}</div>}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{formatDisplayDate(resume.sharedAt)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
                         </table>
-                        {/* Scrollable table body in a separate div */}
-                        <div className="overflow-y-auto" style={{ maxHeight: '220px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f8fafc' }}>
-                          <table className="w-full bg-white" style={{ minWidth: '520px' }}>
-                            <tbody className="divide-y divide-gray-100">
-                              {paginatedResumes.map((resume, index) => (
-                                <tr key={index} className={`transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30`}>
-                                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">{resume.resourceName}</td>
-                                  <td className="px-4 py-3 text-sm">
-                                    <a href={`mailto:${resume.resourceEmail}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-                                      {resume.resourceEmail}
-                                    </a>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-600">
-                                    <div className="font-medium">{resume.sharedBy || 'N/A'}</div>
-                                    {resume.sharedByEmail && <div className="text-xs text-gray-400 truncate max-w-[160px]" title={resume.sharedByEmail}>{resume.sharedByEmail}</div>}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{new Date(resume.sharedAt).toLocaleDateString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
                       </div>
                     </div>
                     {/* Pagination — always visible below table */}
@@ -2626,7 +3262,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                             setResumeCurrentPage(1);
                           }}
                           totalItems={totalResumes}
-                          label="resumes"
+                          label="profiles"
                         />
                       </div>
                     )}
@@ -2889,6 +3525,7 @@ export default function HRDashboard() {
     resourceRequests: "",
     description: "",
     overallStatus: "", // NEW: Added status field with default "Open"
+    budget: "",
   });
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
@@ -2949,6 +3586,7 @@ export default function HRDashboard() {
       resourceRequests: "",
       description: "",
       overallStatus: "",
+      budget: "",
     });
     setSelectedSkills([]);
     setSkillInput("");
@@ -2995,6 +3633,7 @@ export default function HRDashboard() {
       resourceRequests: parseInt(demandForm.resourceRequests) || 1,
       description: demandForm.description,
       overallStatus: demandForm.overallStatus, // NEW: Include status in payload
+      budget: demandForm.budget ? parseFloat(demandForm.budget) : null,
     };
 
     // Validation done earlier
@@ -3057,10 +3696,12 @@ export default function HRDashboard() {
     setEditingDemand(demand);
 
     // Load accounts first if modal is not open
+    let loadedAccounts = accounts;
     if (!isAddDemandOpen) {
       try {
         const response = await DemandService.fetchClientList();
         setAccounts(response);
+        loadedAccounts = response;
       } catch (error) {
         toast.error("Failed to load accounts");
       }
@@ -3083,7 +3724,8 @@ export default function HRDashboard() {
       skillIds: "",
       resourceRequests: demand.resourceRequestsCount?.toString(),
       description: demand.description || "",
-      overallStatus: demand.overallStatus,
+      overallStatus: demand.overallStatus || "",
+      budget: demand.budget || "",
     });
 
     // Set selected skills if available
@@ -3095,19 +3737,18 @@ export default function HRDashboard() {
       setSelectedSkills(skillObjects);
     }
 
-    // Set selected account - wait a bit for accounts to load if needed
-    setTimeout(() => {
-      if (demand.accountId) {
-        const account = accounts.find(acc => acc.accountId === demand.accountId);
-        if (account) {
-          setSelectedAccount(account);
-          setAccountInput(account.accountName);
-        } else {
-          // If account not found in current list, set the account name from demand data
-          setAccountInput(demand.accountName || "");
-        }
+    // Set selected account using the freshly loaded accounts list
+    if (demand.accountId) {
+      const account = loadedAccounts.find(acc => acc.accountId === demand.accountId);
+      if (account) {
+        setSelectedAccount(account);
+        setAccountInput(account.accountName);
+      } else {
+        // If account not found in current list, create a temporary object from demand data
+        setSelectedAccount({ accountId: demand.accountId, accountName: demand.accountName || "" });
+        setAccountInput(demand.accountName || "");
       }
-    }, 100);
+    }
 
     // Set selected department
     if (demand.departmentId && departments.length > 0) {
@@ -3155,7 +3796,8 @@ export default function HRDashboard() {
       workMode: demandForm.workMode,
       resourceRequests: parseInt(demandForm.resourceRequests) || 1,
       description: demandForm.description,
-      status: demandForm.overallStatus, // NEW: Include updated status
+      status: demandForm.overallStatus,
+      budget: demandForm.budget ? parseFloat(demandForm.budget) : null,
     };
 
     // Validation done earlier
@@ -3747,172 +4389,256 @@ export default function HRDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 relative">
-      {/* Chat Bot */}
-      <AnimatePresence>
-        {isChatOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 100, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 100, scale: 0.95 }}
-            transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
-            className="fixed bottom-24 right-4 w-96 bg-white rounded-2xl shadow-2xl z-50 border border-gray-100 overflow-hidden"
-          >
-            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-800">HR AI Assistant</h3>
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  onClick={clearChat}
-                  className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full p-1 transition-colors"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setIsChatOpen(false)}
-                  className="text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full p-1 transition-colors"
-                >
-                  <XCircle className="w-5 h-5" />
-                </Button>
-              </div>
+    <div className="p-1 sm:p-2 space-y-3 relative w-full">
+      {/* Chat Bot rendered via portal to body for perfect absolute viewport alignment */}
+      {isChatOpen && createPortal(
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 30, scale: 0.95 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="fixed bottom-[88px] right-6 bg-white z-50 border border-gray-100 overflow-hidden"
+          style={{
+            width: '320px',
+            borderRadius: '20px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.14)',
+          }}
+        >
+          <div className="flex justify-between items-center bg-white border-b border-[#f0f0f0]" style={{ padding: '14px 16px' }}>
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-[#6366f1]" />
+              <h3 className="text-[14px] font-semibold text-gray-800">HR AI Assistant</h3>
             </div>
-            <div className="bg-white/95 backdrop-blur-sm">
-              <div className="flex flex-col h-[400px]">
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex items-start gap-3 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {msg.from === 'bot' && (
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <Bot className="w-5 h-5 text-blue-600" />
-                        </div>
-                      )}
-                      <div
-                        className={`max-w-[80%] p-4 rounded-2xl shadow-sm transition-all duration-200 ${msg.from === 'user'
-                          ? 'bg-blue-500 text-white rounded-br-none'
-                          : 'bg-gray-100 text-gray-800 rounded-bl-none'
-                          }`}
-                      >
-                        {renderMessageContent(msg.message)}
-                      </div>
-                      {msg.from === 'user' && (
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-indigo-600" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {isLoading && (
-                    <div className="flex justify-start items-center gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={clearChat}
+                className="text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-full h-8 w-8 flex items-center justify-center transition-colors p-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsChatOpen(false)}
+                className="text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-full h-8 w-8 flex items-center justify-center transition-colors p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="bg-white">
+            <div className="flex flex-col">
+              <div
+                ref={chatRef}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  minHeight: '120px',
+                  maxHeight: '360px',
+                  overflowY: 'auto',
+                  padding: '12px 16px',
+                  gap: '10px'
+                }}
+                className="scrollbar-thin scrollbar-thumb-gray-200"
+              >
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-3 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {msg.from === 'bot' && (
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                         <Bot className="w-5 h-5 text-blue-600" />
                       </div>
-                      <div className="max-w-[80%] p-4 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm flex items-center gap-2">
-                        <Loader className="w-5 h-5 animate-spin text-blue-600" />
-                        <span className="text-sm">Processing...</span>
-                      </div>
+                    )}
+                    <div
+                      className={`max-w-[80%] p-4 rounded-2xl shadow-sm transition-all duration-200 ${msg.from === 'user'
+                        ? 'bg-blue-500 text-white rounded-br-none'
+                        : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                        }`}
+                    >
+                      {renderMessageContent(msg.message)}
                     </div>
-                  )}
-                </div>
-                <form onSubmit={handleChatSubmit} className="p-3 border-t border-gray-100 bg-white flex gap-2">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="flex-1 p-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-                    placeholder="Ask me anything..."
-                    disabled={isLoading}
-                  />
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 flex items-center justify-center transition-colors disabled:opacity-50"
-                  >
-                    <Send className="w-7 h-7" strokeWidth={3} />
-                  </Button>
-                </form>
+                    {msg.from === 'user' && (
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-indigo-600" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex justify-start items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="max-w-[80%] p-4 rounded-2xl bg-gray-100 text-gray-800 rounded-bl-none shadow-sm flex items-center gap-2">
+                      <Loader className="w-5 h-5 animate-spin text-blue-600" />
+                      <span className="text-sm">Processing...</span>
+                    </div>
+                  </div>
+                )}
               </div>
+              <form onSubmit={handleChatSubmit} className="bg-white flex items-center gap-2" style={{ borderTop: '1px solid #f0f0f0', padding: '10px 12px' }}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                  }}
+                  className="flex-1 bg-transparent p-1 focus:ring-0 focus:border-transparent text-sm"
+                  placeholder="Ask me anything..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    padding: 0,
+                  }}
+                  className="flex items-center justify-center text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  <Send className="w-[16px] h-[16px]" strokeWidth={2.5} />
+                </Button>
+              </form>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </motion.div>,
+        document.body
+      )}
 
-      {/* Header Section */}
+      {/* ── Liquid Glass Dashboard Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8"
+        transition={{ duration: 0.55, ease: "easeOut" }}
+        className="mb-0 flex justify-center"
       >
-        <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 shadow-lg">
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="mb-6"
-          >
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <UserCheck className="w-10 h-10 text-white" />
+        {/* Centered compact glass panel — floats over the app's animated bg */}
+        <div
+          className="w-full relative"
+          style={{
+            background: 'rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(28px) saturate(1.8) brightness(1.1)',
+            WebkitBackdropFilter: 'blur(28px) saturate(1.8) brightness(1.1)',
+            border: '1px solid rgba(255,255,255,0.28)',
+            borderRadius: '24px',
+            padding: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.3)',
+          }}
+        >
+          {/* Subtle inner shimmer */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '24px',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%)',
+              pointerEvents: 'none',
+            }}
+          />
+
+          <div className="relative" style={{ padding: 0 }}>
+            {/* Row 1: Header text + Action button in a horizontal layout */}
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4" style={{ padding: '16px 20px' }}>
+              <div className="flex items-center gap-[14px]">
+                {/* Compact rounded-2xl Avatar */}
+                <div
+                  className="relative flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderRadius: '16px',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                    width: '42px',
+                    height: '42px',
+                  }}
+                >
+                  <UserCheck className="w-5 h-5 text-white" />
+                </div>
+                {/* Title and subtitle stacked */}
+                <div className="text-left">
+                  <h1
+                    className="leading-tight"
+                    style={{
+                      fontSize: '18px',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                    }}
+                  >
+                    HR Manager Dashboard
+                  </h1>
+                  <p
+                    className="leading-normal mt-0.5"
+                    style={{
+                      fontSize: '11px',
+                      color: 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    Review and approve resource and opportunity requests from project managers
+                  </p>
+                </div>
+              </div>
+
+              {/* Create Demand button only */}
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setEditingDemand(null); setIsAddDemandOpen(true); }}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all duration-200"
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '99px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  background: 'linear-gradient(135deg, #059669, #10b981)',
+                  border: 'none',
+                  boxShadow: '0 4px 20px rgba(16,185,129,0.4)',
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                Create Demand
+              </motion.button>
             </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-3">HR Manager Dashboard</h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Review and approve resource and opportunity requests from project managers
-            </p>
-          </motion.div>
-          <div className="flex gap-4 justify-center">
-            <Button
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg"
-            >
-              <Bot className="w-5 h-5 mr-2" />
-              AI Assistant
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingDemand(null);
-                setIsAddDemandOpen(true);
-              }}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Demand
-            </Button>
+
+            {/* Row 2: 4 stat cards side by side */}
+            <StatisticsCards
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              resourceRequests={resourceRequests}
+              opportunityRequests={opportunityRequests}
+              demands={demands}
+            />
           </div>
         </div>
       </motion.div>
 
-      {/* Statistics Cards */}
-      <StatisticsCards
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        resourceRequests={resourceRequests}
-        opportunityRequests={opportunityRequests}
-        demands={demands}
-      />
-
-      {/* Tabs Section */}
-      <Tabs defaultValue="demands" className="space-y-6" onValueChange={setActiveTab}>
-        <TabsList className="flex bg-gray-100 rounded-lg p-1 gap-1 w-full max-w-md mx-auto">
-
-          <TabsTrigger
-            value="demands"
-            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
-          >
-            Demands
-          </TabsTrigger>
-          <TabsTrigger
-            value="opportunity"
-            className="cursor-pointer flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:text-gray-600 rounded-md px-4 py-2 font-medium transition-all duration-200 border border-transparent data-[state=active]:border-gray-200"
-          >
-            Opportunities
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Premium Tab Switcher ── */}
+      <Tabs defaultValue="demands" className="space-y-5" onValueChange={setActiveTab}>
+        <div className="flex justify-center">
+          <TabsList className="inline-flex bg-white border border-gray-200 shadow-sm rounded-2xl p-1 gap-1">
+            <TabsTrigger
+              value="demands"
+              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+            >
+              Demands
+            </TabsTrigger>
+            <TabsTrigger
+              value="opportunity"
+              className="cursor-pointer px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-blue-200 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700"
+            >
+              Opportunities
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="opportunity">
           <RequestTab
@@ -4040,7 +4766,7 @@ export default function HRDashboard() {
 
                   <div className="space-y-2">
                     <Label htmlFor="resourceRequests" className="flex items-center gap-1">
-                      Number of Resources <span className="text-red-500">*</span>
+                      Number of Openings <span className="text-red-500">*</span>
                     </Label>
                     <input
                       id="resourceRequests"
@@ -4197,6 +4923,12 @@ export default function HRDashboard() {
                       triggerClassName="h-11 px-4 border-gray-300 rounded-xl focus-within:ring-emerald-500"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="budget">Budget ($)</Label>
+                    <input id="budget" type="number" step="0.01" placeholder="e.g., 50000" value={demandForm.budget}
+                      onChange={(e) => setDemandForm({ ...demandForm, budget: e.target.value })}
+                      className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all" />
+                  </div>
                 </div>
               </section>
 
@@ -4324,6 +5056,58 @@ export default function HRDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {createPortal(
+        <div
+          className="group"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {/* Tooltip on hover appearing to the left of the button */}
+          <span
+            className="mr-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-white pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            style={{
+              background: 'rgba(15,23,42,0.85)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}
+          >
+            AI Assistant
+          </span>
+          <motion.button
+            whileHover={{
+              scale: 1.1,
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="flex items-center justify-center relative cursor-pointer"
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              boxShadow: '0 6px 24px rgba(99,102,241,0.45)',
+              border: 'none',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+            }}
+          >
+            {isChatOpen ? (
+              <X className="w-5 h-5 text-white" />
+            ) : (
+              <Bot className="w-5 h-5 text-white" />
+            )}
+          </motion.button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

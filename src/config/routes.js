@@ -50,12 +50,14 @@ export const APP_ROUTES = [
   { path: '/admin/resources',          allowedRoles: ['system-admin'] },
   { path: '/admin/resources/add',      allowedRoles: ['system-admin'] },
   { path: '/admin/interview-hub',      allowedRoles: ['system-admin'] },
+  { path: '/admin/user-activity',      allowedRoles: ['system-admin'] },
   { path: '/admin/system-settings',    allowedRoles: ['system-admin'] },
 
   // ── Portfolio Manager ────────────────────────────────────────────
   { path: '/portfolio',                    allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/projects',           allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/clients',            allowedRoles: ['portfolio-manager'] },
+  { path: '/portfolio/interview-hub',      allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/reports',            allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/strategic-planning', allowedRoles: ['portfolio-manager'] },
   { path: '/portfolio/financial-overview', allowedRoles: ['portfolio-manager'] },
