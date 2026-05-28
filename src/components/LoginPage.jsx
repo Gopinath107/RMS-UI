@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { loginUser } from '../services/LoginPageService.js';
 import { UserManagementService } from '../services/UserManagementService.js';
+import { getErrorMessage } from '../utils/apiResponse.js';
 
 const hardcodedRoleConfigs = [
   {
@@ -299,25 +300,7 @@ export default function LoginPage({ onLogin }) {
         throw new Error(response.errors?.join(', ') || 'Incorrect email or password');
       }
     } catch (error) {
-      // Handle different error types
-      if (error.response) {
-        // Server responded with error status
-        if (error.response.status === 401) {
-          setErrorMessage('Invalid credentials. Please check your email, password, or selected role.');
-        } else if (error.response.status === 400) {
-          setErrorMessage('Invalid request. Please check your inputs.');
-        } else if (error.response.status === 404) {
-          setErrorMessage('User not found with the selected role.');
-        } else {
-          setErrorMessage(`Login failed: ${error.response.data?.message || 'Unknown error'}`);
-        }
-      } else if (error.message && error.message.includes('Network')) {
-        setErrorMessage('Network error. Please check your connection and try again.');
-      } else if (error.message) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage('Invalid credentials. Please check your email or password.');
-      }
+      setErrorMessage(getErrorMessage(error, 'Invalid credentials. Please check your email or password.'));
     } finally {
       setIsLoading(false);
     }

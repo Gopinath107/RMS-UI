@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { InterviewService } from '../services/InterviewManagementService.js';
+import { getErrorMessage } from '../utils/apiResponse.js';
 import { Input } from './ui/input.jsx';
 import {
   Select,
@@ -102,6 +103,7 @@ const InterviewHub = ({ setCurrentPage }) => {
       }
     } catch (err) {
       console.error('Failed to load interview statuses', err);
+      toast.error(getErrorMessage(err, 'Failed to load interview statuses'));
     }
   }, []);
 
@@ -281,8 +283,8 @@ const InterviewHub = ({ setCurrentPage }) => {
       }
     } catch (error) {
       console.error('Error loading interviews:', error);
-      setError('Error loading interviews');
-      toast.error('Error loading interviews');
+      setError(getErrorMessage(error, 'Error loading interviews'));
+      toast.error(getErrorMessage(error, 'Error loading interviews'));
       setMyInterviews([]);
     } finally {
       setIsLoading(false);
@@ -328,7 +330,7 @@ const InterviewHub = ({ setCurrentPage }) => {
       }
     } catch (error) {
       console.error('Error updating level:', error);
-      toast.error('Failed to update result');
+      toast.error(getErrorMessage(error, 'Failed to update result'));
     } finally {
       setIsModalOpen(false);
       setSelectedInterviewId(null);
@@ -361,7 +363,7 @@ const InterviewHub = ({ setCurrentPage }) => {
       }
     } catch (error) {
       console.error('No-show error:', error);
-      toast.error('Failed to mark no-show');
+      toast.error(getErrorMessage(error, 'Failed to mark no-show'));
     }
   };
 
@@ -377,7 +379,7 @@ const InterviewHub = ({ setCurrentPage }) => {
       }
     } catch (error) {
       console.error('Cancel error:', error);
-      toast.error('Failed to cancel');
+      toast.error(getErrorMessage(error, 'Failed to cancel'));
     }
   };
 

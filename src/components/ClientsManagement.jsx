@@ -37,6 +37,7 @@ import {
 import { toast } from 'sonner';
 import { ClientService } from '../services/clientListService';
 import { getCompanyId } from '../utils/authUtils';
+import { getErrorMessage } from '../utils/apiResponse.js';
 
 // Removed mock data
 
@@ -100,7 +101,7 @@ export default function ClientsManagement({ setCurrentPage }) {
       setFilteredClients(mappedClients);
     } catch (error) {
       console.error('Error fetching clients:', error);
-      toast.error('Failed to load clients. Please try again.');
+      toast.error(getErrorMessage(error, 'Failed to load clients. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +184,7 @@ export default function ClientsManagement({ setCurrentPage }) {
       }, 500);
     } catch (error) {
       console.error('Error creating client:', error);
-      toast.error('Failed to create client. Please try again.');
+      toast.error(getErrorMessage(error, 'Failed to create client. Please try again.'));
     }
   };
 

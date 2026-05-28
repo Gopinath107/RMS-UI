@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { sendOtp, verifyOtp, resetPassword } from '../services/LoginPageService.js';
+import { getErrorMessage } from '../utils/apiResponse.js';
 
 function PasswordInput({
   id,
@@ -117,10 +118,7 @@ export default function ForgotPassword() {
       setStep(2);
       setTimeLeft(90);
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.errors?.[0] ||
-        (error.response ? 'Something went wrong. Please try again.' : 'Unable to reach server. Please check your connection.')
-      );
+      setErrorMessage(getErrorMessage(error, 'Unable to reach server. Please check your connection.'));
     } finally {
       setIsLoading(false);
     }
@@ -167,10 +165,7 @@ export default function ForgotPassword() {
       await verifyOtp(email, otpValue);
       setStep(3);
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.errors?.[0] ||
-        'Invalid or expired OTP. Please try again.'
-      );
+      setErrorMessage(getErrorMessage(error, 'Invalid or expired OTP. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -187,9 +182,7 @@ export default function ForgotPassword() {
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.errors?.[0] || 'Failed to resend OTP.'
-      );
+      setErrorMessage(getErrorMessage(error, 'Failed to resend OTP.'));
     } finally {
       setIsLoading(false);
     }
@@ -218,10 +211,7 @@ export default function ForgotPassword() {
       toast.success('Password reset successfully. You can now login.');
       setStep(4);
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.errors?.[0] ||
-        (error.response ? 'Failed to reset password. Please try again.' : 'Unable to reach server. Please check your connection.')
-      );
+      setErrorMessage(getErrorMessage(error, 'Unable to reach server. Please check your connection.'));
     } finally {
       setIsLoading(false);
     }
