@@ -993,8 +993,8 @@ const handleRefresh = async () => {
         </Card>
       </div>
 
-      <Card className="shadow-md bg-white/95 backdrop-blur-sm border border-gray-200">
-        <CardContent className="pt-6">
+      <Card className="shadow-md bg-white/95 backdrop-blur-sm border border-gray-200" style={{ overflow: 'visible' }}>
+        <CardContent className="pt-6" style={{ overflow: 'visible' }}>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">

@@ -205,8 +205,12 @@ const ClientList = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
+    // Reset lastFetchedRef to force re-fetch with new search/filter params
+    lastFetchedRef.current = { page: null, size: null, q: null, industry: null };
     timeoutRef.current = setTimeout(() => {
-      fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
+      // Always search from page 1 to search across all data
+      setCurrentPage(1);
+      fetchClients(1, rowsPerPage, searchText, industryFilter);
     }, 300);
 
     return () => {
@@ -319,6 +323,19 @@ const ClientList = () => {
         }
       }
 
+      // Validate email format - must have proper domain with at least 2 character TLD
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      if (!emailRegex.test(newClient.contactPersonEmail.trim())) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Email!",
+          text: "Please enter a valid email address (e.g., user@example.com)",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
       const result = await ClientService.createClient(
         Number(newClient.companyId),
         newClient.accountName,
@@ -398,7 +415,7 @@ const ClientList = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <Card className="shadow-md rounded-2xl bg-white/80 backdrop-blur-sm">
+        <Card className="shadow-md rounded-2xl bg-white/80 backdrop-blur-sm" style={{ overflow: 'visible' }}>
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>

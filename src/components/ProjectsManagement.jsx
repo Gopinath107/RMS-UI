@@ -292,13 +292,23 @@ const ProjectsManagement = () => {
       budget: project.budget ? project.budget.toString() : "",
       companyId: project.companyId || 1,
       managerUserId: project.managerUserId || null,
-      selectedSkills: project.skills
-        .map(skill =>
-          typeof skill === "object"
-            ? { id: skill.skillId, name: skill.skillName }
-            : skillsList.find(s => s.skillId === skill || s.skillName === skill) || { id: null, name: skill }
-        )
-        .filter(s => s.name && s.id),
+      selectedSkills: (project.skills || []).map(skill => {
+        if (typeof skill === "object" && skill !== null) {
+          // Handle API format: { skillId, skillName } or { id, name }
+          return {
+            id: skill.skillId || skill.id || null,
+            name: skill.skillName || skill.name || ""
+          };
+        }
+        // Handle string skill names or skill IDs
+        if (typeof skill === "number") {
+          const found = skillsList.find(s => s.skillId === skill);
+          return found ? { id: found.skillId, name: found.skillName } : { id: skill, name: `Skill #${skill}` };
+        }
+        // String skill name - look up ID from skillsList
+        const found = skillsList.find(s => s.skillName === skill || s.skillName?.toLowerCase() === skill?.toLowerCase());
+        return found ? { id: found.skillId, name: found.skillName } : { id: null, name: skill };
+      }).filter(s => s.name),
     });
     setIsModalOpen(true);
   };
@@ -322,8 +332,12 @@ const ProjectsManagement = () => {
         Swal.fire({ icon: "warning", title: "Invalid Date Range!", text: "End date cannot be earlier than start date!", timer: 1500, showConfirmButton: false });
         return;
       }
-      if (parseFloat(newProject.budget || 0) < 0) {
-        Swal.fire({ icon: "warning", title: "Invalid Budget!", text: "Budget cannot be negative!", timer: 1500, showConfirmButton: false });
+      if (!newProject.budget || newProject.budget.trim() === "") {
+        Swal.fire({ icon: "warning", title: "Missing Budget!", text: "Budget is required!", timer: 1500, showConfirmButton: false });
+        return;
+      }
+      if (isNaN(parseFloat(newProject.budget)) || parseFloat(newProject.budget) < 0) {
+        Swal.fire({ icon: "warning", title: "Invalid Budget!", text: "Budget must be a valid positive number!", timer: 1500, showConfirmButton: false });
         return;
       }
       const payload = {

@@ -5699,7 +5699,14 @@
   .sidebar-container, .main-content {
     min-height: 100vh;
     max-height: 100vh;
+  }
+
+  .sidebar-container {
     overflow: hidden;
+  }
+
+  .main-content {
+    overflow-y: auto;
   }
 
   .content-scroll {

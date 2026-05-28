@@ -136,7 +136,7 @@ export default function ClientsManagement({ setCurrentPage }) {
     if (!newClient.name || !newClient.name.trim()) { newErrors.name = 'Company Name is required'; isValid = false; }
     if (!newClient.industry || !newClient.industry.trim()) { newErrors.industry = 'Industry is required'; isValid = false; }
     if (!newClient.email || !newClient.email.trim()) { newErrors.email = 'Email is required'; isValid = false; }
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newClient.email.trim())) { newErrors.email = 'Invalid email format'; isValid = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(newClient.email.trim())) { newErrors.email = 'Invalid email format (e.g., user@example.com)'; isValid = false; }
     if (!newClient.contactPerson || !newClient.contactPerson.trim()) { newErrors.contactPerson = 'Contact Person is required'; isValid = false; }
 
     setErrors(newErrors);
@@ -177,8 +177,10 @@ export default function ClientsManagement({ setCurrentPage }) {
       setIsAddModalOpen(false);
       toast.success('Client added successfully!');
       
-      // Refresh the client list
-      fetchClients();
+      // Refresh the client list - add small delay to ensure backend has committed
+      setTimeout(() => {
+        fetchClients();
+      }, 500);
     } catch (error) {
       console.error('Error creating client:', error);
       toast.error('Failed to create client. Please try again.');
