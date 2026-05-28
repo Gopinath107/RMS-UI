@@ -119,7 +119,7 @@ export default function ForgotPassword() {
     } catch (error) {
       setErrorMessage(
         error.response?.data?.errors?.[0] ||
-        'No account found with this email address.'
+        (error.response ? 'Something went wrong. Please try again.' : 'Unable to reach server. Please check your connection.')
       );
     } finally {
       setIsLoading(false);
@@ -219,7 +219,8 @@ export default function ForgotPassword() {
       setStep(4);
     } catch (error) {
       setErrorMessage(
-        error.response?.data?.errors?.[0] || 'Failed to reset password.'
+        error.response?.data?.errors?.[0] ||
+        (error.response ? 'Failed to reset password. Please try again.' : 'Unable to reach server. Please check your connection.')
       );
     } finally {
       setIsLoading(false);
