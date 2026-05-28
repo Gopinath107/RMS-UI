@@ -2641,13 +2641,15 @@ const DemandsTab = ({ demands, onEditDemand }) => {
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             overflow: 'hidden',
             position: 'relative',
+            isolation: 'isolate',
+            transform: 'translateZ(0)',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.transform = 'translateY(-2px) translateZ(0)';
             e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.transform = 'translateY(0) translateZ(0)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
           }}
         >
@@ -2661,6 +2663,8 @@ const DemandsTab = ({ demands, onEditDemand }) => {
               width: '4px',
               background: demand.overallStatus === 'InProgress' ? '#f59e0b' : (demand.overallStatus === 'Open' ? '#22c55e' : statusCfg.dot),
               zIndex: 10,
+              borderTopLeftRadius: '16px',
+              borderBottomLeftRadius: '16px',
             }}
           />
 
