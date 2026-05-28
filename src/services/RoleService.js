@@ -2,8 +2,9 @@
 import api from "./api";
 
 export const RoleService = {
-  fetchRoleList: async function () {
-    return api.get('/roles/list');
+  fetchRoleList: async function (companyId) {
+    const url = companyId ? `/roles/list?companyId=${companyId}` : '/roles/list';
+    return api.get(url);
   },
 
   createRole: async function (companyId, roleName) {

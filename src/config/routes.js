@@ -50,6 +50,7 @@ export const APP_ROUTES = [
   { path: '/admin/resources',          allowedRoles: ['system-admin'] },
   { path: '/admin/resources/add',      allowedRoles: ['system-admin'] },
   { path: '/admin/interview-hub',      allowedRoles: ['system-admin'] },
+  { path: '/admin/user-activity',      allowedRoles: ['system-admin'] },
   { path: '/admin/system-settings',    allowedRoles: ['system-admin'] },
 
   // ── Portfolio Manager ────────────────────────────────────────────

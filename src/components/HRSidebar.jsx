@@ -159,7 +159,7 @@ function HRSidebar({
           KEY FIX: when collapsed → overflow-visible so tooltip escapes sidebar bounds
                    when expanded → overflow-y-auto for normal scrolling               */}
       <nav
-        className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+        className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
           ? 'px-3 overflow-y-auto overflow-x-hidden'
           : 'px-2 overflow-visible'
           }`}

@@ -119,7 +119,7 @@ const menuItems = [
 
         {/* Navigation Menu */}
         <nav 
-          className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+          className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
           ? 'px-3 overflow-y-auto overflow-x-hidden'
           : 'px-2 overflow-visible'
           }`} 
@@ -128,7 +128,7 @@ const menuItems = [
             msOverflowStyle: 'none',
           }}
         >
-          <style jsx>{`
+          <style>{`
             nav::-webkit-scrollbar {
               display: none;
             }

@@ -12,7 +12,8 @@ import {
   Shield,
   UserCheck,
   Server,
-  MessageSquare
+  MessageSquare,
+  Activity
 } from 'lucide-react';
 import { Button } from './ui/button.jsx';
 import { hasAssignedInterviews, getPendingInterviewsCount } from './utils/interviewUtils.js';
@@ -59,6 +60,7 @@ export default function SystemAdminSidebar({
     { id: 'user-management',     label: 'User Management',     icon: Users,         description: 'Manage Users',          path: '/admin',               badge: userCount > 0 ? userCount : null },
     { id: 'resource-management', label: 'Resource Management', icon: Database,       description: 'System Resources',      path: '/admin/resources' },
     { id: 'interview-hub',       label: 'Interview Hub',       icon: MessageSquare,  description: 'My Assigned Interviews', path: '/admin/interview-hub', badge: pendingInterviewsCount > 0 ? pendingInterviewsCount : null },
+    { id: 'user-activity',       label: 'User Activity',       icon: Activity,       description: 'Track User Activity',   path: '/admin/user-activity' },
   ];
 
 
@@ -113,7 +115,7 @@ export default function SystemAdminSidebar({
 
       {/* Navigation Menu */}
       <nav
-        className={`mt-4 flex-1 hide-scrollbar ${isExpanded
+        className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
           ? 'px-3 overflow-y-auto overflow-x-hidden'
           : 'px-2 overflow-visible'
           }`} 
@@ -122,7 +124,7 @@ export default function SystemAdminSidebar({
           msOverflowStyle: 'none',
         }}
       >
-        <style jsx>{`
+        <style>{`
           nav::-webkit-scrollbar {
             display: none;
           }

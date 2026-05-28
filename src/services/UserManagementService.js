@@ -5,18 +5,19 @@ export const UserManagementService = {
     return api.get('/user-accounts/list');
   },
 
-  createUser: async function (companyId, employeeId, roleIds, email, passwordHash, isActive) {
+  createUser: async function (companyId, employeeId, roleIds, email, passwordHash, isActive, name) {
     return api.post('/user-accounts/create', {
       companyId,
       employeeId,
       roleIds,          // backend reads List<Long> roleIds
       email,
       passwordHash,
-      isActive
+      isActive,
+      name
     });
   },
 
-  updateUser: async function (id, companyId, employeeId, roleIds, email, passwordHash, isActive) {
+  updateUser: async function (id, companyId, employeeId, roleIds, email, passwordHash, isActive, name) {
     return api.put('/user-accounts/update', {
       userId: id,
       companyId,
@@ -24,7 +25,8 @@ export const UserManagementService = {
       roleIds,          // backend REPLACES stored roleIds with this list
       email,
       passwordHash: passwordHash || null,   // null = don't change password
-      isActive
+      isActive,
+      name
     });
   },
 
