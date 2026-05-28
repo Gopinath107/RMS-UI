@@ -117,50 +117,25 @@ const ClientList = () => {
     }
   };
 
-  const fetchClients = async (page = currentPage, pageSize = rowsPerPage, query = searchText, industry = industryFilter) => {
-    // Avoid double fetching same parameters
-    if (
-      lastFetchedRef.current.page === page &&
-      lastFetchedRef.current.size === pageSize &&
-      lastFetchedRef.current.q === query &&
-      lastFetchedRef.current.industry === industry
-    ) {
-      return;
-    }
-    lastFetchedRef.current = { page, size: pageSize, q: query, industry };
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
+  const fetchClients = async () => {
     setIsLoading(true);
     try {
-      // API page parameter is 0-indexed
-      const res = await ClientService.fetchClientList(page - 1, pageSize, query, industry);
+      // Fetch up to 10,000 clients to get the full list for client-side search, filtering, and pagination
+      const res = await ClientService.fetchClientList(0, 10000);
       console.log("Full API Response:", res);
       if (res) {
         let clientData = [];
-        let total = 0;
         if (res.data && res.data.success === true && Array.isArray(res.data.result)) {
           clientData = res.data.result;
-          total = res.data.totalElements || 0;
         } else if (Array.isArray(res.data)) {
           clientData = res.data;
-          total = res.data.length;
         } else if (Array.isArray(res)) {
           clientData = res;
-          total = res.length;
         } else {
           throw new Error("Unexpected API response structure");
         }
         console.log("Processed Client Data:", clientData);
         setClients(clientData);
-        
-        // Still apply client-side filtering on the returned slice just in case
-        const filtered = applyFilter(clientData, query, industry);
-        setFilteredClients(filtered);
-        setTotalCount(total);
         setError("");
       } else {
         throw new Error("No data received from API");
@@ -169,8 +144,6 @@ const ClientList = () => {
       console.error("Fetch Error:", err.message || err);
       setError(`Failed to fetch clients. Please check API connection. Details: ${err.message || "Unknown error"}`);
       setClients([]);
-      setFilteredClients([]);
-      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -195,43 +168,37 @@ const ClientList = () => {
     return filtered;
   };
 
-  // Immediate fetch on page or rowsPerPage changes
+  // Immediate fetch on mount
   useEffect(() => {
-    fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
-  }, [currentPage, rowsPerPage]);
+    fetchClients();
+  }, []);
 
-  // Debounced search text and industry changes
+  // Compute filtered & sorted clients client-side
   useEffect(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    const filtered = applyFilter(clients, searchText, industryFilter);
+    let sorted = [...filtered];
+    if (sortConfig.key) {
+      const { key, direction } = sortConfig;
+      sorted.sort((a, b) => {
+        const aValue = a[key] || "";
+        const bValue = b[key] || "";
+        if (aValue < bValue) return direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return direction === "asc" ? 1 : -1;
+        return 0;
+      });
     }
-    // Reset lastFetchedRef to force re-fetch with new search/filter params
-    lastFetchedRef.current = { page: null, size: null, q: null, industry: null };
-    timeoutRef.current = setTimeout(() => {
-      // Always search from page 1 to search across all data
-      setCurrentPage(1);
-      fetchClients(1, rowsPerPage, searchText, industryFilter);
-    }, 300);
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [searchText, industryFilter]);
+    setFilteredClients(sorted);
+    setTotalCount(sorted.length);
+  }, [clients, searchText, industryFilter, sortConfig]);
 
   const handleSearchInputChange = (e) => {
-    const value = e.target.value;
-    setSearchText(value);
+    setSearchText(e.target.value);
     setCurrentPage(1);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      fetchClients(currentPage, rowsPerPage, searchText, industryFilter);
+      // Handled reactively
     }
   };
 
@@ -246,15 +213,6 @@ const ClientList = () => {
       direction = "desc";
     }
     setSortConfig({ key, direction });
-
-    const sorted = [...filteredClients].sort((a, b) => {
-      const aValue = a[key] || "";
-      const bValue = b[key] || "";
-      if (aValue < bValue) return direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return direction === "asc" ? 1 : -1;
-      return 0;
-    });
-    setFilteredClients(sorted);
   };
 
   const getSortIcon = (field) => {
@@ -286,7 +244,8 @@ const ClientList = () => {
     return pages;
   };
 
-  const currentClients = filteredClients;
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const currentClients = filteredClients.slice(startIndex, startIndex + rowsPerPage);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -348,11 +307,8 @@ const ClientList = () => {
 
       if (result) {
         fetchIndustries();
-        if (currentPage === 1) {
-          fetchClients(1, rowsPerPage, searchText, industryFilter);
-        } else {
-          setCurrentPage(1);
-        }
+        fetchClients();
+        setCurrentPage(1);
         setIsModalOpen(false);
         setNewClient({
           companyId: "",
@@ -391,11 +347,7 @@ const ClientList = () => {
   const resetFilters = () => {
     setSearchText("");
     setIndustryFilter("All Industries");
-    if (currentPage === 1) {
-      fetchClients(1, rowsPerPage, "", "All Industries");
-    } else {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   };
 
   return (
@@ -414,8 +366,9 @@ const ClientList = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
+        style={{ position: 'relative', zIndex: 20 }}
       >
-        <Card className="shadow-md rounded-2xl bg-white/80 backdrop-blur-sm" style={{ overflow: 'visible' }}>
+        <Card className="shadow-md rounded-2xl bg-white/80 backdrop-blur-sm" style={{ overflow: 'visible', position: 'relative', zIndex: 20 }}>
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Search</CardTitle>
           </CardHeader>
@@ -451,7 +404,7 @@ const ClientList = () => {
                   </Select>
                 </div>
                 <Button
-                  onClick={() => fetchClients(currentPage, rowsPerPage, searchText, industryFilter)}
+                  onClick={() => fetchClients()}
                   className="bg-blue-500 hover:bg-blue-600 text-white client-search-btn-refresh"
                 >
                   <RefreshCw className="w-4 h-4 mr-2 animate-none" />
@@ -473,8 +426,9 @@ const ClientList = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+        style={{ position: 'relative', zIndex: 10 }}
       >
-        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-lg overflow-hidden">
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-lg overflow-hidden" style={{ position: 'relative', zIndex: 10 }}>
           <CardHeader>
   <div className="flex flex-row justify-between items-center gap-3 flex-wrap">
     <CardTitle className="text-2xl font-bold">

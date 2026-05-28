@@ -426,7 +426,7 @@ const RequestResource = ({ setCurrentPage }) => {
       </div>
 
       {/* Filters */}
-      <Card style={{ overflow: 'visible' }}>
+      <Card style={{ overflow: 'visible', position: 'relative', zIndex: 20 }}>
         <CardContent className="pt-6" style={{ overflow: 'visible' }}>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
@@ -438,21 +438,23 @@ const RequestResource = ({ setCurrentPage }) => {
                 className="pl-10 h-10 w-full text-sm"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-48 h-10">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Submitted">Submitted</SelectItem>
-                {/* <SelectItem value="Pending Approval">Pending Approval</SelectItem> */}
-                {/* <SelectItem value="Under Review">Under Review</SelectItem> */}
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Allocated">Allocated</SelectItem>
-                <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex-1 w-full">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Submitted">Submitted</SelectItem>
+                  {/* <SelectItem value="Pending Approval">Pending Approval</SelectItem> */}
+                  {/* <SelectItem value="Under Review">Under Review</SelectItem> */}
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Allocated">Allocated</SelectItem>
+                  <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
