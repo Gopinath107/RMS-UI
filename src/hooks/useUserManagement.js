@@ -9,6 +9,7 @@ import { DepartmentService } from '../services/DepartmentService';
 import { RoleService } from '../services/RoleService';
 import { SkillService } from '../services/SkillsService';
 import { mapToUi } from '../utils/userMapper';
+import { getErrorMessage } from '../utils/apiResponse';
 
 const EMPTY_FORM = {
   name: '',
@@ -159,42 +160,42 @@ export function useUserManagement() {
     try {
       const r = await UserManagementService.fetchUserList();
       setUsers(mapToUi(r.data.result));
-    } catch { toast.error('Failed to load users'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load users')); }
   };
 
   const fetchEmployees = async () => {
     try {
       const r = await EmployeeService.fetchEmployeeList();
       setEmployees(r.data.result || []);
-    } catch { toast.error('Failed to load employees'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load employees')); }
   };
 
   const fetchCompanies = async () => {
     try {
       const r = await CompanyService.fetchCompanyList();
       setCompanies(r.data.result || r.data);
-    } catch { toast.error('Failed to load companies'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load companies')); }
   };
 
   const fetchRoles = async () => {
     try {
       const r = await RoleService.fetchRoleList();
       setRoles(r.data.result || r.data);
-    } catch { toast.error('Failed to load roles'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load roles')); }
   };
 
   const fetchDepartments = async () => {
     try {
       const r = await DepartmentService.fetchDepartmentList();
       setDepartments(r.data.result || r.data);
-    } catch { toast.error('Failed to load departments'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load departments')); }
   };
 
   const fetchSkills = async () => {
     try {
       const r = await SkillService.fetchSkillList();
       setSkills(r.data.result || r.data);
-    } catch { toast.error('Failed to load skills'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to load skills')); }
   };
 
   const fetchEntities = async () => {
@@ -451,7 +452,7 @@ export function useUserManagement() {
         throw new Error(ur?.data?.errors?.join(', ') || 'Failed to create user account');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to complete user setup';
+      const msg = getErrorMessage(err, 'Failed to complete user setup');
       setErrors(prev => ({ ...prev, submit: msg }));
     } finally {
       setLoading(false);
@@ -476,7 +477,7 @@ export function useUserManagement() {
         toast.error(msg);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Failed to update user');
+      toast.error(getErrorMessage(err, 'Failed to update user'));
     }
   };
 
@@ -485,8 +486,8 @@ export function useUserManagement() {
       await UserManagementService.deleteUser(userId);
       toast.success('User deleted successfully');
       await fetchUsers();
-    } catch {
-      toast.error('Failed to delete user');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete user'));
     }
   };
 
@@ -497,8 +498,8 @@ export function useUserManagement() {
       await UserManagementService.updateUser(parseInt(user.id, 10), user.companyId || 1, user.employeeId, user.roles.map(r => r.roleId), user.email, null, user.status !== 'Active');
       toast.success('User status updated successfully');
       await fetchUsers();
-    } catch {
-      toast.error('Failed to update status');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update status'));
     }
   };
 
@@ -527,7 +528,7 @@ export function useUserManagement() {
         setNewCompanyName(''); setNewCompanyEmail(''); setNewCompanyAddress('');
         await fetchEntities();
       } else { toast.error(r?.data?.errors?.join(', ') || 'Failed to add company'); }
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add company'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to add company')); }
   };
 
   const handleAddRole = async () => {
@@ -539,7 +540,7 @@ export function useUserManagement() {
         setNewRoleCompanyId(''); setNewRoleName('');
         await fetchEntities();
       } else { toast.error(r?.data?.errors?.join(', ') || 'Failed to add role'); }
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add role'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to add role')); }
   };
 
   const handleAddDepartment = async () => {
@@ -551,7 +552,7 @@ export function useUserManagement() {
         setNewDeptCompanyId(''); setNewDeptName(''); setNewDeptParentId('');
         await fetchEntities();
       } else { toast.error(r?.data?.errors?.join(', ') || 'Failed to add department'); }
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add department'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to add department')); }
   };
 
   const handleAddSkill = async () => {
@@ -563,7 +564,7 @@ export function useUserManagement() {
         setNewSkillName(''); setCurrentSkillPage(1);
         await fetchEntities();
       } else { toast.error(r?.data?.errors?.join(', ') || 'Failed to add skill'); }
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add skill'); }
+    } catch (err) { toast.error(getErrorMessage(err, 'Failed to add skill')); }
   };
 
   // Skills pagination
