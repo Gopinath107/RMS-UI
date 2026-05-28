@@ -2961,7 +2961,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           )}
 
           {/* ── Skill Matcher CTA ── */}
-          <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px' }}>
+          <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px', background: '#ffffff' }}>
             <button
               onClick={e => { e.stopPropagation(); handleSkillMatcher(demand); }}
               style={{
