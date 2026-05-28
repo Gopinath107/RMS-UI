@@ -2671,113 +2671,93 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           {/* ── Main Content ── */}
           <div style={{ padding: '18px 20px 14px 20px' }}>
 
-            {/* Row 1: Title & compact metadata inline */}
-            <div className="flex flex-col gap-2 mb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-                  <h3
-                    className="font-bold truncate group-hover:text-blue-700 transition-colors"
-                    style={{ fontSize: '16px', color: '#111827', letterSpacing: '-0.2px' }}
-                    title={demand.demandTitle}
-                  >
-                    {demand.demandTitle}
-                  </h3>
-                  
-                  {/* Compact monospace Demand ID badge */}
+            {/* Row 1: Title + ID badge */}
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3
+                  className="font-bold truncate group-hover:text-blue-700 transition-colors"
+                  style={{ fontSize: '15px', color: '#111827', letterSpacing: '-0.2px' }}
+                  title={demand.demandTitle}
+                >
+                  {demand.demandTitle}
+                </h3>
+
+                {/* Status + Priority + Demand tag chips */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {/* Status chip */}
                   <span
+                    className="inline-flex items-center gap-1.5"
                     style={{
-                      fontFamily: 'monospace',
-                      fontWeight: 800,
-                      color: '#2563eb',
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      padding: '1.5px 7px',
-                      borderRadius: '6px',
+                      background: statusCfg.bg,
+                      color: statusCfg.color,
+                      border: `1px solid ${statusCfg.border}`,
+                      borderRadius: '99px',
+                      padding: '3px 10px',
                       fontSize: '11px',
-                      letterSpacing: '0.3px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
+                      fontWeight: 600,
                     }}
                   >
-                    DM-{demand.demandid}
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.dot, display: 'inline-block', flexShrink: 0 }} />
+                    {demand.overallStatus}
                   </span>
-                </div>
 
-                {/* Sub-row: Horizontal metadata details (Created by and Created on) */}
-                <div className="flex flex-wrap items-center gap-3 text-[11.5px] text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="font-medium text-gray-400 text-[9px] uppercase tracking-wider">Created By</span>
-                    <strong className="text-gray-700 font-semibold">{demand.requesterName}</strong>
-                  </span>
-                  <span className="text-gray-300 hidden sm:inline">•</span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="font-medium text-gray-400 text-[9px] uppercase tracking-wider">Created At</span>
-                    <span className="text-gray-600 font-semibold">{formatDisplayDate(demand.createddt)}</span>
-                  </span>
+                  {/* Priority chip */}
+                  {demand.priority && (
+                    <span
+                      style={{
+                        background: priorityCfg.bg,
+                        color: priorityCfg.color,
+                        border: `1px solid ${priorityCfg.border}`,
+                        borderRadius: '99px',
+                        padding: '3px 10px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {demand.priority}
+                    </span>
+                  )}
+
+                  {/* Profiles shared chip — Click to expand */}
+                  {demand.sharedResumes && demand.sharedResumes.length > 0 && (
+                    <button
+                      onClick={(e) => toggleProfiles(demand.demandid, e)}
+                      className="inline-flex items-center gap-1 hover:bg-indigo-100 transition-colors"
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4338ca',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '99px',
+                        padding: '3px 10px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Users style={{ width: '11px', height: '11px' }} />
+                      {demand.sharedResumes.length} Profile{demand.sharedResumes.length > 1 ? 's' : ''} Shared
+                      {expandedProfiles.has(demand.demandid) ? (
+                        <ChevronUp style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                      ) : (
+                        <ChevronDown style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Status + Priority + Demand tag chips */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                {/* Status chip */}
-                <span
-                  className="inline-flex items-center gap-1.5"
-                  style={{
-                    background: statusCfg.bg,
-                    color: statusCfg.color,
-                    border: `1px solid ${statusCfg.border}`,
-                    borderRadius: '99px',
-                    padding: '3px 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                  }}
-                >
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.dot, display: 'inline-block', flexShrink: 0 }} />
-                  {demand.overallStatus}
+              {/* Right: ID + meta inline horizontally */}
+              <div className="flex-shrink-0 flex items-center gap-2 text-xs text-gray-500 font-medium bg-gray-50/60 border border-gray-100 rounded-xl px-3 py-1.5 shadow-sm">
+                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">ID:</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb', fontSize: '13px' }}>
+                  DM-{demand.demandid}
                 </span>
-
-                {/* Priority chip */}
-                {demand.priority && (
-                  <span
-                    style={{
-                      background: priorityCfg.bg,
-                      color: priorityCfg.color,
-                      border: `1px solid ${priorityCfg.border}`,
-                      borderRadius: '99px',
-                      padding: '3px 10px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {demand.priority}
-                  </span>
-                )}
-
-                {/* Profiles shared chip — Click to expand */}
-                {demand.sharedResumes && demand.sharedResumes.length > 0 && (
-                  <button
-                    onClick={(e) => toggleProfiles(demand.demandid, e)}
-                    className="inline-flex items-center gap-1 hover:bg-indigo-100 transition-colors"
-                    style={{
-                      background: '#eef2ff',
-                      color: '#4338ca',
-                      border: '1px solid #c7d2fe',
-                      borderRadius: '99px',
-                      padding: '3px 10px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Users style={{ width: '11px', height: '11px' }} />
-                    {demand.sharedResumes.length} Profile{demand.sharedResumes.length > 1 ? 's' : ''} Shared
-                    {expandedProfiles.has(demand.demandid) ? (
-                      <ChevronUp style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
-                    ) : (
-                      <ChevronDown style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
-                    )}
-                  </button>
-                )}
+                <span className="text-gray-300">|</span>
+                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">By:</span>
+                <span className="text-gray-700 font-semibold">{demand.requesterName}</span>
+                <span className="text-gray-300">|</span>
+                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">On:</span>
+                <span className="text-gray-500">{formatDisplayDate(demand.createddt)}</span>
               </div>
             </div>
 
@@ -3014,33 +2994,71 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
   return (
     <div className="space-y-3">
-      {/* Search and Sort Controls */}
-      <div className="px-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-gray-800">Demands</h2>
+      {/* Unified Compact Header Toolbar */}
+      <div className="px-3 py-2.5 bg-white/60 backdrop-blur-sm border border-gray-150 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Left: Title & Count details */}
+        <div className="flex flex-col flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight leading-tight">Demands</h2>
+          {sortedDemands.length > 0 && (
+            <span className="text-[11px] text-gray-500 font-medium mt-0.5">
+              Showing <span className="text-gray-700 font-semibold">{Math.min(((currentPage - 1) * itemsPerPage) + 1, sortedDemands.length)}–{Math.min(currentPage * itemsPerPage, sortedDemands.length)}</span> of <span className="text-gray-700 font-semibold">{sortedDemands.length}</span> requests
+            </span>
+          )}
         </div>
 
-        <div className="py-1 flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
-          {/* Search Input */}
+        {/* Center: Search input */}
+        <div className="flex-1 max-w-md w-full md:mx-4">
           <SearchFilter
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search by ID or Title"
           />
         </div>
-      </div>
 
-      {/* Pagination */}
-      {sortedDemands.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          onItemsPerPageChange={handleItemsPerPageChange}
-          totalItems={sortedDemands.length}
-        />
-      )}
+        {/* Right: Compact Pagination controls */}
+        {sortedDemands.length > 0 && (
+          <div className="flex items-center justify-between md:justify-end gap-3 flex-shrink-0 w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-gray-100">
+            {/* Per page dropdown */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
+              >
+                {[5, 10, 20, 50].map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Prev / Page / Next */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center p-1.5 rounded-lg border border-gray-250 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <span className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-150 px-2 py-1 rounded-md min-w-[28px] text-center">
+                {currentPage} <span className="text-gray-400 font-normal">/ {totalPages}</span>
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center p-1.5 rounded-lg border border-gray-250 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                title="Next Page"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Search Results Info */}
       {searchQuery && (
