@@ -2746,18 +2746,13 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 </div>
               </div>
 
-              {/* Right: ID + meta inline horizontally */}
-              <div className="flex-shrink-0 flex items-center gap-2 text-xs text-gray-500 font-medium bg-gray-50/60 border border-gray-100 rounded-xl px-3 py-1.5 shadow-sm">
-                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">ID:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb', fontSize: '13px' }}>
-                  DM-{demand.demandid}
-                </span>
-                <span className="text-gray-300">|</span>
-                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">By:</span>
-                <span className="text-gray-700 font-semibold">{demand.requesterName}</span>
-                <span className="text-gray-300">|</span>
-                <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">On:</span>
-                <span className="text-gray-500">{formatDisplayDate(demand.createddt)}</span>
+              {/* Right: ID + meta — inline compact row */}
+              <div className="flex-shrink-0 text-right self-start text-xs text-gray-500">
+                <span className="font-medium text-blue-600" style={{ fontFamily: 'monospace' }}>DM-{demand.demandid}</span>
+                <span className="mx-1.5 text-gray-300">|</span>
+                <span className="font-semibold text-gray-700">{demand.requesterName}</span>
+                <span className="mx-1.5 text-gray-300">|</span>
+                <span>{formatDisplayDate(demand.createddt)}</span>
               </div>
             </div>
 
@@ -2994,20 +2989,13 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
   return (
     <div className="space-y-3">
-      {/* Unified Compact Header Toolbar */}
-      <div className="px-3 py-2.5 bg-white/60 backdrop-blur-sm border border-gray-150 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Left: Title & Count details */}
-        <div className="flex flex-col flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-800 tracking-tight leading-tight">Demands</h2>
-          {sortedDemands.length > 0 && (
-            <span className="text-[11px] text-gray-500 font-medium mt-0.5">
-              Showing <span className="text-gray-700 font-semibold">{Math.min(((currentPage - 1) * itemsPerPage) + 1, sortedDemands.length)}–{Math.min(currentPage * itemsPerPage, sortedDemands.length)}</span> of <span className="text-gray-700 font-semibold">{sortedDemands.length}</span> requests
-            </span>
-          )}
-        </div>
+      {/* Compact Toolbar */}
+      <div className="px-2.5 py-2 bg-white/60 backdrop-blur-md border border-gray-200/80 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-center gap-4">
+        {/* Left: Title */}
+        <h2 className="text-xl font-bold text-gray-800 flex-shrink-0">Demands</h2>
 
-        {/* Center: Search input */}
-        <div className="flex-1 max-w-md w-full md:mx-4">
+        {/* Center: Search bar (flex-1) */}
+        <div className="flex-1 w-full max-w-md lg:mx-4">
           <SearchFilter
             value={searchQuery}
             onChange={setSearchQuery}
@@ -3015,44 +3003,70 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           />
         </div>
 
-        {/* Right: Compact Pagination controls */}
+        {/* Right: Controls & Pagination */}
         {sortedDemands.length > 0 && (
-          <div className="flex items-center justify-between md:justify-end gap-3 flex-shrink-0 w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-gray-100">
-            {/* Per page dropdown */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
-              >
-                {[5, 10, 20, 50].map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
+          <div className="flex flex-col sm:flex-row items-center gap-4 flex-shrink-0 w-full lg:w-auto justify-end">
+            {/* Per-page & Inline Info */}
+            <div className="flex items-center gap-3.5">
+              <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                Showing <span className="text-gray-700 font-semibold">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, sortedDemands.length)}</span> of <span className="text-gray-700 font-semibold">{sortedDemands.length}</span> requests
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400 whitespace-nowrap">Per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                  className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
+                >
+                  {[5, 10, 20, 50].map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Prev / Page / Next */}
+            {/* Prev / Pages / Next buttons */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="flex items-center justify-center p-1.5 rounded-lg border border-gray-250 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-                title="Previous Page"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
+                Prev
               </button>
 
-              <span className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-150 px-2 py-1 rounded-md min-w-[28px] text-center">
-                {currentPage} <span className="text-gray-400 font-normal">/ {totalPages}</span>
-              </span>
+              <div className="flex items-center gap-1 mx-0.5">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (currentPage <= 3) pageNum = i + 1;
+                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = currentPage - 2 + i;
+
+                  const isActive = currentPage === pageNum;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200'
+                          : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
 
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="flex items-center justify-center p-1.5 rounded-lg border border-gray-250 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-                title="Next Page"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
               >
+                Next
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
