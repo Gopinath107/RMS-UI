@@ -2632,199 +2632,140 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       >
         <div
           onClick={() => handleViewDemand(demand)}
-          className="group cursor-pointer"
-          style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid #e8edf5',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            overflow: 'hidden',
-            position: 'relative',
-            isolation: 'isolate',
-            transform: 'translateZ(0)',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px) translateZ(0)';
-            e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0) translateZ(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-          }}
+          className="group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-200 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
         >
-          {/* Left accent strip (yellow for InProgress, green for Open, statusCfg.dot otherwise) */}
+          {/* Left colored border */}
           <div
+            className="absolute left-0 top-0 bottom-0 w-1.5 z-10"
             style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: '4px',
-              background: demand.overallStatus === 'InProgress' ? '#f59e0b' : (demand.overallStatus === 'Open' ? '#22c55e' : statusCfg.dot),
-              zIndex: 10,
-              borderTopLeftRadius: '16px',
-              borderBottomLeftRadius: '16px',
+              background: demand.overallStatus === 'InProgress' ? '#f59e0b' : (demand.overallStatus === 'Open' ? '#22c55e' : statusCfg.dot)
             }}
           />
 
-          {/* ── Main Content ── */}
-          <div style={{ padding: '18px 20px 14px 20px' }}>
-
-            {/* Row 1: Title + ID badge inline, subtitle row below */}
-            <div className="flex items-start justify-between gap-4 mb-3">
-              {/* Left side: Title and chips */}
+          <div className="flex flex-col p-5 pl-7 pb-4">
+            {/* Top Row: Title, Badges, Meta */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-5">
+              {/* Left: Title & Badges */}
               <div className="flex-1 min-w-0">
-
-                {/* Title row: demand title */}
-                <div className="flex items-center gap-2.5 flex-wrap mb-2">
-                  <h3
-                    className="font-bold truncate group-hover:text-blue-700 transition-colors"
-                    style={{ fontSize: '16px', color: '#111827', letterSpacing: '-0.2px' }}
-                    title={demand.demandTitle}
-                  >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-bold text-gray-900 truncate pr-4 group-hover:text-blue-700 transition-colors" title={demand.demandTitle}>
                     {demand.demandTitle}
                   </h3>
+                  <span className="md:hidden shrink-0 font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md shadow-sm">
+                    DM-{demand.demandid}
+                  </span>
                 </div>
-
-                {/* Status + Priority + Profiles chips */}
-                <div className="flex flex-wrap items-center gap-1.5">
+                
+                {/* Badges */}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   {/* Status chip */}
                   <span
-                    className="inline-flex items-center gap-1.5"
-                    style={{
-                      background: statusCfg.bg,
-                      color: statusCfg.color,
-                      border: `1px solid ${statusCfg.border}`,
-                      borderRadius: '99px',
-                      padding: '3px 10px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold border"
+                    style={{ background: statusCfg.bg, color: statusCfg.color, borderColor: statusCfg.border }}
                   >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.dot, display: 'inline-block', flexShrink: 0 }} />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusCfg.dot }} />
                     {demand.overallStatus}
                   </span>
 
                   {/* Priority chip */}
                   {demand.priority && (
                     <span
-                      style={{
-                        background: priorityCfg.bg,
-                        color: priorityCfg.color,
-                        border: `1px solid ${priorityCfg.border}`,
-                        borderRadius: '99px',
-                        padding: '3px 10px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                      }}
+                      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold border"
+                      style={{ background: priorityCfg.bg, color: priorityCfg.color, borderColor: priorityCfg.border }}
                     >
                       {demand.priority}
                     </span>
                   )}
 
-                  {/* Profiles shared chip — Click to expand */}
+                  {/* Profiles shared chip */}
                   {demand.sharedResumes && demand.sharedResumes.length > 0 && (
                     <button
                       onClick={(e) => toggleProfiles(demand.demandid, e)}
-                      className="inline-flex items-center gap-1 hover:bg-indigo-100 transition-colors"
-                      style={{
-                        background: '#eef2ff',
-                        color: '#4338ca',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: '99px',
-                        padding: '3px 10px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-1 text-xs font-bold transition-colors shadow-sm"
                     >
-                      <Users style={{ width: '11px', height: '11px' }} />
+                      <Users className="w-3.5 h-3.5" />
                       {demand.sharedResumes.length} Profile{demand.sharedResumes.length > 1 ? 's' : ''} Shared
                       {expandedProfiles.has(demand.demandid) ? (
-                        <ChevronUp style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                        <ChevronUp className="w-3.5 h-3.5" />
                       ) : (
-                        <ChevronDown style={{ width: '12px', height: '12px', marginLeft: '2px' }} />
+                        <ChevronDown className="w-3.5 h-3.5" />
                       )}
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Right side: DM ID, Raised By, and Date */}
-              <div className="flex flex-col items-end flex-shrink-0">
-                <div className="mb-2">
-                  {/* DM ID badge */}
-                  <span style={{
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#2563eb',
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '6px',
-                    padding: '3px 10px',
-                    letterSpacing: '0.3px',
-                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)'
-                  }}>
-                    DM-{demand.demandid}
-                  </span>
+              {/* Right: Meta Panel (Desktop) */}
+              <div className="hidden md:flex flex-col items-end shrink-0 bg-gray-50/80 rounded-xl p-3 border border-gray-100 shadow-sm">
+                <span className="font-mono text-sm font-bold text-blue-700 bg-blue-100/50 border border-blue-200 px-3 py-1 rounded-md mb-2.5 shadow-sm">
+                  DM-{demand.demandid}
+                </span>
+                <div className="flex flex-col items-end gap-1.5 text-xs text-gray-500 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span>Raised by <span className="text-gray-800 font-semibold">{demand.requesterName}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span>{formatDisplayDate(demand.createddt)}</span>
+                  </div>
                 </div>
-                
-                {/* Subtitle: Raised by + Date */}
-                <div className="flex items-center gap-1.5 mt-1.5 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">
-                  <User style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>
-                    Raised by <span style={{ color: '#374151', fontWeight: 600 }}>{demand.requesterName}</span>
-                  </span>
-                  <span style={{ color: '#d1d5db', fontSize: '12px' }}>•</span>
-                  <Calendar style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>{formatDisplayDate(demand.createddt)}</span>
+              </div>
+              
+              {/* Mobile Meta */}
+              <div className="md:hidden flex flex-wrap items-center gap-3 text-xs text-gray-500 font-medium bg-gray-50/80 rounded-lg p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span>By <span className="text-gray-800 font-semibold">{demand.requesterName}</span></span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span>{formatDisplayDate(demand.createddt)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Row 2: Meta pills */}
-            <div className="flex flex-wrap items-center gap-1.5 mb-0">
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
               {demand.resourceRequestsCount !== undefined && (
-                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                  <Users style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
-                  <strong style={{ color: '#1e293b' }}>{demand.resourceRequestsCount}</strong>&nbsp;open
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 shadow-sm">
+                  <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate"><strong className="text-slate-800 text-[13px]">{demand.resourceRequestsCount}</strong> open</span>
+                </div>
               )}
               {demand.accountName && (
-                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                  <Target style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
-                  {demand.accountName}
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 shadow-sm" title={demand.accountName}>
+                  <Target className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate font-semibold text-slate-700">{demand.accountName}</span>
+                </div>
               )}
               {demand.projectName && (
-                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                  <Briefcase style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
-                  {demand.projectName}
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 shadow-sm" title={demand.projectName}>
+                  <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate font-semibold text-slate-700">{demand.projectName}</span>
+                </div>
               )}
               {demand.departmentName && (
-                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                  <Building style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
-                  {demand.departmentName}
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 shadow-sm" title={demand.departmentName}>
+                  <Building className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate font-semibold text-slate-700">{demand.departmentName}</span>
+                </div>
               )}
               {demand.workLocPref && (
-                <span className="inline-flex items-center gap-1" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                  <MapPin style={{ width: '11px', height: '11px', color: '#94a3b8' }} />
-                  {demand.workLocPref}
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 shadow-sm" title={demand.workLocPref}>
+                  <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate font-semibold text-slate-700">{demand.workLocPref}</span>
+                </div>
               )}
               {demand.locationType && (
-                <span style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '10.5px', color: '#64748b', fontWeight: 700, letterSpacing: '0.4px' }}>
+                <div className="flex items-center justify-center bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-xs text-gray-600 font-bold tracking-wide shadow-sm">
                   {demand.locationType}
-                </span>
+                </div>
               )}
               {demand.workMode && (
-                <span style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 10px', fontSize: '10.5px', color: '#64748b', fontWeight: 700, letterSpacing: '0.4px' }}>
+                <div className="flex items-center justify-center bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-xs text-gray-600 font-bold tracking-wide shadow-sm">
                   {demand.workMode}
-                </span>
+                </div>
               )}
             </div>
           </div>
@@ -2966,15 +2907,15 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
           {/* ── Skills Row ── */}
           {demand.skillName && demand.skillName.length > 0 && (
-            <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px' }}>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="border-t border-gray-100 p-5 pl-7 pt-4 bg-gray-50/30">
+              <div className="flex flex-wrap gap-2">
                 {demand.skillName.slice(0, 6).map((skill, idx) => (
-                  <span key={idx} style={{ background: '#f0f4ff', color: '#4f46e5', border: '1px solid #e0e7ff', borderRadius: '6px', padding: '3px 9px', fontSize: '11px', fontWeight: 600 }}>
+                  <span key={idx} className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-md text-xs font-bold shadow-sm">
                     {skill}
                   </span>
                 ))}
                 {demand.skillName.length > 6 && (
-                  <span style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 9px', fontSize: '11px', fontWeight: 600 }}>
+                  <span className="bg-white text-gray-600 border border-gray-200 px-3 py-1 rounded-md text-xs font-bold shadow-sm">
                     +{demand.skillName.length - 6} more
                   </span>
                 )}
@@ -2983,31 +2924,13 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           )}
 
           {/* ── Skill Matcher CTA ── */}
-          <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 20px', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px', background: '#ffffff' }}>
+          <div className="p-5 pl-7 pt-0 pb-5">
             <button
               onClick={e => { e.stopPropagation(); handleSkillMatcher(demand); }}
-              style={{
-                width: '100%',
-                height: '36px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)',
-                color: '#1e3a8a',
-                fontWeight: 600,
-                fontSize: '12.5px',
-                border: '1px solid #bfdbfe',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 8px rgba(96,165,250,0.25)',
-                transition: 'opacity 0.18s ease, box-shadow 0.18s ease',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(96,165,250,0.4)'; e.currentTarget.style.opacity = '0.92'; }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; e.currentTarget.style.opacity = '1'; }}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border border-transparent hover:border-indigo-400/30"
             >
-              <Sparkles style={{ width: '13px', height: '13px' }} />
-              Skill Matcher
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm tracking-wide">Skill Matcher</span>
             </button>
           </div>
         </div>
@@ -3018,75 +2941,78 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   return (
     <div className="space-y-3">
       {/* Premium Toolbar */}
-      <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 mb-5 relative overflow-hidden">
-        {/* Decorative background element */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full -mr-16 -mt-16 opacity-50 pointer-events-none" />
-        
-        {/* Left: Title & Results count */}
-        <div className="flex items-center gap-4 w-full md:w-auto relative z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-              <Target className="w-4 h-4 text-blue-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 tracking-tight">Demands</h2>
-          </div>
-          <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
-          <span className="inline-flex items-center gap-1.5 bg-gray-50 text-gray-700 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 shadow-sm">
-            <span className="text-blue-600 font-bold">{sortedDemands.length}</span> Total Demands
-          </span>
-        </div>
-
-        {/* Right: Search and Pagination Wrapper */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          {/* Search bar */}
-          <div className="w-full sm:w-64">
-            <SearchFilter
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by ID or Title"
-            />
-          </div>
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-6 relative overflow-visible z-20">
+        <div className="p-4 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           
-          {/* Pagination Controls */}
-          {sortedDemands.length > 0 && (
-            <div className="flex items-center gap-4 border-l border-gray-200 pl-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Per page:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                  className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer hover:border-gray-300 transition-colors"
-                >
-                  {[5, 10, 20, 50].map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Next/Prev buttons with page indicator */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  title="Previous Page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-medium text-gray-600 min-w-[3rem] text-center whitespace-nowrap">
-                  <span className="text-gray-900 font-bold">{currentPage}</span> / {totalPages}
+          {/* Left: Title & Results count */}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center shadow-inner shrink-0">
+              <Target className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 leading-tight">Demands</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="inline-flex items-center justify-center bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded border border-blue-100">
+                  {sortedDemands.length}
                 </span>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  title="Next Page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <span className="text-xs font-semibold text-gray-500">Total</span>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Center/Right: Search, Per Page, Pagination */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto md:ml-auto">
+            {/* Search bar */}
+            <div className="w-full sm:w-64">
+              <SearchFilter
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search by ID or Title"
+                className="w-full"
+              />
+            </div>
+            
+            {/* Pagination Controls */}
+            {sortedDemands.length > 0 && (
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 sm:pl-4 sm:border-l sm:border-gray-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-semibold hidden sm:inline">Show:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="h-9 pl-3 pr-8 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 hover:bg-gray-100 transition-colors appearance-none cursor-pointer"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
+                  >
+                    {[5, 10, 20, 50].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-md text-gray-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-gray-600 min-w-[3rem] text-center">
+                    <span className="text-gray-900">{currentPage}</span> <span className="text-gray-400 font-normal">/</span> {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-md text-gray-600 hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
