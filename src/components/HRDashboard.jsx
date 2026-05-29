@@ -2671,19 +2671,24 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           {/* ── Main Content ── */}
           <div style={{ padding: '18px 20px 14px 20px' }}>
 
-            {/* Row 1: Title + ID badge */}
+            {/* Row 1: Title + ID badge inline, subtitle row below */}
             <div className="flex items-start justify-between gap-4 mb-3">
+              {/* Left side: Title and chips */}
               <div className="flex-1 min-w-0">
-                <h3
-                  className="font-bold truncate group-hover:text-blue-700 transition-colors"
-                  style={{ fontSize: '15px', color: '#111827', letterSpacing: '-0.2px' }}
-                  title={demand.demandTitle}
-                >
-                  {demand.demandTitle}
-                </h3>
 
-                {/* Status + Priority + Demand tag chips */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {/* Title row: demand title */}
+                <div className="flex items-center gap-2.5 flex-wrap mb-2">
+                  <h3
+                    className="font-bold truncate group-hover:text-blue-700 transition-colors"
+                    style={{ fontSize: '16px', color: '#111827', letterSpacing: '-0.2px' }}
+                    title={demand.demandTitle}
+                  >
+                    {demand.demandTitle}
+                  </h3>
+                </div>
+
+                {/* Status + Priority + Profiles chips */}
+                <div className="flex flex-wrap items-center gap-1.5">
                   {/* Status chip */}
                   <span
                     className="inline-flex items-center gap-1.5"
@@ -2746,13 +2751,36 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 </div>
               </div>
 
-              {/* Right: ID + meta — inline compact row */}
-              <div className="flex-shrink-0 text-right self-start text-xs text-gray-500">
-                <span className="font-medium text-blue-600" style={{ fontFamily: 'monospace' }}>DM-{demand.demandid}</span>
-                <span className="mx-1.5 text-gray-300">|</span>
-                <span className="font-semibold text-gray-700">{demand.requesterName}</span>
-                <span className="mx-1.5 text-gray-300">|</span>
-                <span>{formatDisplayDate(demand.createddt)}</span>
+              {/* Right side: DM ID, Raised By, and Date */}
+              <div className="flex flex-col items-end flex-shrink-0">
+                <div className="mb-2">
+                  {/* DM ID badge */}
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#2563eb',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    padding: '3px 10px',
+                    letterSpacing: '0.3px',
+                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)'
+                  }}>
+                    DM-{demand.demandid}
+                  </span>
+                </div>
+                
+                {/* Subtitle: Raised by + Date */}
+                <div className="flex items-center gap-1.5 mt-1.5 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">
+                  <User style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
+                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>
+                    Raised by <span style={{ color: '#374151', fontWeight: 600 }}>{demand.requesterName}</span>
+                  </span>
+                  <span style={{ color: '#d1d5db', fontSize: '12px' }}>•</span>
+                  <Calendar style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
+                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>{formatDisplayDate(demand.createddt)}</span>
+                </div>
               </div>
             </div>
 
@@ -2989,89 +3017,77 @@ const DemandsTab = ({ demands, onEditDemand }) => {
 
   return (
     <div className="space-y-3">
-      {/* Compact Toolbar */}
-      <div className="px-2.5 py-2 bg-white/60 backdrop-blur-md border border-gray-200/80 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-center gap-4">
-        {/* Left: Title */}
-        <h2 className="text-xl font-bold text-gray-800 flex-shrink-0">Demands</h2>
-
-        {/* Center: Search bar (flex-1) */}
-        <div className="flex-1 w-full max-w-md lg:mx-4">
-          <SearchFilter
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search by ID or Title"
-          />
+      {/* Premium Toolbar */}
+      <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 mb-5 relative overflow-hidden">
+        {/* Decorative background element */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full -mr-16 -mt-16 opacity-50 pointer-events-none" />
+        
+        {/* Left: Title & Results count */}
+        <div className="flex items-center gap-4 w-full md:w-auto relative z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+              <Target className="w-4 h-4 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 tracking-tight">Demands</h2>
+          </div>
+          <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+          <span className="inline-flex items-center gap-1.5 bg-gray-50 text-gray-700 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 shadow-sm">
+            <span className="text-blue-600 font-bold">{sortedDemands.length}</span> Total Demands
+          </span>
         </div>
 
-        {/* Right: Controls & Pagination */}
-        {sortedDemands.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center gap-4 flex-shrink-0 w-full lg:w-auto justify-end">
-            {/* Per-page & Inline Info */}
-            <div className="flex items-center gap-3.5">
-              <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                Showing <span className="text-gray-700 font-semibold">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, sortedDemands.length)}</span> of <span className="text-gray-700 font-semibold">{sortedDemands.length}</span> requests
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400 whitespace-nowrap">Per page:</span>
+        {/* Right: Search and Pagination Wrapper */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          {/* Search bar */}
+          <div className="w-full sm:w-64">
+            <SearchFilter
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search by ID or Title"
+            />
+          </div>
+          
+          {/* Pagination Controls */}
+          {sortedDemands.length > 0 && (
+            <div className="flex items-center gap-4 border-l border-gray-200 pl-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Per page:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                  className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-sm cursor-pointer"
+                  className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer hover:border-gray-300 transition-colors"
                 >
                   {[5, 10, 20, 50].map(option => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* Prev / Pages / Next buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                Prev
-              </button>
-
-              <div className="flex items-center gap-1 mx-0.5">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) pageNum = i + 1;
-                  else if (currentPage <= 3) pageNum = i + 1;
-                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                  else pageNum = currentPage - 2 + i;
-
-                  const isActive = currentPage === pageNum;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold transition-all duration-200 ${
-                        isActive
-                          ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200'
-                          : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+              {/* Next/Prev buttons with page indicator */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-medium text-gray-600 min-w-[3rem] text-center whitespace-nowrap">
+                  <span className="text-gray-900 font-bold">{currentPage}</span> / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
-              >
-                Next
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Search Results Info */}

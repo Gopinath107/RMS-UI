@@ -146,7 +146,7 @@ const OVERALL_STATUS_CONFIG = {
 /*  EXCEL GRID — COLUMN DEFINITIONS (drag-drop order driven)       */
 /* ───────────────────────────────────────────────────────────────── */
 const COLUMN_DEFS = [
-    { key: '#',              label: '#',               minW: 36,   sortKey: null,            filter: null,                                      fixed: true  },
+    { key: '#',              label: 'S.No',               minW: 36,   sortKey: null,            filter: null,                                      fixed: true  },
     { key: 'name',           label: 'Demand Name',     minW: 140,  sortKey: 'name',           filter: 'text'                                                  },
     { key: 'client',         label: 'Client',          minW: 80,   sortKey: 'client',         filter: 'text'                                                  },
     { key: 'project',        label: 'Skill Set',       minW: 80,   sortKey: 'project',        filter: 'text'                                                  },

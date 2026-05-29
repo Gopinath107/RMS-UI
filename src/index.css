@@ -6271,7 +6271,7 @@ html {
 [data-state="active"] {
   font-weight: var(--font-weight-bold);
   color: var(--color-blue-600);
-  background-color: var(--color-blue-100);
+  /* background-color: var(--color-blue-100); */
 /* Optional: nicer hover for inactive tabs */
 TabsTrigger:hover:not([data-state="active"]) {
   color: var(--color-gray-700);
