@@ -2,8 +2,8 @@ import api from "./api";
 
 export const EmployeeService = {
   
-  fetchEmployeeList: async function () {
-    return api.get('/employees/list');
+  fetchEmployeeList: async function (params) {
+    return api.get('/employees/list', { params });
   },
 
   createEmployee: async function (formData) {
