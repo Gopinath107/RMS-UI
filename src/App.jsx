@@ -15,6 +15,7 @@ import LoginPage from './components/LoginPage.jsx';
 import ForgotPassword from './components/ForgotPassword.jsx';
 import NotFound from './components/NotFound.jsx';
 import AppShell from './layout/AppShell.jsx';
+import RmsAccessBoundary from './components/RmsAccessBoundary.jsx';
 
 import { Toaster } from './components/ui/sonner.jsx';
 import { getDashboardPath } from './config/routes.js';
@@ -108,7 +109,7 @@ function AppContent() {
           path="/*"
           element={
             isAuthenticated
-              ? <AppShell userRole={userRole} onLogout={handleLogout} />
+              ? <RmsAccessBoundary onLogout={handleLogout}><AppShell userRole={userRole} onLogout={handleLogout} /></RmsAccessBoundary>
               : <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />
           }
         />

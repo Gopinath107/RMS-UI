@@ -165,7 +165,7 @@ export function useUserManagement() {
 
   const fetchEmployees = async () => {
     try {
-      const r = await EmployeeService.fetchEmployeeList();
+      const r = await EmployeeService.fetchEmployeeList({ purpose: 'RMS_ACCOUNT' });
       setEmployees(r.data.result || []);
     } catch (err) { toast.error(getErrorMessage(err, 'Failed to load employees')); }
   };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { getDashboardPath } from '../config/routes.js';
+import { useRmsAccess, permissionForPath } from '../utils/portalAccess.js';
 
 /**
  * ProtectedRoute — wraps any authenticated route.
@@ -14,6 +15,8 @@ import { getDashboardPath } from '../config/routes.js';
  */
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
+  const access = useRmsAccess();
+  const requiredPermission = permissionForPath(location.pathname);
 
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const userRole = localStorage.getItem('userRole') || '';
@@ -33,5 +36,8 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to={getDashboardPath(userRole)} replace />;
   }
 
+  if (access.managed && requiredPermission && !access.permissions.includes(requiredPermission)) {
+    return <section className="rounded-xl border bg-white p-6" role="alert"><h1 className="text-xl font-semibold">Access not assigned</h1><p>This RMS page requires permission from your RIS Portal administrator.</p></section>;
+  }
   return children;
 }
