@@ -156,6 +156,7 @@ const ProfileTab = React.memo(({
               allowCreate
               creating={isCreatingDepartment}
               onCreate={onCreateDepartment}
+              maxVisibleOptions={Math.max(departments.length, 200)}
             />
           </F>
         <F label="Client">
@@ -178,6 +179,7 @@ const ProfileTab = React.memo(({
             creating={isCreatingClient}
             onCreate={onCreateClient}
             clearable
+            maxVisibleOptions={Math.max(clients.length, 200)}
           />
         </F>
       </Section>
@@ -2092,7 +2094,7 @@ export default function AddResourcePage() {
     payload.append("profileSummary", formData.profileSummary || "");
     payload.append("trainingSummary", formData.trainingSummary || "");
     payload.append("certificationSummary", formData.certificationSummary || "");
-    if (formData.middleName) payload.append("middleName", formData.middleName);
+    payload.append("middleName", (formData.middleName || "").trim());
     if (formData.dateOfBirth) payload.append("dateOfBirth", formData.dateOfBirth);
     if (formData.primaryCountryCode) payload.append("primaryCountryCode", formData.primaryCountryCode);
     if (formData.primaryContactNo) payload.append("primaryContactNo", formData.primaryContactNo);
@@ -2203,7 +2205,7 @@ export default function AddResourcePage() {
     payload.append("preferredLocation", formData.preferredLocation || "");
     payload.append("comments", formData.comments || "");
     // New fields for update
-    if (formData.middleName) payload.append("middleName", formData.middleName);
+    payload.append("middleName", (formData.middleName || "").trim());
     if (formData.dateOfBirth) payload.append("dateOfBirth", formData.dateOfBirth);
     if (formData.primaryCountryCode) payload.append("primaryCountryCode", formData.primaryCountryCode);
     if (formData.primaryContactNo) payload.append("primaryContactNo", formData.primaryContactNo);

@@ -76,6 +76,10 @@ importExcel: async function (formData) {
     }
   });
 },
+downloadImportTemplate: async function (companyId) {
+  const qs = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  return api.get(`/employees/import-template${qs}`, { responseType: 'blob' });
+},
   shareResume: async function (employeeId, status, actionByUserId, ids, type = 'opportunity') {
   const payload = {
     employeeId,

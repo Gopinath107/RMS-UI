@@ -309,7 +309,7 @@ const InterviewsManagement = ({ setCurrentPage }) => {
   /*  LOAD INTERVIEWS                                                      */
   /* --------------------------------------------------------------------- */
   const loadInterviews = useCallback(async () => {
-    if (allRequests.length === 0 || allResources.length === 0) return;
+    if (allRequests.length === 0) return;
 
     try {
       const response = await InterviewService.fetchInterviewList();
@@ -1998,7 +1998,6 @@ const InterviewsManagement = ({ setCurrentPage }) => {
                           handleLevelChange(lvl, 'date', e.target.value);
                           clearLevelError(lvl);
                         }}
-                        min={new Date().toISOString().split('T')[0]}
                         className={`block w-full h-10 border-gray-300 focus:ring-blue-500 ${levelErrors.date ? 'border-red-500' : ''
                           } ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         disabled={isDisabled}

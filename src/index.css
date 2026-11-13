@@ -1166,20 +1166,15 @@
   .min-w-max {
     min-width: max-content;
   }
-  /* Optional: Custom scrollbar for horizontal scroll */
+  /* Invisible scrollbars for horizontal and table scroll */
+.overflow-x-auto {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
 .overflow-x-auto::-webkit-scrollbar {
-  height: 8px;
-}
-.overflow-x-auto::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-.overflow-x-auto::-webkit-scrollbar-thumb {
-  background: #c084fc;
-  border-radius: 4px;
-}
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: #a78bfa;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
   .flex-1 {
@@ -6667,6 +6662,49 @@ th:hover .col-resize-line {
 /* On active drag: line turns #6366f1 (or app's primary color) */
 .col-resize-handle.is-resizing .col-resize-line {
   background-color: #6366f1 !important;
+}
+
+/* Hide default thick scrollbars (both horizontal and vertical) globally across the entire app */
+*,
+*::before,
+*::after,
+html,
+body,
+#root,
+[data-slot="table-container"],
+[data-slot="dialog-content"],
+[data-slot="dialog-content"] *,
+.rms-import-dialog,
+.rms-import-dialog *,
+.responsive-table,
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto,
+.scrollbar-thin,
+.hide-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+[data-slot="table-container"]::-webkit-scrollbar,
+[data-slot="dialog-content"]::-webkit-scrollbar,
+[data-slot="dialog-content"] *::-webkit-scrollbar,
+.rms-import-dialog::-webkit-scrollbar,
+.rms-import-dialog *::-webkit-scrollbar,
+.responsive-table::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 

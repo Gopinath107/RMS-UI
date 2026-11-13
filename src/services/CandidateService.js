@@ -59,6 +59,10 @@ export const CandidateService = {
         return api.post('/candidates/importExcel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+    },
+    downloadImportTemplate: async (companyId) => {
+        const qs = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+        return api.get(`/candidates/import-template${qs}`, { responseType: 'blob' });
     }
 
 };

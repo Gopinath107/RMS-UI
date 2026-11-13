@@ -326,8 +326,9 @@ function SelectContent({ className }) {
   return (
     <div
       data-slot="select-content"
+      style={{ maxHeight: "9.5rem", overflowY: "auto", overflowX: "hidden", zIndex: 9999 }}
       className={cn(
-        "absolute left-0 top-full mt-1 w-full min-w-[8rem] max-h-[220px] overflow-y-auto overflow-x-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-xl z-[9999] scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400",
+        "absolute left-0 top-full mt-1 w-full min-w-[8rem] max-h-40 overflow-y-auto overflow-x-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-xl z-[9999] scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400",
         className,
       )}
     >

@@ -170,11 +170,7 @@ export default function AddUserDialog({
                     </label>
                   </div>
                 ))}
-                {[...companyRoles, ...inlineRoles].length === 0 && <div className="text-sm text-gray-500 italic">No roles available. Add one below.</div>}
-              </div>
-              <div className="flex gap-2 mt-1">
-                <Input value={newRoleInput} onChange={e => setNewRoleInput(e.target.value)} placeholder="Add new role name" className="h-8 text-xs flex-1" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddInlineRole(); } }} />
-                <Button type="button" onClick={handleAddInlineRole} className="h-8 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800" variant="outline">+ Add Role</Button>
+                {[...companyRoles, ...inlineRoles].length === 0 && <div className="text-sm text-gray-500 italic">No roles available.</div>}
               </div>
               {errors.roleIds && <p className="text-xs text-red-500 mt-1">{errors.roleIds}</p>}
             </div>

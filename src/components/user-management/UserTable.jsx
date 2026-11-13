@@ -42,7 +42,6 @@ export default function UserTable({
                 <TableHead className="font-semibold text-gray-700">Role(s)</TableHead>
                 <TableHead className="font-semibold text-gray-700">Company</TableHead>
                 <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                <TableHead className="font-semibold text-gray-700">Last Login</TableHead>
                 <TableHead className="font-semibold text-gray-700 text-right pr-5">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -82,7 +81,6 @@ export default function UserTable({
                         <span className="leading-none">{user.status}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs text-gray-400">{user.lastLogin === 'N/A' ? '—' : user.lastLogin}</TableCell>
                     <TableCell className="text-right pr-5">
                       <div className="flex items-center justify-end gap-1.5">
                         <button title="Edit user" onClick={() => onEdit(user)} className="w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all">
@@ -100,7 +98,7 @@ export default function UserTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center">
+                  <TableCell colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
                         <Users className="w-7 h-7 text-gray-300" />

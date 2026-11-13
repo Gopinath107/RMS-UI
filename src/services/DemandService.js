@@ -1,6 +1,7 @@
 // New file: src/services/DemandService.js (assuming standard project structure)
 import api from './api';
 import { APIConfigurations } from '../constant/AuthPath';
+import { ClientService } from './clientListService';
 
 export const DemandService = {
   create: async (payload) => {
@@ -22,14 +23,7 @@ export const DemandService = {
     return api.get('/companies/list');
   },
     fetchClientList: async function () {
-    try {
-      const response = await api.get('/accounts/list?size=300');
-      // Return only the array of clients
-      return response.data.result;
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      throw error;
-    }
+    return ClientService.fetchClientList();
   },
   // NEW: Create Account
   createAccount: async (payload) => {

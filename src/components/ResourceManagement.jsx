@@ -64,7 +64,10 @@ import {
     ExternalLink, Share2,
     ChevronDown,
     ChevronUp,
-    BookOpen
+    BookOpen,
+    Upload,
+    Building2,
+    X
 } from "lucide-react";
 import Swal from 'sweetalert2';
 import { toast } from "sonner";
@@ -992,7 +995,7 @@ const ResourceTable = ({
             <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-lg">
                 <div className="relative">
                     <DndContext sensors={colSensors} collisionDetection={closestCenter} onDragEnd={handleColDragEnd}>
-                    <Table className="responsive-table" containerClassName="max-h-[480px] overflow-auto scrollbar-thin scrollbar-track-purple-100 scrollbar-thumb-purple-300 hover:scrollbar-thumb-purple-400">
+                    <Table className="responsive-table" containerClassName="overflow-x-auto hide-scrollbar">
                         <TableHeader className="sticky top-0 z-10">
                             <TableRow className="bg-gradient-to-r from-purple-200/80 via-blue-300/70 to-indigo-300/80 border-b-2 border-purple-300 shadow-sm">
                                 <SortableContext items={visibleCols} strategy={horizontalListSortingStrategy}>
@@ -1216,6 +1219,10 @@ export default function ResourceManagement() {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importCompanyId, setImportCompanyId] = useState(null);
     const [importFile, setImportFile] = useState(null);
+    const [isImportDragOver, setIsImportDragOver] = useState(false);
+    const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const importFileInputRef = useRef(null);
     const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
     const [resumeUrl, setResumeUrl] = useState("");
     const [resumeFileName, setResumeFileName] = useState("");
@@ -2395,18 +2402,66 @@ export default function ResourceManagement() {
     };
 
     const handleImport = () => {
+        setIsImportDragOver(false);
         setIsImportModalOpen(true);
     };
 
+    const handleDownloadImportTemplate = async () => {
+        setIsDownloadingTemplate(true);
+        try {
+            const response = activeTab === "internal"
+                ? await EmployeeService.downloadImportTemplate(importCompanyId)
+                : await CandidateService.downloadImportTemplate(importCompanyId);
+
+            const blob = new Blob([response.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = activeTab === "internal"
+                ? "Employee_Import_Template.xlsx"
+                : "Candidate_Import_Template.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success("Sample Excel template downloaded.");
+        } catch (error) {
+            console.error("Template download error:", error);
+            toast.error("Failed to download sample Excel template.");
+        } finally {
+            setIsDownloadingTemplate(false);
+        }
+    };
+
+    const selectImportFile = (file) => {
+        if (!file) return;
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+            toast.error("Please upload only CSV or Excel files (.csv, .xls, .xlsx)");
+            return;
+        }
+        setImportFile(file);
+    };
+
     const handleImportFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const fileName = file.name.toLowerCase();
-            if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-                toast.error("Please upload only CSV or Excel files (.csv, .xls, .xlsx)");
-                return;
-            }
-            setImportFile(file);
+        selectImportFile(e.target.files?.[0]);
+    };
+
+    const handleImportFileDrop = (e) => {
+        e.preventDefault();
+        setIsImportDragOver(false);
+        if (!isImporting) {
+            selectImportFile(e.dataTransfer.files?.[0]);
+        }
+    };
+
+    const clearImportFile = (e) => {
+        e?.stopPropagation();
+        setImportFile(null);
+        if (importFileInputRef.current) {
+            importFileInputRef.current.value = "";
         }
     };
 
@@ -2424,6 +2479,7 @@ export default function ResourceManagement() {
         formData.append("companyId", importCompanyId);
         formData.append("file", importFile);
 
+        setIsImporting(true);
         try {
             let response;
 
@@ -2435,18 +2491,37 @@ export default function ResourceManagement() {
                 response = await CandidateService.importExcel(formData);
             }
 
-            // SUCCESS path
-            if (response.data.success) {
-                const successMessage = activeTab === "internal"
-                    ? "Employees imported successfully!"
-                    : "Candidates imported successfully!";
+            const importResult = response.data?.result;
+            const createdCount = importResult?.createdCount ?? 0;
+            const updatedCount = importResult?.updatedCount ?? 0;
+            const successCount = importResult?.successCount ?? 0;
+            const label = activeTab === "internal" ? "Employees" : "Candidates";
 
-                toast.success(successMessage);
+            // Full or partial success
+            if (response.data.success || successCount > 0) {
+                const detailParts = [];
+                if (createdCount > 0) detailParts.push(`${createdCount} created`);
+                if (updatedCount > 0) detailParts.push(`${updatedCount} updated`);
+                const summary = detailParts.length > 0
+                    ? `${label} imported: ${detailParts.join(", ")}.`
+                    : `${label} imported successfully!`;
+
+                if (Array.isArray(response.data.errors) && response.data.errors.length > 0) {
+                    toast.warning(
+                        <div className="whitespace-pre-line text-left">
+                            {`${summary}\n${response.data.errors.join("\n")}`}
+                        </div>,
+                        { duration: 9000 }
+                    );
+                } else {
+                    toast.success(summary);
+                }
+
                 setIsImportModalOpen(false);
+                setIsImportDragOver(false);
                 setImportCompanyId(null);
-                setImportFile(null);
+                clearImportFile();
 
-                // Refresh the appropriate list
                 if (activeTab === "internal") {
                     loadInternalResources();
                 } else {
@@ -2492,6 +2567,8 @@ export default function ResourceManagement() {
                 : "Failed to import candidates. Please try again.";
 
             toast.error(errorMessage);
+        } finally {
+            setIsImporting(false);
         }
     };
 
@@ -3930,21 +4007,234 @@ export default function ResourceManagement() {
             {/* Import Dialog (only for internal resources) */}
 
             {/* Import Dialog */}
-            <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {activeTab === "internal" ? "Import Employees" : "Import External Candidates"}
-                        </DialogTitle>
+            <Dialog open={isImportModalOpen} onOpenChange={(open) => {
+                if (!open && isImporting) return;
+                setIsImportModalOpen(open);
+                if (!open) setIsImportDragOver(false);
+            }}>
+                <DialogContent
+                    className="rms-import-dialog hide-scrollbar"
+                    style={{
+                        padding: 0,
+                        overflow: "hidden",
+                        borderRadius: 18,
+                        border: "none",
+                        maxWidth: 580,
+                        width: "calc(100% - 2rem)",
+                        gap: 0,
+                        backgroundColor: "#ffffff",
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.28)",
+                        maxHeight: "92vh",
+                        display: "flex",
+                        flexDirection: "column",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                    }}
+                >
+                    <style>{`
+                        .rms-import-dialog,
+                        .rms-import-dialog *,
+                        .rms-import-body,
+                        .rms-import-body * {
+                            scrollbar-width: none !important;
+                            -ms-overflow-style: none !important;
+                        }
+                        .rms-import-dialog::-webkit-scrollbar,
+                        .rms-import-dialog *::-webkit-scrollbar,
+                        .rms-import-body::-webkit-scrollbar,
+                        .rms-import-body *::-webkit-scrollbar {
+                            display: none !important;
+                            width: 0 !important;
+                            height: 0 !important;
+                        }
+                        .rms-import-dialog > button:last-child {
+                            color: rgba(255, 255, 255, 0.92) !important;
+                            background: rgba(255, 255, 255, 0.18) !important;
+                            border-radius: 9999px !important;
+                            width: 32px !important;
+                            height: 32px !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            top: 16px !important;
+                            right: 16px !important;
+                            opacity: 1 !important;
+                            cursor: pointer;
+                        }
+                        .rms-import-dialog > button:last-child:hover {
+                            background: rgba(255, 255, 255, 0.3) !important;
+                            color: #ffffff !important;
+                        }
+                    `}</style>
+
+                    {/* Gradient Header */}
+                    <DialogHeader
+                        style={{
+                            background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%)",
+                            padding: "20px 24px",
+                            color: "#ffffff",
+                            margin: 0,
+                            gap: 0,
+                            flexShrink: 0,
+                        }}
+                    >
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, paddingRight: 40 }}>
+                            <div
+                                style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 12,
+                                    backgroundColor: "rgba(255, 255, 255, 0.18)",
+                                    border: "1px solid rgba(255, 255, 255, 0.28)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <Upload style={{ width: 20, height: 20, color: "#ffffff" }} />
+                            </div>
+                            <div style={{ textAlign: "left" }}>
+                                <DialogTitle
+                                    style={{
+                                        fontSize: 19,
+                                        fontWeight: 700,
+                                        color: "#ffffff",
+                                        margin: 0,
+                                        lineHeight: 1.25,
+                                    }}
+                                >
+                                    {activeTab === "internal" ? "Import Employees" : "Import External Candidates"}
+                                </DialogTitle>
+                                <DialogDescription
+                                    style={{
+                                        fontSize: 12.5,
+                                        color: "rgba(255, 255, 255, 0.88)",
+                                        margin: "4px 0 0",
+                                        lineHeight: 1.4,
+                                    }}
+                                >
+                                    Bulk upload via Excel or CSV with automatic resume attachment from Resume Path.
+                                </DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="importCompany">Company *</Label>
+
+                    {/* Modal Body */}
+                    <div
+                        className="rms-import-body hide-scrollbar"
+                        style={{
+                            padding: "20px 24px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 16,
+                            backgroundColor: "#ffffff",
+                            overflowY: "auto",
+                            flex: "1 1 auto",
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                        }}
+                    >
+                        {/* Template Download Card */}
+                        <div
+                            style={{
+                                borderRadius: 12,
+                                border: "1px solid #ddd6fe",
+                                background: "linear-gradient(135deg, #f5f3ff 0%, #eef2ff 55%, #eff6ff 100%)",
+                                padding: 14,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 12,
+                                    flexWrap: "wrap",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 9,
+                                            backgroundColor: "#d1fae5",
+                                            color: "#047857",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <FileText style={{ width: 17, height: 17 }} />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: 13.5, fontWeight: 600, color: "#111827", margin: 0 }}>
+                                            Excel Sample Template (.xlsx)
+                                        </p>
+                                        <p style={{ fontSize: 12, color: "#4b5563", margin: "2px 0 0" }}>
+                                            Pre-formatted columns with an Instructions guide sheet.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isDownloadingTemplate || isImporting}
+                                    onClick={handleDownloadImportTemplate}
+                                    style={{
+                                        backgroundColor: "#ffffff",
+                                        color: "#6d28d9",
+                                        border: "1px solid #c4b5fd",
+                                        borderRadius: 10,
+                                        padding: "7px 12px",
+                                        fontSize: 12.5,
+                                        fontWeight: 600,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        flexShrink: 0,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <Download style={{ width: 15, height: 15 }} />
+                                    {isDownloadingTemplate ? "Downloading..." : "Download Template"}
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Company Selector */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <Label
+                                htmlFor="importCompany"
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    fontSize: 13.5,
+                                    fontWeight: 600,
+                                    color: "#1f2937",
+                                }}
+                            >
+                                <Building2 style={{ width: 15, height: 15, color: "#7c3aed" }} />
+                                Company <span style={{ color: "#e11d48" }}>*</span>
+                            </Label>
                             <Select
                                 value={importCompanyId || ""}
                                 onValueChange={(value) => setImportCompanyId(value)}
+                                disabled={isImporting}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger
+                                    style={{
+                                        height: 42,
+                                        borderRadius: 10,
+                                        borderColor: "#d1d5db",
+                                        backgroundColor: "#f9fafb",
+                                        width: "100%",
+                                    }}
+                                >
                                     <SelectValue placeholder="Select company" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -3959,33 +4249,225 @@ export default function ResourceManagement() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="importFile">Upload File (CSV or Excel) *</Label>
-                            <Input
+
+                        {/* Drag-and-Drop File Upload Zone */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <Label
+                                    htmlFor="importFile"
+                                    style={{ fontSize: 13.5, fontWeight: 600, color: "#1f2937" }}
+                                >
+                                    Upload Spreadsheet <span style={{ color: "#e11d48" }}>*</span>
+                                </Label>
+                                <span style={{ fontSize: 11.5, color: "#6b7280" }}>Formats: .xlsx, .xls, .csv</span>
+                            </div>
+                            <input
+                                ref={importFileInputRef}
                                 id="importFile"
                                 type="file"
                                 accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                disabled={isImporting}
                                 onChange={handleImportFileChange}
+                                style={{ display: "none" }}
                             />
-                            <p className="text-sm text-gray-500">
-                                {activeTab === "internal"
-                                    ? "Upload employee data in CSV or Excel format"
-                                    : "Upload candidate data in CSV or Excel format"}
-                            </p>
+                            {!importFile ? (
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => !isImporting && importFileInputRef.current?.click()}
+                                    onKeyDown={(e) => {
+                                        if ((e.key === "Enter" || e.key === " ") && !isImporting) {
+                                            e.preventDefault();
+                                            importFileInputRef.current?.click();
+                                        }
+                                    }}
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        if (!isImporting) setIsImportDragOver(true);
+                                    }}
+                                    onDragLeave={() => setIsImportDragOver(false)}
+                                    onDrop={handleImportFileDrop}
+                                    style={{
+                                        border: isImportDragOver ? "2px dashed #7c3aed" : "2px dashed #cbd5e1",
+                                        backgroundColor: isImportDragOver ? "#f5f3ff" : "#f8fafc",
+                                        borderRadius: 12,
+                                        padding: "20px 16px",
+                                        textAlign: "center",
+                                        cursor: isImporting ? "not-allowed" : "pointer",
+                                        transition: "all 0.2s ease",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            width: 42,
+                                            height: 42,
+                                            borderRadius: "50%",
+                                            backgroundColor: "#ede9fe",
+                                            color: "#6d28d9",
+                                            margin: "0 auto 10px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        <Upload style={{ width: 20, height: 20 }} />
+                                    </div>
+                                    <p style={{ fontSize: 13.5, fontWeight: 600, color: "#1f2937", margin: 0 }}>
+                                        Click to browse or drag &amp; drop your file here
+                                    </p>
+                                    <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>
+                                        Excel workbook (.xlsx, .xls) or CSV spreadsheet
+                                    </p>
+                                </div>
+                            ) : (
+                                <div
+                                    style={{
+                                        border: "2px solid #34d399",
+                                        backgroundColor: "#ecfdf5",
+                                        borderRadius: 12,
+                                        padding: "12px 14px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 12,
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 10,
+                                                backgroundColor: "#10b981",
+                                                color: "#ffffff",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <FileText style={{ width: 20, height: 20 }} />
+                                        </div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <p
+                                                style={{
+                                                    fontSize: 13.5,
+                                                    fontWeight: 600,
+                                                    color: "#111827",
+                                                    margin: 0,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {importFile.name}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: "#047857",
+                                                    fontWeight: 500,
+                                                    margin: "2px 0 0",
+                                                }}
+                                            >
+                                                {importFile.size < 1048576
+                                                    ? `${(importFile.size / 1024).toFixed(1)} KB`
+                                                    : `${(importFile.size / 1048576).toFixed(2)} MB`}{" "}
+                                                • Ready to import
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={isImporting}
+                                        onClick={clearImportFile}
+                                        title="Remove file"
+                                        style={{
+                                            padding: 6,
+                                            borderRadius: 8,
+                                            border: "none",
+                                            backgroundColor: "transparent",
+                                            color: "#6b7280",
+                                            cursor: isImporting ? "not-allowed" : "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <X style={{ width: 16, height: 16 }} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="outline" onClick={() => {
-                            setIsImportModalOpen(false);
-                            setImportCompanyId(null);
-                            setImportFile(null);
-                        }}>
+
+                    {/* Footer Bar */}
+                    <DialogFooter
+                        style={{
+                            padding: "14px 24px",
+                            backgroundColor: "#f9fafb",
+                            borderTop: "1px solid #e5e7eb",
+                            display: "flex",
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: 10,
+                            margin: 0,
+                            flexShrink: 0,
+                        }}
+                    >
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isImporting}
+                            onClick={() => {
+                                setIsImportModalOpen(false);
+                                setIsImportDragOver(false);
+                                setImportCompanyId(null);
+                                clearImportFile();
+                            }}
+                            style={{
+                                borderRadius: 10,
+                                border: "1px solid #d1d5db",
+                                backgroundColor: "#ffffff",
+                                color: "#374151",
+                                padding: "8px 16px",
+                                fontSize: 13.5,
+                                fontWeight: 500,
+                                cursor: isImporting ? "not-allowed" : "pointer",
+                            }}
+                        >
                             Cancel
                         </Button>
-                        <Button onClick={handleSubmitImport} className="bg-green-500 hover:bg-green-600">
-                            {activeTab === "internal" ? "Import Employees" : "Import Candidates"}
+                        <Button
+                            type="button"
+                            onClick={handleSubmitImport}
+                            disabled={isImporting}
+                            style={{
+                                borderRadius: 10,
+                                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                color: "#ffffff",
+                                border: "none",
+                                padding: "9px 18px",
+                                fontSize: 13.5,
+                                fontWeight: 600,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.28)",
+                                cursor: isImporting ? "not-allowed" : "pointer",
+                                opacity: isImporting ? 0.7 : 1,
+                            }}
+                        >
+                            <Upload style={{ width: 15, height: 15 }} />
+                            {isImporting
+                                ? "Importing..."
+                                : activeTab === "internal"
+                                    ? "Import Employees"
+                                    : "Import Candidates"}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
@@ -5034,7 +5516,6 @@ export default function ResourceManagement() {
                                                     handleLevelChange(lvl, 'date', e.target.value);
                                                     clearInterviewLevelError(lvl);
                                                 }}
-                                                min={new Date().toISOString().split('T')[0]}
                                                 className={`border-gray-300 focus:ring-blue-500 ${levelErrors.date ? 'border-red-500' : ''}`}
                                             />
                                             {levelErrors.date && (

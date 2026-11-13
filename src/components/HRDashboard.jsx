@@ -2630,27 +2630,40 @@ const DemandsTab = ({ demands, onEditDemand }) => {
         exit={{ opacity: 0, y: -12 }}
         transition={{ duration: 0.32, delay: index * 0.045 }}
       >
+        <style>{`
+          @media (min-width: 768px) {
+            .demand-right-col {
+              width: 220px !important;
+              min-width: 220px !important;
+            }
+          }
+        `}</style>
         <div
           onClick={() => handleViewDemand(demand)}
           className="group cursor-pointer"
           style={{
-            background: '#ffffff',
+            background: 'rgba(255,255,255,0.82)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             borderRadius: '16px',
-            border: '1px solid #e8edf5',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            border: '1.5px solid transparent',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.82),rgba(255,255,255,0.82)), linear-gradient(135deg,#bfdbfe 0%,#ddd6fe 50%,#bae6fd 100%)',
+            backgroundOrigin: 'border-box',
+            backgroundClip: 'padding-box, border-box',
+            boxShadow: '0 2px 10px rgba(99,102,241,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+            transition: 'transform 0.22s cubic-bezier(.22,1,.36,1), box-shadow 0.22s cubic-bezier(.22,1,.36,1)',
             overflow: 'hidden',
             position: 'relative',
             isolation: 'isolate',
             transform: 'translateZ(0)',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px) translateZ(0)';
-            e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)';
+            e.currentTarget.style.transform = 'translateY(-3px) translateZ(0)';
+            e.currentTarget.style.boxShadow = '0 12px 36px rgba(99,102,241,0.14), 0 4px 12px rgba(0,0,0,0.07)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0) translateZ(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+            e.currentTarget.style.boxShadow = '0 2px 10px rgba(99,102,241,0.06), 0 1px 3px rgba(0,0,0,0.04)';
           }}
         >
           {/* Left accent strip (yellow for InProgress, green for Open, statusCfg.dot otherwise) */}
@@ -2751,36 +2764,70 @@ const DemandsTab = ({ demands, onEditDemand }) => {
                 </div>
               </div>
 
-              {/* Right side: DM ID, Raised By, and Date */}
-              <div className="flex flex-col items-start sm:items-end flex-shrink-0 w-full sm:w-auto">
-                <div className="mb-2">
-                  {/* DM ID badge */}
-                  <span style={{
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#2563eb',
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '6px',
-                    padding: '3px 10px',
-                    letterSpacing: '0.3px',
-                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)'
-                  }}>
-                    DM-{demand.demandid}
-                  </span>
-                </div>
-                
-                {/* Subtitle: Raised by + Date */}
-                <div className="flex items-center gap-1.5 mt-1.5 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">
+              {/* Right side: DM ID · Raised By · Date — single horizontal row */}
+              <div
+                className="demand-right-col flex-shrink-0"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '6px',
+                  flexWrap: 'nowrap',
+                }}
+              >
+                {/* DM ID badge */}
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '6px',
+                  padding: '3px 10px',
+                  letterSpacing: '0.3px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 1px 2px rgba(37,99,235,0.06)',
+                }}>
+                  DM-{demand.demandid}
+                </span>
+
+                {/* Raised by badge */}
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  padding: '3px 9px',
+                  fontSize: '11.5px',
+                  color: '#6b7280',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                }}>
                   <User style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>
-                    Raised by <span style={{ color: '#374151', fontWeight: 600 }}>{demand.requesterName}</span>
-                  </span>
-                  <span style={{ color: '#d1d5db', fontSize: '12px' }}>•</span>
+                  Raised by&nbsp;<span style={{ color: '#374151', fontWeight: 600 }}>{demand.requesterName}</span>
+                </span>
+
+                {/* Date badge */}
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  padding: '3px 9px',
+                  fontSize: '11.5px',
+                  color: '#6b7280',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                }}>
                   <Calendar style={{ width: '11px', height: '11px', color: '#9ca3af', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11.5px', color: '#6b7280', fontWeight: 500 }}>{formatDisplayDate(demand.createddt)}</span>
-                </div>
+                  {formatDisplayDate(demand.createddt)}
+                </span>
               </div>
             </div>
 
@@ -3016,11 +3063,104 @@ const DemandsTab = ({ demands, onEditDemand }) => {
   };
 
   return (
-    <div className="space-y-3">
-      {/* Premium Toolbar */}
-      <div className="px-5 py-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 mb-5">
+    <div
+      style={{
+        background: 'linear-gradient(135deg, #eef7ff 0%, #f8fbff 45%, #f4f0ff 100%)',
+        borderRadius: '20px',
+        padding: '20px',
+        minHeight: '200px',
+      }}
+    >
+      <div className="space-y-3">
+        <style>{`
+          .demands-header-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 24px !important;
+            flex-wrap: nowrap !important;
+          }
+          .demands-header-left {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+          }
+          .demands-header-right {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 16px !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+            flex-wrap: nowrap !important;
+            white-space: nowrap !important;
+          }
+          .demands-search-wrapper {
+            width: 420px !important;
+            max-width: 420px !important;
+            flex: 0 0 420px !important;
+          }
+          .demands-pagination-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+          }
+          @media (max-width: 768px) {
+            .demands-header-container {
+              flex-wrap: wrap !important;
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 16px !important;
+            }
+            .demands-header-left {
+              width: 100% !important;
+              justify-content: space-between !important;
+            }
+            .demands-header-right {
+              flex-wrap: wrap !important;
+              justify-content: flex-start !important;
+              width: 100% !important;
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 12px !important;
+            }
+            .demands-search-wrapper {
+              width: 100% !important;
+              max-width: 100% !important;
+              flex: 1 1 auto !important;
+            }
+            .demands-pagination-wrapper {
+              width: 100% !important;
+              justify-content: space-between !important;
+              border-left: none !important;
+              padding-left: 0 !important;
+            }
+          }
+        `}</style>
+      {/* Premium Glassmorphism Toolbar */}
+      <div
+        className="demands-header-container"
+        style={{
+          padding: '14px 20px',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          borderRadius: '16px',
+          border: '1.5px solid',
+          borderColor: 'transparent',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.72),rgba(255,255,255,0.72)), linear-gradient(135deg,#bfdbfe,#ddd6fe,#bae6fd)',
+          backgroundOrigin: 'border-box',
+          backgroundClip: 'padding-box, border-box',
+          boxShadow: '0 4px 24px rgba(99,102,241,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+          marginBottom: '16px',
+        }}
+      >
         {/* Left: Title & Results count */}
-        <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="demands-header-left">
           <h2 className="text-xl font-bold text-gray-800 tracking-tight">Demands</h2>
           <div className="h-5 w-px bg-gray-300 hidden sm:block"></div>
           <span className="inline-flex items-center justify-center bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-100 shadow-sm">
@@ -3029,9 +3169,9 @@ const DemandsTab = ({ demands, onEditDemand }) => {
         </div>
 
         {/* Right: Search and Pagination Wrapper */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+        <div className="demands-header-right">
           {/* Search bar */}
-          <div className="w-full sm:w-64">
+          <div className="demands-search-wrapper">
             <SearchFilter
               value={searchQuery}
               onChange={setSearchQuery}
@@ -3041,7 +3181,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           
           {/* Pagination Controls */}
           {sortedDemands.length > 0 && (
-            <div className="flex items-center gap-4 border-l border-gray-200 pl-4">
+            <div className="demands-pagination-wrapper border-l border-gray-200 pl-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Per page:</span>
                 <select
@@ -3100,7 +3240,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
       )}
 
       {/* Demands List - Full width cards */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {paginatedDemands.length > 0 ? (
           paginatedDemands.map((demand, index) => renderDemandCard(demand, index))
         ) : (
@@ -3556,6 +3696,7 @@ const DemandsTab = ({ demands, onEditDemand }) => {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

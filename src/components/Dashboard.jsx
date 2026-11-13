@@ -1384,7 +1384,30 @@ const DemandsTab = ({ demands }) => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.82)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: '16px',
+          border: '1.5px solid transparent',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.82),rgba(255,255,255,0.82)), linear-gradient(135deg,#bfdbfe 0%,#ddd6fe 50%,#bae6fd 100%)',
+          backgroundOrigin: 'border-box',
+          backgroundClip: 'padding-box, border-box',
+          boxShadow: '0 2px 10px rgba(99,102,241,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+          transition: 'transform 0.22s cubic-bezier(.22,1,.36,1), box-shadow 0.22s cubic-bezier(.22,1,.36,1)',
+          overflow: 'hidden',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'translateY(-3px)';
+          e.currentTarget.style.boxShadow = '0 12px 36px rgba(99,102,241,0.14), 0 4px 12px rgba(0,0,0,0.07)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 2px 10px rgba(99,102,241,0.06), 0 1px 3px rgba(0,0,0,0.04)';
+        }}
+      >
         <CardContent className="p-6">
           <div className="flex items-start mb-4" onClick={() => handleViewDemand(demand)}>
             <div className="flex-1">
@@ -1467,21 +1490,47 @@ const DemandsTab = ({ demands }) => {
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </motion.div>
   );
 
   return (
-    <div className="space-y-6">
-      {/* Search and Sort Controls */}
-      <div className="px-2 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <div
+      style={{
+        background: 'linear-gradient(135deg, #eef7ff 0%, #f8fbff 45%, #f4f0ff 100%)',
+        borderRadius: '20px',
+        padding: '20px',
+        minHeight: '200px',
+      }}
+    >
+    <div className="space-y-4">
+      {/* Premium Glassmorphism Toolbar */}
+      <div
+        style={{
+          padding: '14px 20px',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          borderRadius: '16px',
+          border: '1.5px solid transparent',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.72),rgba(255,255,255,0.72)), linear-gradient(135deg,#bfdbfe,#ddd6fe,#bae6fd)',
+          backgroundOrigin: 'border-box',
+          backgroundClip: 'padding-box, border-box',
+          boxShadow: '0 4px 24px rgba(99,102,241,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-gray-800">Active Demands</h2>
           <Badge variant="outline" className="bg-purple-50 text-purple-700">
             {sortedDemands.length} Total
           </Badge>
         </div>
-        
+
         <div className="py-1 flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
           {/* Search Input */}
           <SearchFilter
@@ -1490,7 +1539,7 @@ const DemandsTab = ({ demands }) => {
             placeholder="Search by ID or Title"
           />
         </div>
-      </div>	  
+      </div>
       
       {/* Pagination */}
       {sortedDemands.length > 0 && (
@@ -1522,7 +1571,7 @@ const DemandsTab = ({ demands }) => {
       )}
 
       {/* Demands List - Full width cards */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {paginatedDemands.length > 0 ? (
           paginatedDemands.map((demand, index) => renderDemandCard(demand, index))
         ) : (
@@ -1542,6 +1591,8 @@ const DemandsTab = ({ demands }) => {
           </Card>
         )}
       </div>
+      </div>
+    </div>
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
