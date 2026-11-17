@@ -410,51 +410,6 @@ export default function LoginPage({ onLogin }) {
                 </motion.div>
               </CardContent>
             </Card>
-            <motion.div
-              key={activeRole}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="bg-white/20 backdrop-blur-md rounded-2xl p-6 text-white border border-white/30"
-            >
-              <h3 className="text-lg font-semibold mb-4">Demo Credentials for {currentRoleConfig.title}:</h3>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  {/* <span className="block text-sm font-medium">Available Emails:</span> */}
-                  {currentRoleConfig.credentials.emails && currentRoleConfig.credentials.emails.length > 0 ? (
-                    currentRoleConfig.credentials.emails.map((email, index) => (
-                      <div
-                        key={index}
-                        className="font-mono bg-white/20 px-3 py-2 rounded-lg text-sm break-all hover:bg-white/30 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setEmail(email);
-                          toast.info(`Email "${email}" selected`, {
-                            position: 'top-right',
-                            duration: 2000,
-                          });
-                        }}
-                      >
-                        {email}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-white/80 italic">No demo emails available for this role</p>
-                  )}
-                </div>
-                {currentRoleConfig.credentials.emails && currentRoleConfig.credentials.emails.length > 0 && (
-                  <div className="pt-2">
-                    {/* <p className="text-xs text-white/70 mb-2">Click on any email above to auto-fill it</p> */}
-                  </div>
-                )}
-              </div>
-              {/* <Button
-    onClick={handleQuickLogin}
-    variant="outline"
-    className="w-full mt-4 text-black border-white/40 hover:bg-white/20 hover:border-white/60"
-  >
-    Auto-fill First Email
-  </Button> */}
-            </motion.div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -593,33 +548,7 @@ export default function LoginPage({ onLogin }) {
                   transition={{ duration: 0.3 }}
                   className={`xl:hidden text-center p-3 rounded-xl ${currentRoleConfig.bgColor} border border-gray-200`}
                 >
-                  <p className="text-xs text-gray-700 mb-2">{currentRoleConfig.description}</p>
-                  <div className="text-xs text-gray-500 space-y-2">
-                    <p><strong>Demo Emails for {currentRoleConfig.title}:</strong></p>
-                    {currentRoleConfig.credentials.emails && currentRoleConfig.credentials.emails.length > 0 ? (
-                      currentRoleConfig.credentials.emails.map((email, index) => (
-                        <p
-                          key={index}
-                          className="break-all hover:underline cursor-pointer"
-                          onClick={() => {
-                            setEmail(email);
-                            toast.info(`Email "${email}" selected`, {
-                              position: 'top-right',
-                              duration: 2000,
-                            });
-                          }}
-                        >
-                          {email}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="italic">No demo emails available</p>
-                    )}
-                    <p><strong>Role ID:</strong> {currentRoleConfig.roleId}</p>
-                    {currentRoleConfig.credentials.emails && currentRoleConfig.credentials.emails.length > 0 && (
-                      <p className="text-xs text-gray-400">Click any email to auto-fill it</p>
-                    )}
-                  </div>
+                  <p className="text-xs text-gray-700">{currentRoleConfig.description}</p>
                 </motion.div>
               </CardContent>
             </Card>
