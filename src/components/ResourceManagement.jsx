@@ -422,6 +422,7 @@ const ResourceDetails = ({
     resourceType,
     onEditResource,
     onViewResume,
+    onUploadResume,
     onSkillMatcher,
     allInterviewsRaw,
     onScheduleInterviewFromAudit,
@@ -740,15 +741,28 @@ const ResourceDetails = ({
                         >
                             <div className="flex items-center justify-between mb-3">
                                 <span className="text-xs text-gray-500 font-medium">Assigned Skills</span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onViewResume(resource.id)}
-                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    <span>View Resume</span>
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => onViewResume(resource.id)}
+                                        className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        <span>View Resume</span>
+                                    </Button>
+                                    {onUploadResume && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onUploadResume(resource)}
+                                            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
+                                        >
+                                            <Upload className="h-4 w-4" />
+                                            <span>Upload Resume</span>
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignContent: 'flex-start' }}>
                                 {resource.skills?.length > 0 ? (
@@ -975,6 +989,7 @@ const ResourceTable = ({
     onEditInterviewFromRow,
     allInterviewsRaw = [],
     onViewResume,
+    onUploadResume,
     onSkillMatcher,
     onResumeShare,
     onResumeReject,
@@ -1204,6 +1219,7 @@ const ResourceTable = ({
                                                                 resourceType={resourceType}
                                                                 onEditResource={onEditResource}
                                                                 onViewResume={onViewResume}
+                                                                onUploadResume={onUploadResume}
                                                                 onSkillMatcher={onSkillMatcher}
                                                                 allInterviewsRaw={allInterviewsRaw}
                                                                 onScheduleInterviewFromAudit={onScheduleInterviewFromAudit}
@@ -1299,6 +1315,7 @@ export default function ResourceManagement() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isResumeUploadStepOpen, setIsResumeUploadStepOpen] = useState(false);
+    const [resumeUploadTarget, setResumeUploadTarget] = useState(null); // resource for which resume is being uploaded
     const [autoFilledFields, setAutoFilledFields] = useState({});
     const [sortField, setSortField] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
@@ -2030,8 +2047,29 @@ export default function ResourceManagement() {
     };
 
     // Handle parsed resume data — maps ALL extracted fields to the form state
-    const handleResumeParsed = (parsedData, file, hasPartialData = false) => {
+    const handleResumeParsed = async (parsedData, file, hasPartialData = false) => {
         setIsResumeUploadStepOpen(false);
+
+        // If uploading for an existing employee (from expanded row Upload Resume button)
+        if (resumeUploadTarget) {
+            try {
+                const formData = new FormData();
+                formData.append('employeeId', resumeUploadTarget.id.toString());
+                formData.append('firstName', resumeUploadTarget.name?.split(' ')[0] || resumeUploadTarget.firstName || '');
+                formData.append('lastName', resumeUploadTarget.name?.split(' ').slice(1).join(' ') || resumeUploadTarget.lastName || '');
+                formData.append('email', resumeUploadTarget.email || '');
+                formData.append('companyId', (resumeUploadTarget.companyId || 1).toString());
+                if (file) formData.append('resume', file);
+                await EmployeeService.updateEmployee(formData);
+                toast.success(`Resume uploaded successfully for ${resumeUploadTarget.name || resumeUploadTarget.firstName}!`);
+                await loadInternalResources();
+            } catch (err) {
+                toast.error('Failed to upload resume. Please try again.');
+            }
+            setResumeUploadTarget(null);
+            return;
+        }
+
         setIsAddModalOpen(true);
         setResumeFile(file);
 
@@ -2181,6 +2219,11 @@ export default function ResourceManagement() {
     const handleSkipResume = () => {
         setIsResumeUploadStepOpen(false);
         setAutoFilledFields({});
+        // If uploading for existing employee, just close — don't open Add modal
+        if (resumeUploadTarget) {
+            setResumeUploadTarget(null);
+            return;
+        }
         setIsAddModalOpen(true);
     };
 
@@ -4032,13 +4075,15 @@ export default function ResourceManagement() {
                                 </button>
                             </div>
                             <div className="flex flex-wrap justify-end gap-2">
+                                {activeTab === "external" && (
                                 <Button
                                     onClick={() => navigate(`${resourceBasePath}/add?type=${activeTab}`)}
                                     className="h-10 px-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add {activeTab === "internal" ? "Internal Resource" : "External Resource"}
+                                    Add External Resource
                                 </Button>
+                                )}
                                 <Button
                                     onClick={() => navigate(projectsPath)}
                                     className="h-10 px-4 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg"
@@ -4235,6 +4280,10 @@ export default function ResourceManagement() {
                         onEditInterviewFromRow={handleEditInterviewFromRow}
                         allInterviewsRaw={allInterviewsRaw}
                         onViewResume={handleViewResume}
+                        onUploadResume={(resource) => {
+                            setResumeUploadTarget(resource);
+                            setIsResumeUploadStepOpen(true);
+                        }}
                         onSkillMatcher={handleSkillMatcher}
                         onResumeShare={handleResumeShare}
                         onResumeReject={handleResumeReject}
