@@ -430,9 +430,48 @@ const ResourceDetails = ({
     getStatusColor,
     isSystemAdmin,
     onDeleteShare,
-    onToggleActiveStatus
+    onToggleActiveStatus,
+    onRefresh
 }) => {
     const [openSection, setOpenSection] = useState(null);
+    const directResumeInputRef = useRef(null);
+    const [isUploadingResume, setIsUploadingResume] = useState(false);
+
+    const handleDirectResumeUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!['.pdf', '.doc', '.docx'].includes(ext)) {
+            toast.error('Only PDF, DOC, or DOCX files are supported.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size must be under 5MB.');
+            return;
+        }
+        setIsUploadingResume(true);
+        const toastId = toast.loading(`Uploading resume for ${resource.name || resource.firstName || 'employee'}...`);
+        try {
+            const formData = new FormData();
+            formData.append('resume', file);
+            formData.append('employeeId', resource.id.toString());
+            formData.append('firstName', resource.name?.split(' ')[0] || resource.firstName || '');
+            formData.append('lastName', resource.name?.split(' ').slice(1).join(' ') || resource.lastName || '');
+            formData.append('email', resource.email || '');
+            formData.append('companyId', (resource.companyId || 1).toString());
+
+            await EmployeeService.updateEmployee(formData);
+            toast.success(`Resume uploaded successfully for ${resource.name || resource.firstName || 'employee'}!`, { id: toastId });
+            if (onRefresh) onRefresh();
+            if (onUploadResume) onUploadResume(resource);
+        } catch (err) {
+            console.error('Failed to upload resume:', err);
+            toast.error('Failed to upload resume. Please try again.', { id: toastId });
+        } finally {
+            setIsUploadingResume(false);
+            if (directResumeInputRef.current) directResumeInputRef.current.value = '';
+        }
+    };
 
     const isPersonalInfoOpen = openSection === 'personal';
     const isProjectInfoOpen = openSection === 'project';
@@ -742,6 +781,13 @@ const ResourceDetails = ({
                             <div className="flex items-center justify-between mb-3">
                                 <span className="text-xs text-gray-500 font-medium">Assigned Skills</span>
                                 <div className="flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        ref={directResumeInputRef}
+                                        style={{ display: 'none' }}
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={handleDirectResumeUpload}
+                                    />
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -751,17 +797,16 @@ const ResourceDetails = ({
                                         <FileText className="h-4 w-4" />
                                         <span>View Resume</span>
                                     </Button>
-                                    {onUploadResume && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => onUploadResume(resource)}
-                                            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
-                                        >
-                                            <Upload className="h-4 w-4" />
-                                            <span>Upload Resume</span>
-                                        </Button>
-                                    )}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={isUploadingResume}
+                                        onClick={() => directResumeInputRef.current?.click()}
+                                        className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
+                                    >
+                                        <Upload className="h-4 w-4" />
+                                        <span>{isUploadingResume ? "Uploading..." : "Upload Resume"}</span>
+                                    </Button>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignContent: 'flex-start' }}>
@@ -1002,7 +1047,8 @@ const ResourceTable = ({
     getStatusColor,
     formatDate,
     uniqueRoles,
-    resourceType = "internal" // "internal" or "external"
+    resourceType = "internal", // "internal" or "external"
+    onRefresh
 }) => {
     const totalPages = Math.ceil(filteredResources.length / itemsPerPage);
     const startIndex = (currentPageNum - 1) * itemsPerPage;
@@ -1228,6 +1274,7 @@ const ResourceTable = ({
                                                                 isSystemAdmin={isSystemAdmin}
                                                                 onDeleteShare={onDeleteShare}
                                                                 onToggleActiveStatus={onToggleActiveStatus}
+                                                                onRefresh={onRefresh}
                                                             />
                                                         </CardContent>
                                                     </Card>
@@ -4280,10 +4327,8 @@ export default function ResourceManagement() {
                         onEditInterviewFromRow={handleEditInterviewFromRow}
                         allInterviewsRaw={allInterviewsRaw}
                         onViewResume={handleViewResume}
-                        onUploadResume={(resource) => {
-                            setResumeUploadTarget(resource);
-                            setIsResumeUploadStepOpen(true);
-                        }}
+                        onUploadResume={loadInternalResources}
+                        onRefresh={activeTab === "internal" ? loadInternalResources : loadExternalResources}
                         onSkillMatcher={handleSkillMatcher}
                         onResumeShare={handleResumeShare}
                         onResumeReject={handleResumeReject}
