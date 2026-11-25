@@ -76,6 +76,7 @@ function Select({
 }) {
   const rootRef = React.useRef(null);
   const inputRef = React.useRef(null);
+  const justCommittedRef = React.useRef(false);
   const [internalValue, setInternalValue] = React.useState(defaultValue);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -134,10 +135,15 @@ function Select({
 
   const commitValue = React.useCallback((nextValue) => {
     if (disabled) return;
-    if (value === undefined) setInternalValue(nextValue);
-    onValueChange?.(nextValue);
+    justCommittedRef.current = true;
     setOpen(false);
     setQuery("");
+    inputRef.current?.blur();
+    if (value === undefined) setInternalValue(nextValue);
+    onValueChange?.(nextValue);
+    setTimeout(() => {
+      justCommittedRef.current = false;
+    }, 300);
   }, [disabled, onValueChange, value]);
 
   const handleCreate = React.useCallback(async () => {
@@ -204,6 +210,7 @@ function Select({
     handleCreate,
     handleKeyDown,
     inputRef,
+    justCommittedRef,
     loading,
     open,
     query,
@@ -275,10 +282,17 @@ function SelectTrigger({
         context.disabled && "cursor-not-allowed opacity-50",
         className,
       )}
-      onClick={() => {
+      onClick={(e) => {
         if (!context.disabled) {
-          context.setOpen(true);
-          context.inputRef.current?.focus();
+          if (context.justCommittedRef?.current) return;
+          if (context.open && e.target !== context.inputRef.current) {
+            context.setOpen(false);
+            context.setQuery("");
+            context.inputRef.current?.blur();
+          } else {
+            context.setOpen(true);
+            context.inputRef.current?.focus();
+          }
         }
       }}
       {...props}
@@ -290,6 +304,7 @@ function SelectTrigger({
         value={displayValue}
         placeholder={placeholder}
         onFocus={() => {
+          if (context.justCommittedRef?.current) return;
           context.setQuery("");
           context.setOpen(true);
         }}
@@ -349,7 +364,10 @@ function SelectContent({ className }) {
           type="button"
           disabled={item.disabled}
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => context.commitValue(item.value)}
+          onClick={(event) => {
+            event.stopPropagation();
+            context.commitValue(item.value);
+          }}
           className={cn(
             "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50",
             index === context.activeIndex && "bg-accent text-accent-foreground",

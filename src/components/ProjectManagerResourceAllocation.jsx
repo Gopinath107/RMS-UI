@@ -692,6 +692,10 @@ const enrichedInterviewResults = useMemo(() =>
   }, [searchTerm, filterStatus, filterResult, filterRequestType,filterResourceType, dateRange, enrichedInterviewResults]);
 
   const handleAllocateToClient = useCallback((candidate) => {
+    const empMatch = employees.find(e => e.employeeId === candidate.employeeId);
+    if (empMatch?.status?.toLowerCase() === 'inactive' || candidate?.status?.toLowerCase() === 'inactive') {
+      return toast.error('This resource is inactive and cannot be allocated to projects.');
+    }
     if (candidate.clearanceStatus !== 'Cleared') return toast.error('Only cleared candidates can be allocated');
     if (candidate.onboardingStatus !== 'Onboarded') return toast.error('Candidate must be Onboarded');
 

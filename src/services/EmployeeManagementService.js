@@ -26,6 +26,10 @@ updateEmployee: async function (formData) {
     }
   );
 },
+
+updateStatus: async function (id, status) {
+  return api.patch(`/employees/${id}/status?status=${encodeURIComponent(status)}`);
+},
   
   
   deleteEmployee: async function (id) {
@@ -96,6 +100,13 @@ downloadImportTemplate: async function (companyId) {
 
   return api.post('/employees/share-resume', payload);
 },
+
+  deleteShare: async function (employeeId, demandId, groupId, type = 'demand') {
+    const params = new URLSearchParams({ employeeId: String(employeeId), type });
+    if (demandId) params.append('demandId', String(demandId));
+    if (groupId) params.append('groupId', String(groupId));
+    return api.delete(`/employees/delete-share?${params.toString()}`);
+  },
 
   /**
    * Parse a resume file and extract structured candidate data.

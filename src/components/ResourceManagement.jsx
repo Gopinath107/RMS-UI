@@ -67,7 +67,10 @@ import {
     BookOpen,
     Upload,
     Building2,
-    X
+    X,
+    Trash2,
+    UserCheck,
+    UserX
 } from "lucide-react";
 import Swal from 'sweetalert2';
 import { toast } from "sonner";
@@ -424,7 +427,9 @@ const ResourceDetails = ({
     onScheduleInterviewFromAudit,
     onEditInterviewFromRow,
     getStatusColor,
-    isSystemAdmin
+    isSystemAdmin,
+    onDeleteShare,
+    onToggleActiveStatus
 }) => {
     const [openSection, setOpenSection] = useState(null);
 
@@ -610,11 +615,28 @@ const ResourceDetails = ({
                             className="p-4 border-t border-gray-100 bg-gray-50/30"
                         >
                             <div className="space-y-2 text-sm">
-                                <div>
+                                <div className="flex items-center">
                                     <span className="text-gray-500 font-medium">Status:</span>
                                     <Badge className={`ml-2 ${getStatusColor(resource.status)}`}>
                                         {resource.status}
                                     </Badge>
+                                    {!isSystemAdmin && onToggleActiveStatus && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onToggleActiveStatus(resource);
+                                            }}
+                                            className={`ml-3 h-6 px-2 text-[11px] font-medium ${
+                                                resource.status === "Inactive"
+                                                    ? "border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                                                    : "border-red-200 text-red-600 bg-red-50/50 hover:bg-red-100"
+                                            }`}
+                                        >
+                                            {resource.status === "Inactive" ? "Activate" : "Mark Inactive"}
+                                        </Button>
+                                    )}
                                 </div>
                                 {resourceType === "internal" && (
                                     <div>
@@ -895,6 +917,29 @@ const ResourceDetails = ({
                                             </Button>
                                         )
                                     )}
+
+                                    {/* Delete action: only allowed after rejecting */}
+                                    {audit.status === 'Rejected' && (
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-red-200/60">
+                                            <span className="text-xs text-red-500 font-medium flex items-center gap-1.5">
+                                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                                Rejected
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (onDeleteShare) onDeleteShare(resource, audit);
+                                                }}
+                                                className="border-red-200 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 text-xs h-7 px-2.5 flex items-center gap-1.5 rounded-md transition-colors shadow-none"
+                                                title="Delete this rejected demand share"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -935,6 +980,8 @@ const ResourceTable = ({
     onResumeReject,
     onResumePending,
     onEditResource,
+    onDeleteShare,
+    onToggleActiveStatus,
     isResumeToggleLocked,
     getSortIcon,
     getStatusColor,
@@ -1021,10 +1068,15 @@ const ResourceTable = ({
                                 const skills = (Array.isArray(resource.primarySkills) && resource.primarySkills.length > 0)
                                     ? resource.primarySkills
                                     : (Array.isArray(resource.skills) ? resource.skills : []);
+                                const isInactive = resource.status === "Inactive";
                                 return (
                                     <React.Fragment key={resource.id}>
                                         <TableRow
-                                            className="hover:bg-purple-50/50 cursor-pointer transition-all duration-200 border-b border-purple-100"
+                                            className={`${
+                                                isInactive
+                                                    ? 'bg-slate-100/90 hover:bg-slate-200/80 border-l-4 border-l-slate-400'
+                                                    : 'hover:bg-purple-50/50'
+                                            } cursor-pointer transition-all duration-200 border-b border-purple-100`}
                                             onClick={() => onRowToggle(resource.id)}
                                         >
                                             {visibleCols.map((colId) => {
@@ -1083,21 +1135,57 @@ const ResourceTable = ({
                                                     case 'actions':
                                                         if (isSystemAdmin) return null;
                                                         return (
-                                                            <TableCell key={colId} className="py-4 w-[160px]">
-                                                                <div className="flex gap-2">
+                                                            <TableCell key={colId} className="py-4 w-[190px] min-w-[190px]">
+                                                                <div className="flex items-center gap-1.5">
                                                                     <Button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
+                                                                            if (isInactive) {
+                                                                                toast.error("Resource is inactive. Cannot schedule interview.");
+                                                                                return;
+                                                                            }
                                                                             if (resource.resumeStatus !== "shared") {
                                                                                 toast.error("Please share the resume first to schedule an interview.");
                                                                                 return;
                                                                             }
                                                                             onScheduleInterview(resource);
                                                                         }}
-                                                                        className={`bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-[11px] px-2 py-1 whitespace-nowrap ${resource.resumeStatus !== "shared" ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                                        disabled={isInactive || resource.resumeStatus !== "shared"}
+                                                                        className={`bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-[11px] px-2 py-1 h-7 whitespace-nowrap ${
+                                                                            (isInactive || resource.resumeStatus !== "shared") ? "opacity-50 cursor-not-allowed" : ""
+                                                                        }`}
                                                                     >
                                                                         Schedule
                                                                     </Button>
+                                                                    {isInactive ? (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                onToggleActiveStatus && onToggleActiveStatus(resource);
+                                                                            }}
+                                                                            className="h-7 px-2 text-[11px] font-medium border-emerald-300 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-1 shadow-sm whitespace-nowrap"
+                                                                            title="Activate Resource"
+                                                                        >
+                                                                            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                                                            Activate
+                                                                        </Button>
+                                                                    ) : (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                onToggleActiveStatus && onToggleActiveStatus(resource);
+                                                                            }}
+                                                                            className="h-7 px-2 text-[11px] font-medium border-red-200 text-red-600 bg-red-50/40 hover:bg-red-100 flex items-center gap-1 shadow-sm whitespace-nowrap"
+                                                                            title="Mark Resource as Inactive"
+                                                                        >
+                                                                            <UserX className="w-3.5 h-3.5 text-red-500" />
+                                                                            Inactivate
+                                                                        </Button>
+                                                                    )}
                                                                 </div>
                                                             </TableCell>
                                                         );
@@ -1122,6 +1210,8 @@ const ResourceTable = ({
                                                                 onEditInterviewFromRow={onEditInterviewFromRow}
                                                                 getStatusColor={getStatusColor}
                                                                 isSystemAdmin={isSystemAdmin}
+                                                                onDeleteShare={onDeleteShare}
+                                                                onToggleActiveStatus={onToggleActiveStatus}
                                                             />
                                                         </CardContent>
                                                     </Card>
@@ -1237,6 +1327,12 @@ export default function ResourceManagement() {
     const [demandGroups, setDemandGroups] = useState([]);
     const [selectedType, setSelectedType] = useState('demand');
     const [selectedItems, setSelectedItems] = useState([]);
+    const [deleteShareDialog, setDeleteShareDialog] = useState({
+        isOpen: false,
+        resource: null,
+        audit: null,
+        isDeleting: false
+    });
 
     // API data
     const [companies, setCompanies] = useState([]);
@@ -1473,6 +1569,7 @@ export default function ResourceManagement() {
                         skills: emp.skills?.map(s => typeof s === 'object' ? s.skillName : s) || [],
                         primarySkills: emp.primarySkills,
                         currentProject: emp.currentProject || null,
+                        currentProjectId: emp.currentProjectId || null,
                         joiningDate: emp.joiningDate,
                         client: emp.currentClient || emp.client || null,
                         currentClient: emp.currentClient,
@@ -2588,12 +2685,18 @@ export default function ResourceManagement() {
                 return "bg-blue-100 text-blue-700 border-blue-200";
             case "Not Allocated":
                 return "bg-red-100 text-red-700 border-red-200";
+            case "Inactive":
+                return "bg-gray-200 text-gray-700 border-gray-300 font-semibold";
             default:
                 return "bg-gray-100 text-gray-700 border-gray-200";
         }
     };
 
     const handleScheduleInterview = (resource) => {
+        if (resource.status === 'Inactive') {
+            toast.error("Resource is inactive. Cannot schedule interview.");
+            return;
+        }
         const sharedDemands = (resource.resumeShareAudit || []).filter(audit => audit.status === 'Shared' && audit.type === 'DEMAND');
 
         if (sharedDemands.length === 0) {
@@ -2697,6 +2800,10 @@ export default function ResourceManagement() {
 
     // Add this function in the ResourceManagement component, after the handleScheduleInterview function
     const handleScheduleInterviewFromAudit = (resource, audit) => {
+        if (resource.status === 'Inactive') {
+            toast.error("Resource is inactive. Cannot schedule interview.");
+            return;
+        }
         // Find the corresponding request from allRequests
         let request = null;
 
@@ -3158,6 +3265,12 @@ export default function ResourceManagement() {
     };
 
     const handleResumeShare = (employeeId) => {
+        const pool = activeTab === "internal" ? internalResources : externalResources;
+        const res = pool.find(r => r.id === employeeId);
+        if (res?.status === "Inactive") {
+            toast.error("This resource is inactive. Cannot share resume or allocate to demands.");
+            return;
+        }
         setSelectedEmployeeForShare(employeeId);
         setSelectedItems([]);
         setSelectedType('demand'); // Default to demand when opening share dialog
@@ -3284,6 +3397,7 @@ export default function ResourceManagement() {
         }
     };
     const isResumeToggleLocked = (resource) => {
+        if (resource.status === 'Inactive') return true;
         if (resource.resumeStatus !== 'shared') return false;
         const i = resource.interview;
         if (!i || !i.isSelected) return false;
@@ -3347,22 +3461,26 @@ export default function ResourceManagement() {
             }
 
             if (response.data.success) {
+                const resResult = response.data.result;
+                const hasRemainingShares = resResult?.sharedWith?.some(s => s.status === 'Shared');
+                const newStatus = hasRemainingShares ? "shared" : "rejected";
+
                 // Update localStorage
                 if (activeTab === "internal") {
-                    const newMap = { ...loadResumeStatusMap(), [selectedEmployeeForReject]: "rejected" };
+                    const newMap = { ...loadResumeStatusMap(), [selectedEmployeeForReject]: newStatus };
                     saveResumeStatusMap(newMap);
 
                     // Update component state
                     setInternalResources(prev => prev.map(r =>
-                        r.id === selectedEmployeeForReject ? { ...r, resumeStatus: "rejected" } : r
+                        r.id === selectedEmployeeForReject ? { ...r, resumeStatus: newStatus } : r
                     ));
                 } else {
-                    const newMap = { ...loadExternalResumeStatusMap(), [selectedEmployeeForReject]: "rejected" };
+                    const newMap = { ...loadExternalResumeStatusMap(), [selectedEmployeeForReject]: newStatus };
                     saveExternalResumeStatusMap(newMap);
 
                     // Update component state
                     setExternalResources(prev => prev.map(r =>
-                        r.id === selectedEmployeeForReject ? { ...r, resumeStatus: "rejected" } : r
+                        r.id === selectedEmployeeForReject ? { ...r, resumeStatus: newStatus } : r
                     ));
                 }
 
@@ -3386,6 +3504,161 @@ export default function ResourceManagement() {
                 toast.error('Network error: Unable to connect to server');
             } else {
                 toast.error('Error rejecting resume');
+            }
+        }
+    };
+
+    const handleOpenDeleteShare = (resource, audit) => {
+        setDeleteShareDialog({
+            isOpen: true,
+            resource,
+            audit,
+            isDeleting: false
+        });
+    };
+
+    const handleConfirmDeleteShare = async () => {
+        const { resource, audit } = deleteShareDialog;
+        if (!resource || !audit) return;
+
+        setDeleteShareDialog(prev => ({ ...prev, isDeleting: true }));
+        try {
+            const type = (audit.type === 'GROUP' || audit.type === 'OPPORTUNITY') ? 'opportunity' : 'demand';
+            const demandId = audit.demandId || (type === 'demand' ? (audit.demandid || audit.id) : null);
+            const groupId = audit.groupId || (type === 'opportunity' ? (audit.groupid || audit.id) : null);
+
+            let response;
+            if (activeTab === "internal") {
+                response = await EmployeeService.deleteShare(resource.id, demandId, groupId, type);
+            } else {
+                response = await CandidateService.deleteShare(resource.id, demandId, groupId, type);
+            }
+
+            if (response.data.success) {
+                const resResult = response.data.result;
+                const newStatus = resResult?.status ? resResult.status.toLowerCase() : 'pending';
+
+                if (activeTab === "internal") {
+                    const newMap = { ...loadResumeStatusMap(), [resource.id]: newStatus };
+                    saveResumeStatusMap(newMap);
+                } else {
+                    const newMap = { ...loadExternalResumeStatusMap(), [resource.id]: newStatus };
+                    saveExternalResumeStatusMap(newMap);
+                }
+
+                toast.success('Demand share deleted successfully!');
+                setDeleteShareDialog({ isOpen: false, resource: null, audit: null, isDeleting: false });
+                loadInternalResources();
+                loadExternalResources();
+            } else {
+                const errorMsg = response.data.errors?.[0] || 'Failed to delete demand share';
+                toast.error(errorMsg);
+                setDeleteShareDialog(prev => ({ ...prev, isDeleting: false }));
+            }
+        } catch (error) {
+            console.error('Error deleting demand share:', error);
+            const errorMsg = error.response?.data?.errors?.[0] || error.response?.data?.message || 'Error deleting demand share';
+            toast.error(errorMsg);
+            setDeleteShareDialog(prev => ({ ...prev, isDeleting: false }));
+        }
+    };
+
+    const handleToggleActiveStatus = async (resource) => {
+        if (!resource) return;
+        const isCurrentlyInactive = resource.status === "Inactive";
+
+        if (!isCurrentlyInactive) {
+            const result = await Swal.fire({
+                title: 'Inactivate Resource?',
+                html: `Are you sure you want to mark <strong>${resource.name}</strong> as <strong>Inactive</strong>?<br/><br/><span class="text-xs text-red-600 font-medium">Inactive resources cannot be allocated to projects or shared for demands.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Inactivate',
+                cancelButtonText: 'Cancel'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    // Remember current status before marking inactive
+                    if (resource.status && resource.status !== "Inactive") {
+                        localStorage.setItem(`prev_status_${activeTab}_${resource.id}`, resource.status);
+                    }
+                    if (activeTab === "internal") {
+                        await EmployeeService.updateStatus(resource.id, "Inactive");
+                        toast.success(`${resource.name} marked as Inactive`);
+                        loadInternalResources();
+                    } else {
+                        await CandidateService.updateStatus(resource.id, "Inactive");
+                        toast.success(`${resource.name} marked as Inactive`);
+                        loadExternalResources();
+                    }
+                } catch (err) {
+                    toast.error("Failed to update status: " + (err.response?.data?.errors?.[0] || err.message));
+                }
+            }
+        } else {
+            // Activating resource - restore original or project-appropriate status
+            const savedPrevStatus = localStorage.getItem(`prev_status_${activeTab}_${resource.id}`);
+            let restoredStatus;
+
+            if (activeTab === "internal") {
+                const hasProject = Boolean(
+                    (resource.currentProjectId != null && resource.currentProjectId !== 0) ||
+                    (resource.currentProject && resource.currentProject !== "N/A" && resource.currentProject !== "Not assigned") ||
+                    (resource.client && resource.client !== "N/A" && resource.client !== "Not assigned")
+                );
+
+                if (savedPrevStatus && savedPrevStatus !== "Inactive") {
+                    restoredStatus = savedPrevStatus;
+                } else if (hasProject) {
+                    restoredStatus = "Billable";
+                } else {
+                    restoredStatus = "Bench";
+                }
+            } else {
+                const hasProject = Boolean(
+                    (resource.currentProject && resource.currentProject !== "N/A" && resource.currentProject !== "Not assigned") ||
+                    (resource.client && resource.client !== "N/A" && resource.client !== "Not assigned")
+                );
+
+                if (savedPrevStatus && savedPrevStatus !== "Inactive") {
+                    restoredStatus = savedPrevStatus;
+                } else if (hasProject) {
+                    restoredStatus = "Allocated";
+                } else {
+                    restoredStatus = "Not Allocated";
+                }
+            }
+
+            const result = await Swal.fire({
+                title: 'Activate Resource?',
+                html: `Activate <strong>${resource.name}</strong>?<br/><br/><span class="text-xs text-gray-500">Status will be restored to <strong>${restoredStatus}</strong> so they can be allocated.</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Activate',
+                cancelButtonText: 'Cancel'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    if (activeTab === "internal") {
+                        await EmployeeService.updateStatus(resource.id, restoredStatus);
+                        localStorage.removeItem(`prev_status_${activeTab}_${resource.id}`);
+                        toast.success(`${resource.name} activated (${restoredStatus})`);
+                        loadInternalResources();
+                    } else {
+                        await CandidateService.updateStatus(resource.id, mapStatusToCandidate(restoredStatus));
+                        localStorage.removeItem(`prev_status_${activeTab}_${resource.id}`);
+                        toast.success(`${resource.name} activated (${restoredStatus})`);
+                        loadExternalResources();
+                    }
+                } catch (err) {
+                    toast.error("Failed to activate resource: " + (err.response?.data?.errors?.[0] || err.message));
+                }
             }
         }
     };
@@ -3846,6 +4119,14 @@ export default function ResourceManagement() {
                                         >
                                             Internal
                                         </Button>
+                                        <Button
+                                            variant={getCurrentStatusFilter() === "Inactive" ? "default" : "outline"}
+                                            onClick={() => setInternalStatusFilter("Inactive")}
+                                            size="sm"
+                                            className={getCurrentStatusFilter() === "Inactive" ? "bg-gray-600 hover:bg-gray-700 text-white" : "hover:bg-gray-50"}
+                                        >
+                                            Inactive
+                                        </Button>
                                     </>
                                 ) : (
                                     <>
@@ -3872,6 +4153,14 @@ export default function ResourceManagement() {
                                             className={getCurrentStatusFilter() === "Not Allocated" ? "bg-red-500 hover:bg-red-600" : "hover:bg-red-50"}
                                         >
                                             Not Allocated
+                                        </Button>
+                                        <Button
+                                            variant={getCurrentStatusFilter() === "Inactive" ? "default" : "outline"}
+                                            onClick={() => setExternalStatusFilter("Inactive")}
+                                            size="sm"
+                                            className={getCurrentStatusFilter() === "Inactive" ? "bg-gray-600 hover:bg-gray-700 text-white" : "hover:bg-gray-50"}
+                                        >
+                                            Inactive
                                         </Button>
                                     </>
                                 )}
@@ -3951,6 +4240,8 @@ export default function ResourceManagement() {
                         onResumeReject={handleResumeReject}
                         onResumePending={handleResumePending}
                         onEditResource={handleEditResource}
+                        onDeleteShare={handleOpenDeleteShare}
+                        onToggleActiveStatus={handleToggleActiveStatus}
                         isResumeToggleLocked={isResumeToggleLocked}
                         getSortIcon={getSortIcon}
                         getStatusColor={getStatusColor}
@@ -4658,6 +4949,7 @@ export default function ResourceManagement() {
                                                         <SelectItem value="Bench">Bench</SelectItem>
                                                         <SelectItem value="Bench Shadow">Bench Shadow</SelectItem>
                                                         <SelectItem value="Internal">Internal</SelectItem>
+                                                        <SelectItem value="Inactive">Inactive</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -4825,6 +5117,7 @@ export default function ResourceManagement() {
                                                     <SelectItem value="Allocated">Allocated</SelectItem>
                                                     {/* <SelectItem value="Engaged">Engaged</SelectItem> */}
                                                     <SelectItem value="Not Allocated">Not Allocated</SelectItem>
+                                                    <SelectItem value="Inactive">Inactive</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -5836,9 +6129,34 @@ export default function ResourceManagement() {
                                                     </Badge>
                                                 )}
                                                 {isAlreadyRejected && (
-                                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                                                        Already Rejected
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                                            Already Rejected
+                                                        </Badge>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const matchingAudit = resumeShareAudit.find(audit =>
+                                                                    (selectedType === 'demand' && audit.demandId === group.demandid) ||
+                                                                    (selectedType === 'opportunity' && audit.groupId === group.groupId)
+                                                                );
+                                                                handleOpenDeleteShare(currentEmployee, matchingAudit || {
+                                                                    type: selectedType === 'demand' ? 'DEMAND' : 'GROUP',
+                                                                    demandId: group.demandid,
+                                                                    groupId: group.groupId,
+                                                                    demandTitle: group.title || group.demandTitle,
+                                                                    status: 'Rejected'
+                                                                });
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs h-6 px-2 flex items-center gap-1 border border-red-200 rounded"
+                                                            title="Delete this rejected demand share"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </div>
                                             <div className="text-xs text-gray-600 mt-1 space-x-2">
@@ -5979,17 +6297,25 @@ export default function ResourceManagement() {
                                 return (
                                     <div
                                         key={group.groupId || group.demandid}
+                                        onClick={() => {
+                                            if (isAlreadyRejected) return;
+                                            const isChecked = selectedItems.some(s => (s.groupId || s.demandid) === (group.groupId || group.demandid));
+                                            if (isChecked) {
+                                                setSelectedItems(prev => prev.filter(s => (s.groupId || s.demandid) !== (group.groupId || group.demandid)));
+                                            } else {
+                                                setSelectedItems(prev => [...prev, group]);
+                                            }
+                                        }}
                                         className={`
                                 flex items-start gap-3 
                                 p-3 rounded-md border 
                                 transition-colors
                                 ${isAlreadyRejected
-                                                ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                                                ? 'bg-red-50 border-red-200 opacity-60 cursor-not-allowed'
                                                 : isAlreadyShared
-                                                    ? 'bg-green-50 border-green-200 hover:bg-green-100'
-                                                    : 'hover:bg-gray-50 border-gray-200'
+                                                    ? 'bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer'
+                                                    : 'hover:bg-gray-50 border-gray-200 cursor-pointer'
                                             }
-                                cursor-pointer
                             `}
                                     >
                                         <Checkbox
@@ -6003,18 +6329,42 @@ export default function ResourceManagement() {
                                                     );
                                                 }
                                             }}
+                                            onClick={(e) => e.stopPropagation()}
                                             disabled={isAlreadyRejected} // Disable if already rejected
-                                            className={`mt-0.5 ${isAlreadyRejected ? 'border-red-500 bg-red-500' :
-                                                isAlreadyShared ? 'border-green-500 bg-green-500' : ''
-                                                }`}
+                                            className={`mt-0.5 ${isAlreadyRejected ? 'border-red-500 bg-red-100' : ''}`}
                                         />
                                         <div className="flex-1 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <div className="font-medium text-gray-900">{group.title || group.demandTitle}</div>
                                                 {isAlreadyRejected && (
-                                                    <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                                                        Already Rejected
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                                            Already Rejected
+                                                        </Badge>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const matchingAudit = resumeShareAudit.find(audit =>
+                                                                    (selectedType === 'demand' && audit.demandId === group.demandid) ||
+                                                                    (selectedType === 'opportunity' && audit.groupId === group.groupId)
+                                                                );
+                                                                handleOpenDeleteShare(currentEmployee, matchingAudit || {
+                                                                    type: selectedType === 'demand' ? 'DEMAND' : 'GROUP',
+                                                                    demandId: group.demandid,
+                                                                    groupId: group.groupId,
+                                                                    demandTitle: group.title || group.demandTitle,
+                                                                    status: 'Rejected'
+                                                                });
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs h-6 px-2 flex items-center gap-1 border border-red-200 rounded"
+                                                            title="Delete this rejected demand share"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
                                                 )}
                                                 {isAlreadyShared && (
                                                     <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
@@ -6080,6 +6430,66 @@ export default function ResourceManagement() {
                             {selectedItems.length > 0 && (
                                 <span className="ml-1">({selectedItems.length})</span>
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Rejected Demand Share Confirmation Dialog */}
+            <Dialog
+                open={deleteShareDialog.isOpen}
+                onOpenChange={(open) => {
+                    if (!deleteShareDialog.isDeleting) {
+                        setDeleteShareDialog(prev => ({ ...prev, isOpen: open }));
+                    }
+                }}
+            >
+                <DialogContent className="max-w-md w-full p-6">
+                    <DialogHeader className="pb-3 border-b">
+                        <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-red-600">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            Delete Rejected Demand
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 text-sm text-gray-600 space-y-2">
+                        <p>
+                            Are you sure you want to delete this rejected demand share?
+                        </p>
+                        <div className="bg-red-50/60 border border-red-100 rounded-lg p-3 text-xs text-gray-700 space-y-1">
+                            <div>
+                                <span className="font-semibold text-gray-900">Demand:</span>{' '}
+                                {deleteShareDialog.audit?.demandTitle || deleteShareDialog.audit?.title || deleteShareDialog.audit?.projectName || 'N/A'}
+                            </div>
+                            {deleteShareDialog.audit?.demandId && (
+                                <div>
+                                    <span className="font-semibold text-gray-900">Demand ID:</span> DM-{deleteShareDialog.audit.demandId}
+                                </div>
+                            )}
+                            {deleteShareDialog.audit?.clientName && (
+                                <div>
+                                    <span className="font-semibold text-gray-900">Client:</span> {deleteShareDialog.audit.clientName}
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            This will permanently remove this demand from the profile's sharing history and clean up the associated request record.
+                        </p>
+                    </div>
+                    <DialogFooter className="pt-3 border-t flex justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteShareDialog(prev => ({ ...prev, isOpen: false }))}
+                            disabled={deleteShareDialog.isDeleting}
+                            className="min-w-[80px]"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleConfirmDeleteShare}
+                            disabled={deleteShareDialog.isDeleting}
+                            className="min-w-[90px] bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteShareDialog.isDeleting ? 'Deleting...' : 'Delete'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

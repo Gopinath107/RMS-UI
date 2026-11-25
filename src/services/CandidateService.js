@@ -24,6 +24,9 @@ export const CandidateService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     },
+    updateStatus: async (id, status) => {
+        return api.patch(`/candidates/${id}/status?status=${encodeURIComponent(status)}`);
+    },
     fetchCompanies: async () => {
         // Assuming same endpoint as employees or adjust if different
         return api.get('/companies/list');
@@ -51,6 +54,12 @@ export const CandidateService = {
         }
 
         return api.post('/candidates/share-resume', payload);
+    },
+    deleteShare: async (candidateId, demandId, groupId, type = 'demand') => {
+        const params = new URLSearchParams({ candidateId: String(candidateId), type });
+        if (demandId) params.append('demandId', String(demandId));
+        if (groupId) params.append('groupId', String(groupId));
+        return api.delete(`/candidates/delete-share?${params.toString()}`);
     },
     viewResume: async function (id) {
         return api.get(`/candidates/${id}/viewResume`, { responseType: 'blob' });

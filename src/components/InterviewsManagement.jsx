@@ -893,6 +893,7 @@ const InterviewsManagement = ({ setCurrentPage }) => {
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#2563eb',
       cancelButtonColor: '#6b7280',
+      returnFocus: false,
     });
 
     if (!confirmResult.isConfirmed) return;
@@ -910,6 +911,7 @@ const InterviewsManagement = ({ setCurrentPage }) => {
           text: '',
           icon: 'success',
           confirmButtonColor: '#10b981',
+          returnFocus: false,
         };
 
         const lowerLabel = newLabel.toLowerCase();
@@ -940,6 +942,7 @@ const InterviewsManagement = ({ setCurrentPage }) => {
           text: errMsg,
           icon: 'error',
           confirmButtonColor: '#ef4444',
+          returnFocus: false,
         });
         loadInterviews();
       }
@@ -953,6 +956,7 @@ const InterviewsManagement = ({ setCurrentPage }) => {
         text: `Error updating status: ${errMsg}`,
         icon: 'error',
         confirmButtonColor: '#ef4444',
+        returnFocus: false,
       });
       loadInterviews();
     }

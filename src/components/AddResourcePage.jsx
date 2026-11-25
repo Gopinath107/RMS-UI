@@ -938,8 +938,20 @@ export default function AddResourcePage() {
     }
   }, [initialType, isEditMode]);
 
+  const hasRealDraft = useMemo(() => {
+    if (!restoredDraft?.formData) return false;
+    const fd = restoredDraft.formData;
+    return Boolean(
+      (fd.firstName && fd.firstName.trim()) ||
+      (fd.lastName && fd.lastName.trim()) ||
+      (fd.email && fd.email.trim()) ||
+      (fd.phone && fd.phone.trim()) ||
+      (fd.primaryRole && fd.primaryRole.trim())
+    );
+  }, [restoredDraft]);
+
   const [resourceType, setResourceType] = useState(restoredDraft?.resourceType || initialType);
-  const [step, setStep] = useState(isEditMode ? 'form' : (restoredDraft?.formData ? 'form' : 'upload')); // 'upload' | 'form'
+  const [step, setStep] = useState(isEditMode ? 'form' : (hasRealDraft ? 'form' : 'upload')); // 'upload' | 'form'
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [errors, setErrors] = useState({});
   // Saved resume from backend (edit mode)
@@ -948,15 +960,16 @@ export default function AddResourcePage() {
   const [savedResumeFileName, setSavedResumeFileName] = useState(null);
   const [isLoadingSavedResume, setIsLoadingSavedResume] = useState(false);
   const replaceResumeInputRef = useRef(null);
+  const isSubmittingRef = useRef(false);
 
   const [formData, setFormData] = useState(() => ({
     ...(initialType === 'internal' ? EMPTY_INTERNAL : EMPTY_EXTERNAL),
     ...(isEditMode ? editResource.formData : {}),
-    ...(restoredDraft?.formData || {}),
+    ...(hasRealDraft ? (restoredDraft?.formData || {}) : {}),
   }));
-  const [autoFilledFields, setAutoFilledFields] = useState(restoredDraft?.autoFilledFields || {});
-  const [socialLinks, setSocialLinks] = useState(isEditMode ? (editResource?.socialLinks || []) : (restoredDraft?.socialLinks || []));
-  const [resourceDocuments, setResourceDocuments] = useState(restoredDraft?.resourceDocuments || []);
+  const [autoFilledFields, setAutoFilledFields] = useState(hasRealDraft ? (restoredDraft?.autoFilledFields || {}) : {});
+  const [socialLinks, setSocialLinks] = useState(isEditMode ? (editResource?.socialLinks || []) : (hasRealDraft ? (restoredDraft?.socialLinks || []) : []));
+  const [resourceDocuments, setResourceDocuments] = useState(hasRealDraft ? (restoredDraft?.resourceDocuments || []) : []);
   const [resumeFile, setResumeFile] = useState(null);
   const [docxPreviewHtml, setDocxPreviewHtml] = useState('');
   const [isDocPreviewLoading, setIsDocPreviewLoading] = useState(false);
@@ -964,7 +977,7 @@ export default function AddResourcePage() {
   const [storageType, setStorageType] = useState('aws');
   const [selectedSkills, setSelectedSkills] = useState(isEditMode ? (editResource?.selectedSkills || []) : []);
   const [skillInput, setSkillInput] = useState("");
-  const [activeSection, setActiveSection] = useState(restoredDraft?.activeSection || 'profile');
+  const [activeSection, setActiveSection] = useState((hasRealDraft && restoredDraft?.activeSection) || 'profile');
   const sectionRefs = useRef({});
 
   const [companies, setCompanies] = useState([]);
@@ -1607,6 +1620,7 @@ export default function AddResourcePage() {
   });
 
   const clearDraft = useCallback(() => {
+    isSubmittingRef.current = true;
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(getResourceDraftKey(resourceType));
     }
@@ -1616,10 +1630,12 @@ export default function AddResourcePage() {
 
   const handleClose = () => {
     clearDraft();
+    setStep('upload');
     navigate(resourceBasePath);
   };
 
   const handleResumeParsed = (parsedData, file, isPartial) => {
+    isSubmittingRef.current = false;
     setResumeFile(file);
     const normalized = normalizeParsedResumeData(parsedData || {});
     setFormData(prev => ({ ...prev, ...normalized.formData }));
@@ -1634,6 +1650,7 @@ export default function AddResourcePage() {
   };
 
   const handleSkipResume = () => {
+    isSubmittingRef.current = false;
     setActiveSection('profile');
     setStep('form');
   };
@@ -1833,6 +1850,7 @@ export default function AddResourcePage() {
       if (response.data.success) {
         toast.success("Resource added successfully!");
         clearDraft();
+        setStep('upload');
         navigate(resourceBasePath);
 
         setFormData({ ...EMPTY_INTERNAL });
@@ -2011,6 +2029,7 @@ export default function AddResourcePage() {
         toast.success("External candidate added successfully!");
         Swal.close();
         clearDraft();
+        setStep('upload');
         navigate(resourceBasePath);
 
         // Reset form
@@ -2143,6 +2162,7 @@ export default function AddResourcePage() {
       if (response?.data?.success) {
         toast.success("Resource updated successfully!");
         clearDraft();
+        setStep('upload');
         navigate(resourceBasePath);
       } else {
         toast.error(response?.data?.errors?.[0] || "Failed to update resource.");
@@ -2253,6 +2273,7 @@ export default function AddResourcePage() {
       if (response?.data?.success) {
         toast.success("External resource updated successfully!");
         clearDraft();
+        setStep('upload');
         navigate(resourceBasePath);
       } else {
         toast.error(response?.data?.errors?.[0] || "Failed to update external resource.");
@@ -2483,7 +2504,20 @@ export default function AddResourcePage() {
   }, [step]);
 
   useEffect(() => {
-    if (isEditMode || step !== 'form' || typeof window === 'undefined') return;
+    if (isEditMode || step !== 'form' || typeof window === 'undefined' || isSubmittingRef.current) return;
+
+    const hasData = Boolean(
+      (formData.firstName && formData.firstName.trim()) ||
+      (formData.lastName && formData.lastName.trim()) ||
+      (formData.email && formData.email.trim()) ||
+      (formData.phone && formData.phone.trim()) ||
+      (formData.primaryRole && formData.primaryRole.trim())
+    );
+
+    if (!hasData) {
+      sessionStorage.removeItem(draftKey);
+      return;
+    }
 
     sessionStorage.setItem(draftKey, JSON.stringify({
       formData,
