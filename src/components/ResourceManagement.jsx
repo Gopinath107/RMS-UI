@@ -1048,7 +1048,8 @@ const ResourceTable = ({
     formatDate,
     uniqueRoles,
     resourceType = "internal", // "internal" or "external"
-    onRefresh
+    onRefresh,
+    onDirectUploadResume
 }) => {
     const totalPages = Math.ceil(filteredResources.length / itemsPerPage);
     const startIndex = (currentPageNum - 1) * itemsPerPage;
@@ -1198,6 +1199,21 @@ const ResourceTable = ({
                                                         return (
                                                             <TableCell key={colId} className="py-4 w-[190px] min-w-[190px]">
                                                                 <div className="flex items-center gap-1.5">
+                                                                    {resourceType === "internal" && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                onDirectUploadResume && onDirectUploadResume(resource);
+                                                                            }}
+                                                                            className="h-7 px-2 text-[11px] font-medium border-emerald-300 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-1 shadow-sm whitespace-nowrap"
+                                                                            title="Upload Resume for employee"
+                                                                        >
+                                                                            <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                                                                            Upload Resume
+                                                                        </Button>
+                                                                    )}
                                                                     <Button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
@@ -1363,6 +1379,55 @@ export default function ResourceManagement() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isResumeUploadStepOpen, setIsResumeUploadStepOpen] = useState(false);
     const [resumeUploadTarget, setResumeUploadTarget] = useState(null); // resource for which resume is being uploaded
+    const hiddenResumeUploadInputRef = useRef(null);
+    const [uploadingTargetEmployee, setUploadingTargetEmployee] = useState(null);
+
+    const triggerResumeUploadForEmployee = (employee) => {
+        setUploadingTargetEmployee(employee);
+        if (hiddenResumeUploadInputRef.current) {
+            hiddenResumeUploadInputRef.current.value = '';
+            hiddenResumeUploadInputRef.current.click();
+        }
+    };
+
+    const handleGlobalResumeFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        const target = uploadingTargetEmployee;
+        if (!file || !target) return;
+
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!['.pdf', '.doc', '.docx'].includes(ext)) {
+            toast.error('Only PDF, DOC, or DOCX files are supported.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size must be under 5MB.');
+            return;
+        }
+
+        const toastId = toast.loading(`Uploading resume for ${target.name || target.firstName || 'employee'}...`);
+        try {
+            const formData = new FormData();
+            formData.append('resume', file);
+            formData.append('employeeId', target.id.toString());
+            formData.append('firstName', target.name?.split(' ')[0] || target.firstName || '');
+            formData.append('lastName', target.name?.split(' ').slice(1).join(' ') || target.lastName || '');
+            formData.append('email', target.email || '');
+            formData.append('companyId', (target.companyId || 1).toString());
+
+            await EmployeeService.updateEmployee(formData);
+            toast.success(`Resume uploaded successfully for ${target.name || target.firstName || 'employee'}!`, { id: toastId });
+            await loadInternalResources();
+        } catch (err) {
+            console.error('Failed to upload resume:', err);
+            toast.error('Failed to upload resume. Please try again.', { id: toastId });
+        } finally {
+            setUploadingTargetEmployee(null);
+            if (hiddenResumeUploadInputRef.current) {
+                hiddenResumeUploadInputRef.current.value = '';
+            }
+        }
+    };
     const [autoFilledFields, setAutoFilledFields] = useState({});
     const [sortField, setSortField] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
@@ -3300,13 +3365,33 @@ export default function ResourceManagement() {
             }
 
             Swal.close();
-            const contentType = response.headers['content-type'] || 'application/pdf';
-            const blob = new Blob([response.data], { type: contentType });
+            const contentType = response.headers['content-type'] || '';
+            const isJson = contentType.includes('json') || (typeof response.data === 'string' && response.data.includes('"success":false'));
+            if (isJson) {
+                const targetRes = getCurrentResources().find(r => r.id === id) || { id };
+                Swal.fire({
+                    title: 'Resume Not Found',
+                    text: `No resume is uploaded yet for ${targetRes.name || 'this employee'}. Would you like to upload one now?`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Upload Resume',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#10b981'
+                }).then((res) => {
+                    if (res.isConfirmed) {
+                        triggerResumeUploadForEmployee(targetRes);
+                    }
+                });
+                return;
+            }
+
+            const effectiveType = contentType || 'application/pdf';
+            const blob = new Blob([response.data], { type: effectiveType });
             const url = window.URL.createObjectURL(blob);
 
             // Set modal data
             setResumeUrl(url);
-            setResumeFileName(`${activeTab === "internal" ? "Internal EMP" : "External EMP"}-${id}.${contentType.split('/')[1] || 'pdf'}`);
+            setResumeFileName(`${activeTab === "internal" ? "Internal EMP" : "External EMP"}-${id}.${effectiveType.split('/')[1] || 'pdf'}`);
             setIsResumeModalOpen(true);
         } catch (error) {
             console.error("Error viewing resume:", error);
@@ -4342,6 +4427,14 @@ export default function ResourceManagement() {
                         formatDate={formatDate}
                         uniqueRoles={activeTab === "internal" ? uniqueInternalRoles : uniqueExternalRoles}
                         resourceType={activeTab}
+                        onDirectUploadResume={triggerResumeUploadForEmployee}
+                    />
+                    <input
+                        type="file"
+                        ref={hiddenResumeUploadInputRef}
+                        style={{ display: 'none' }}
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleGlobalResumeFileChange}
                     />
                 </>
             )}
