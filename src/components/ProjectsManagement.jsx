@@ -577,12 +577,6 @@ const ProjectsManagement = () => {
                     <Calendar className="h-4 w-4 mr-2" />
                     {project.startDate} - {project.endDate}
                   </p>
-                  {project.budget && Number(project.budget) > 0 ? (
-                    <p className="flex items-center text-sm text-gray-600">
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Budget: ${Number(project.budget).toLocaleString()}
-                    </p>
-                  ) : null}
                   <p className="flex items-center text-sm text-gray-600">
                     <FileText className="h-4 w-4 mr-2" />
                     Status: {project.status}
@@ -1023,12 +1017,6 @@ const ProjectsManagement = () => {
                   <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
                   <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
                 </div>
-                {selectedDetails?.budget && Number(selectedDetails.budget) > 0 ? (
-                  <div>
-                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
-                    <p className="text-sm font-medium text-gray-800 mt-0.5">${Number(selectedDetails.budget).toLocaleString()}</p>
-                  </div>
-                ) : null}
               </CardContent>
             </Card>
 
