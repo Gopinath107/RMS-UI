@@ -3268,26 +3268,7 @@ export default function ResourceManagement() {
 
         console.log('Final levels array:', levels);
 
-        let apiCall;
-        if (isDemand) {
-            apiCall = InterviewService.createBatchInterview(
-                parseInt(interviewFormData.requestId),
-                parseInt(interviewFormData.candidateId),
-                currentUserId,
-                interviewFormData.interviewLevels,
-                levels
-            );
-        } else {
-            apiCall = InterviewService.createInterview(
-                parseInt(interviewFormData.requestId),
-                parseInt(interviewFormData.candidateId),
-                null,
-                interviewFormData.interviewLevels,
-                levels
-            );
-        }
-
-        // Remove toast.promise and handle the API call directly
+        // Handle the API call directly via submitAction
         const submitAction = async () => {
             try {
                 console.log('Scheduling interview for:', {
