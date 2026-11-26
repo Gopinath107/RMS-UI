@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Briefcase,
   Users,
   FileCheck,
   Clock,
@@ -58,6 +59,13 @@ function HRSidebar({
       description: 'Overview & Metrics',
       path: '/hr',
       badge: pendingCount > 0 ? pendingCount : null
+    },
+    {
+      id: 'demand-management',
+      label: 'Demand Management',
+      icon: Briefcase,
+      description: 'Active Demands & Profiles',
+      path: '/hr/demands',
     },
     {
       id: 'resource-management',

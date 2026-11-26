@@ -5,6 +5,7 @@ import React from 'react';
 
 // Pages
 import HRDashboard from '../components/HRDashboard.jsx';
+import DemandManagement from '../components/DemandManagement.jsx';
 import ResourceManagement from '../components/ResourceManagement.jsx';
 import AddResourcePage from '../components/AddResourcePage.jsx';
 import InterviewsManagement from '../components/InterviewsManagement.jsx';
@@ -53,6 +54,7 @@ const ActivityWrapper = ({ children }) => (
 export const PROTECTED_ROUTES = [
   // ── HR ──────────────────────────────────────────────────────────
   { path: '/hr',                  component: HRDashboard,                     roles: ['hr'] },
+  { path: '/hr/demands',          component: DemandManagement,                roles: ['hr'] },
   { path: '/hr/resources',        component: ResourceManagement,              roles: ['hr'] },
   { path: '/hr/resources/add',    component: AddResourcePage,                 roles: ['hr'] },
   { path: '/hr/interviews',       component: InterviewsManagement,            roles: ['hr'] },

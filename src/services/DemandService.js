@@ -120,4 +120,44 @@ createDepartment: async (payload) => {
     }
   },
 
+  /**
+   * Fetches the shared profiles summary metrics (Today, Yesterday, Total events vs unique resources)
+   * and recent records.
+   */
+  fetchSharedProfilesSummary: async function () {
+    try {
+      const response = await api.get('/demands/shared-profiles/summary');
+      return response.data?.result || response.data;
+    } catch (error) {
+      console.error('Error fetching shared profiles summary:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches paginated & filtered list of submitted profiles against demands.
+   */
+  fetchSharedProfilesList: async function (params = {}) {
+    try {
+      const response = await api.get('/demands/shared-profiles', { params });
+      return response.data?.result || response.data;
+    } catch (error) {
+      console.error('Error fetching shared profiles list:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches genuine chronological event history for a submitted profile against a demand.
+   */
+  fetchProfileHistory: async function (demandId, resourceType, resourceId) {
+    try {
+      const response = await api.get(`/demands/${demandId}/profiles/${resourceType}/${resourceId}/history`);
+      return response.data?.result || response.data;
+    } catch (error) {
+      console.error('Error fetching profile history:', error);
+      throw error;
+    }
+  },
+
 };

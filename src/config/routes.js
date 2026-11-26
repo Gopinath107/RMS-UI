@@ -25,6 +25,7 @@ export const APP_ROUTES = [
 
   // ── HR ──────────────────────────────────────────────────────────
   { path: '/hr',                   allowedRoles: ['hr'] },
+  { path: '/hr/demands',           allowedRoles: ['hr'] },
   { path: '/hr/resources',         allowedRoles: ['hr'] },
   { path: '/hr/interviews',        allowedRoles: ['hr'] },
   { path: '/hr/interview-hub',     allowedRoles: ['hr'] },
