@@ -332,11 +332,7 @@ const ProjectsManagement = () => {
         Swal.fire({ icon: "warning", title: "Invalid Date Range!", text: "End date cannot be earlier than start date!", timer: 1500, showConfirmButton: false });
         return;
       }
-      if (!newProject.budget || newProject.budget.trim() === "") {
-        Swal.fire({ icon: "warning", title: "Missing Budget!", text: "Budget is required!", timer: 1500, showConfirmButton: false });
-        return;
-      }
-      if (isNaN(parseFloat(newProject.budget)) || parseFloat(newProject.budget) < 0) {
+      if (newProject.budget && newProject.budget.trim() !== "" && (isNaN(parseFloat(newProject.budget)) || parseFloat(newProject.budget) < 0)) {
         Swal.fire({ icon: "warning", title: "Invalid Budget!", text: "Budget must be a valid positive number!", timer: 1500, showConfirmButton: false });
         return;
       }
@@ -347,7 +343,7 @@ const ProjectsManagement = () => {
         description: newProject.description,
         startDate: newProject.startDate,
         endDate: newProject.endDate,
-        budget: parseFloat(newProject.budget || 0),
+        budget: newProject.budget && newProject.budget.trim() !== "" ? parseFloat(newProject.budget) : null,
         revenueAmount: 0,
         priority: newProject.priority,
         status: newProject.status,
@@ -581,10 +577,12 @@ const ProjectsManagement = () => {
                     <Calendar className="h-4 w-4 mr-2" />
                     {project.startDate} - {project.endDate}
                   </p>
-                  <p className="flex items-center text-sm text-gray-600">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Budget: ${project.budget?.toLocaleString() || "N/A"}
-                  </p>
+                  {project.budget && Number(project.budget) > 0 ? (
+                    <p className="flex items-center text-sm text-gray-600">
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Budget: ${Number(project.budget).toLocaleString()}
+                    </p>
+                  ) : null}
                   <p className="flex items-center text-sm text-gray-600">
                     <FileText className="h-4 w-4 mr-2" />
                     Status: {project.status}
@@ -836,18 +834,17 @@ const ProjectsManagement = () => {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="budget" className="text-xs font-medium text-gray-700">Budget *</Label>
+                  <Label htmlFor="budget" className="text-xs font-medium text-gray-700">Budget (Optional)</Label>
                   <Input
                     id="budget" name="budget" type="number"
                     min="0"
                     onKeyDown={(e) => {
                       if (e.key === '-' || e.key === 'e') e.preventDefault();
                     }}
-                    placeholder="Enter budget"
+                    placeholder="Enter budget (optional)"
                     value={newProject.budget}
                     onChange={handleInputChange}
                     className="h-8 px-3 py-1.5 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    required
                   />
                 </div>
 
@@ -992,86 +989,88 @@ const ProjectsManagement = () => {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
           className="
-            w-[95vw] max-w-[1000px]
-            max-h-[92vh] overflow-y-auto
-            p-8 bg-white rounded-2xl shadow-2xl border border-gray-200
+            w-[92vw] max-w-[680px]
+            max-h-[82vh] overflow-y-auto
+            p-5 sm:p-6 bg-white rounded-2xl shadow-2xl border border-gray-200
           "
         >
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-2xl font-bold text-gray-800">
+          <DialogHeader className="mb-3">
+            <DialogTitle className="text-xl font-bold text-gray-800">
               Project Details: {selectedDetails?.projectName}
             </DialogTitle>
-            <DialogDescription className="text-gray-500 text-sm mt-1">
+            <DialogDescription className="text-gray-500 text-xs mt-0.5">
               View all details of the selected project.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch auto-rows-fr">
-            <Card className="border border-gray-300 h-full min-h-[160px]">
-              <CardHeader className="pb-3 border-b border-gray-100">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Card className="border border-gray-200 rounded-xl shadow-xs">
+              <CardHeader className="py-2.5 px-4 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                   <Briefcase className="w-4 h-4 text-blue-500" /> Project Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+              <CardContent className="p-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client</p>
-                  <p className="text-gray-800 mt-0.5">{selectedDetails?.accountName || "N/A"}</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Client</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.accountName || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</p>
-                  <p className="text-gray-800 mt-0.5">{selectedDetails?.status || "N/A"}</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Status</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.status || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
-                  <p className="text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Priority</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.priority || "N/A"}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
-                  <p className="text-gray-800 mt-0.5">${selectedDetails?.budget?.toLocaleString() || "N/A"}</p>
-                </div>
+                {selectedDetails?.budget && Number(selectedDetails.budget) > 0 ? (
+                  <div>
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Budget</p>
+                    <p className="text-sm font-medium text-gray-800 mt-0.5">${Number(selectedDetails.budget).toLocaleString()}</p>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 
-            <Card className="border border-gray-300 h-full min-h-[160px]">
-              <CardHeader className="pb-3 border-b border-gray-100">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+            <Card className="border border-gray-200 rounded-xl shadow-xs">
+              <CardHeader className="py-2.5 px-4 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                   <Calendar className="w-4 h-4 text-blue-500" /> Timeline
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+              <CardContent className="p-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Start Date</p>
-                  <p className="text-gray-800 mt-0.5">{selectedDetails?.startDate || "N/A"}</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Start Date</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.startDate || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">End Date</p>
-                  <p className="text-gray-800 mt-0.5">{selectedDetails?.endDate || "N/A"}</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">End Date</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">{selectedDetails?.endDate || "N/A"}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border border-gray-300 h-full min-h-[160px]">
-              <CardHeader className="pb-3 border-b border-gray-100">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+            <Card className="border border-gray-200 rounded-xl shadow-xs">
+              <CardHeader className="py-2.5 px-4 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                   <FileText className="w-4 h-4 text-blue-500" /> Description
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4">
-                <p className="text-gray-700 text-sm leading-relaxed">
+              <CardContent className="p-4">
+                <p className="text-gray-700 text-xs sm:text-sm leading-relaxed max-h-[80px] overflow-y-auto">
                   {selectedDetails?.description || "No description provided."}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border border-gray-300 h-full min-h-[160px]">
-              <CardHeader className="pb-3 border-b border-gray-100">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800">
+            <Card className="border border-gray-200 rounded-xl shadow-xs">
+              <CardHeader className="py-2.5 px-4 border-b border-gray-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                   <Activity className="w-4 h-4 text-blue-500" /> Required Skills
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="flex flex-wrap gap-2">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
                   {selectedDetails?.skills && selectedDetails.skills.length > 0 ? (
                     selectedDetails.skills.map((skill) => {
                       const skillName =
@@ -1079,17 +1078,28 @@ const ProjectsManagement = () => {
                           ? skill.name
                           : skillsList.find(s => s.skillId === skill || s.skillName === skill)?.skillName || skill;
                       return (
-                        <Badge key={skill.id || skill} className="bg-blue-100 text-blue-700">
+                        <Badge key={skill.id || skill} className="bg-blue-50 text-blue-700 text-[11px] py-0.5 px-2">
                           {skillName}
                         </Badge>
                       );
                     })
                   ) : (
-                    <p className="text-gray-500 text-sm">No skills assigned</p>
+                    <p className="text-gray-400 text-xs">No skills assigned</p>
                   )}
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="flex justify-end pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDetailsOpen(false)}
+              className="text-xs h-8 px-4"
+            >
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
