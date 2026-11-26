@@ -70,7 +70,8 @@ import {
     X,
     Trash2,
     UserCheck,
-    UserX
+    UserX,
+    RefreshCw
 } from "lucide-react";
 import Swal from 'sweetalert2';
 import { toast } from "sonner";
@@ -450,7 +451,9 @@ const ResourceDetails = ({
             return;
         }
         setIsUploadingResume(true);
-        const toastId = toast.loading(`Uploading resume for ${resource.name || resource.firstName || 'employee'}...`);
+        const actionVerb = resource.hasResume ? 'Replacing' : 'Uploading';
+        const actionPast = resource.hasResume ? 'replaced' : 'uploaded';
+        const toastId = toast.loading(`${actionVerb} resume for ${resource.name || resource.firstName || 'employee'}...`);
         try {
             const formData = new FormData();
             formData.append('resume', file);
@@ -461,7 +464,7 @@ const ResourceDetails = ({
             formData.append('companyId', (resource.companyId || 1).toString());
 
             await EmployeeService.updateEmployee(formData);
-            toast.success(`Resume uploaded successfully for ${resource.name || resource.firstName || 'employee'}!`, { id: toastId });
+            toast.success(`Resume ${actionPast} successfully for ${resource.name || resource.firstName || 'employee'}!`, { id: toastId });
             if (onRefresh) onRefresh();
             if (onUploadResume) onUploadResume(resource);
         } catch (err) {
@@ -803,9 +806,10 @@ const ResourceDetails = ({
                                         disabled={isUploadingResume}
                                         onClick={() => directResumeInputRef.current?.click()}
                                         className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs px-3 py-1 rounded-md flex items-center gap-1"
+                                        title={resource.hasResume ? "Replace resume for employee" : "Upload resume for employee"}
                                     >
-                                        <Upload className="h-4 w-4" />
-                                        <span>{isUploadingResume ? "Uploading..." : "Upload Resume"}</span>
+                                        {resource.hasResume ? <RefreshCw className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                                        <span>{isUploadingResume ? "Uploading..." : (resource.hasResume ? "Replace Resume" : "Upload Resume")}</span>
                                     </Button>
                                 </div>
                             </div>
@@ -1208,10 +1212,19 @@ const ResourceTable = ({
                                                                                 onDirectUploadResume && onDirectUploadResume(resource);
                                                                             }}
                                                                             className="h-7 px-2 text-[11px] font-medium border-emerald-300 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-1 shadow-sm whitespace-nowrap"
-                                                                            title="Upload Resume for employee"
+                                                                            title={resource.hasResume ? "Replace resume for employee" : "Upload resume for employee"}
                                                                         >
-                                                                            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                                                                            Upload Resume
+                                                                            {resource.hasResume ? (
+                                                                                <>
+                                                                                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                                                                                    Replace Resume
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                                                                                    Upload Resume
+                                                                                </>
+                                                                            )}
                                                                         </Button>
                                                                     )}
                                                                     <Button
@@ -1405,7 +1418,9 @@ export default function ResourceManagement() {
             return;
         }
 
-        const toastId = toast.loading(`Uploading resume for ${target.name || target.firstName || 'employee'}...`);
+        const actionVerb = target.hasResume ? 'Replacing' : 'Uploading';
+        const actionPast = target.hasResume ? 'replaced' : 'uploaded';
+        const toastId = toast.loading(`${actionVerb} resume for ${target.name || target.firstName || 'employee'}...`);
         try {
             const formData = new FormData();
             formData.append('resume', file);
@@ -1416,7 +1431,7 @@ export default function ResourceManagement() {
             formData.append('companyId', (target.companyId || 1).toString());
 
             await EmployeeService.updateEmployee(formData);
-            toast.success(`Resume uploaded successfully for ${target.name || target.firstName || 'employee'}!`, { id: toastId });
+            toast.success(`Resume ${actionPast} successfully for ${target.name || target.firstName || 'employee'}!`, { id: toastId });
             await loadInternalResources();
         } catch (err) {
             console.error('Failed to upload resume:', err);
@@ -1691,21 +1706,38 @@ export default function ResourceManagement() {
                         };
                     }
 
+                    const primaryList = Array.isArray(emp.primarySkills)
+                        ? emp.primarySkills
+                        : (typeof emp.primarySkills === 'string' ? emp.primarySkills.split(/[,;|]/).map(s => s.trim()).filter(Boolean) : []);
+                    const skillList = Array.isArray(emp.skills)
+                        ? emp.skills.map(s => typeof s === 'object' ? s.skillName : s).filter(Boolean)
+                        : [];
+                    const allSkills = [...new Set([...primaryList, ...skillList])];
+
+                    const expVal = (emp.experienceYears !== null && emp.experienceYears !== undefined)
+                        ? emp.experienceYears
+                        : (emp.totalExperience !== null && emp.totalExperience !== undefined ? emp.totalExperience : null);
+                    const formattedExp = expVal !== null
+                        ? (expVal === 0 ? "< 1 year" : `${expVal} ${expVal === 1 ? 'year' : 'years'}`)
+                        : "";
+
+                    const hasResume = Boolean(emp.resumeUrl || emp.resumeFileName || emp.resumeDocumentId);
+
                     return {
                         id: emp.employeeId.toString(),
                         name: `${emp.firstName} ${emp.lastName || ''}`.trim(),
                         role: emp.jobTitle || emp.departmentName || "Unknown",
-                        skills: emp.skills?.map(s => typeof s === 'object' ? s.skillName : s) || [],
-                        primarySkills: emp.primarySkills,
+                        skills: allSkills,
+                        primarySkills: primaryList.length > 0 ? primaryList : allSkills,
                         currentProject: emp.currentProject || null,
                         currentProjectId: emp.currentProjectId || null,
                         joiningDate: emp.joiningDate,
-                        client: emp.currentClient || emp.client || null,
-                        currentClient: emp.currentClient,
+                        client: emp.currentClient || emp.client || "N/A",
+                        currentClient: emp.currentClient || emp.client || "N/A",
                         status: emp.status === "Client" ? "Billable" : emp.status,
                         email: emp.email,
                         phone: emp.phoneNumber,
-                        experience: emp.experienceYears ? `${emp.experienceYears} years` : "",
+                        experience: formattedExp,
                         location: emp.location,
                         projectType: emp.employmentType,
                         photo: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face",
@@ -1720,6 +1752,10 @@ export default function ResourceManagement() {
                         profileSummary: emp.profileSummary,
                         trainingSummary: emp.trainingSummary,
                         certificationSummary: emp.certificationSummary,
+                        hasResume,
+                        resumeUrl: emp.resumeUrl,
+                        resumeFileName: emp.resumeFileName,
+                        resumeDocumentId: emp.resumeDocumentId,
                         // ADD THESE FIELDS FROM API RESPONSE
                         resumeShareAudit: emp.resumeShareAudit || [], // This is the array of sharing history
                         resumeShareActionByUserId: emp.resumeShareActionByUserId,
@@ -2867,6 +2903,11 @@ export default function ResourceManagement() {
             ? (matchingAutoDemand.demandTitle || matchingAutoDemand.demandtitle)
             : (sharedDemands.length === 1 ? (sharedDemands[0].demandTitle || sharedDemands[0].title || '') : '');
 
+        const allowedDemands = sharedDemands.map(sd => ({
+            demandId: (sd.demandId || sd.demandid)?.toString(),
+            demandTitle: sd.demandTitle || sd.title || `Demand #${sd.demandId || sd.demandid}`
+        }));
+
         // Pre-fill candidate from row context
         setInterviewFormData({
             id: '',
@@ -2880,7 +2921,8 @@ export default function ResourceManagement() {
             interviewLevels: [],
             levelsDetails: [],
             originalLevels: [],
-            interviewType: 'demand'
+            interviewType: 'demand',
+            _allowedDemands: allowedDemands
         });
 
         if (autoSelectDemandId) {
@@ -3051,7 +3093,11 @@ export default function ResourceManagement() {
             interviewLevels: [],
             levelsDetails: [],
             originalLevels: [],
-            interviewType: isDemand ? 'demand' : 'opportunity'
+            interviewType: isDemand ? 'demand' : 'opportunity',
+            _allowedDemands: isDemand && targetDemandId ? [{
+                demandId: targetDemandId,
+                demandTitle: demandTitle || `Demand #${targetDemandId}`
+            }] : []
         });
 
         clearInterviewFieldError('general');
@@ -5780,13 +5826,20 @@ export default function ResourceManagement() {
                                     />
                                     {interviewFormData._demandDropdownOpen && (
                                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                            {demandGroups
-                                                .filter(d => {
+                                            {(() => {
+                                                const selectableDemands = interviewFormData._allowedDemands
+                                                    ? interviewFormData._allowedDemands.map(ad => {
+                                                        const full = demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === ad.demandId?.toString());
+                                                        return full || { demandid: ad.demandId, demandId: ad.demandId, demandTitle: ad.demandTitle, demandtitle: ad.demandTitle };
+                                                    })
+                                                    : demandGroups;
+
+                                                const filtered = selectableDemands.filter(d => {
                                                     const search = (interviewFormData._demandSearch || '').toLowerCase().trim();
                                                     const dId = (d.demandid || d.demandId);
                                                     const dTitle = (d.demandTitle || d.demandtitle) || '';
                                                     const cur = interviewFormData.demandId
-                                                        ? demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString())
+                                                        ? selectableDemands.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString())
                                                         : null;
                                                     const isCurrentSelected = cur && search === (cur.demandTitle || cur.demandtitle || '').toLowerCase().trim();
 
@@ -5794,8 +5847,13 @@ export default function ResourceManagement() {
                                                         isCurrentSelected ||
                                                         `dm-${dId}`.toLowerCase().includes(search) ||
                                                         dTitle.toLowerCase().includes(search);
-                                                })
-                                                .map(d => {
+                                                });
+
+                                                if (filtered.length === 0) {
+                                                    return <div className="px-3 py-2 text-sm text-gray-400">No allocated demands found</div>;
+                                                }
+
+                                                return filtered.map(d => {
                                                     const dId = (d.demandid || d.demandId);
                                                     const dTitle = (d.demandTitle || d.demandtitle);
                                                     return (
@@ -5815,24 +5873,8 @@ export default function ResourceManagement() {
                                                             {dTitle}
                                                         </div>
                                                     );
-                                                })
-                                            }
-                                            {demandGroups.filter(d => {
-                                                const search = (interviewFormData._demandSearch || '').toLowerCase().trim();
-                                                const dId = (d.demandid || d.demandId);
-                                                const dTitle = (d.demandTitle || d.demandtitle) || '';
-                                                const cur = interviewFormData.demandId
-                                                    ? demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString())
-                                                    : null;
-                                                const isCurrentSelected = cur && search === (cur.demandTitle || cur.demandtitle || '').toLowerCase().trim();
-
-                                                return !search ||
-                                                    isCurrentSelected ||
-                                                    `dm-${dId}`.toLowerCase().includes(search) ||
-                                                    dTitle.toLowerCase().includes(search);
-                                            }).length === 0 && (
-                                                    <div className="px-3 py-2 text-sm text-gray-400">No demands found</div>
-                                                )}
+                                                });
+                                            })()}
                                         </div>
                                     )}
                                 </div>
