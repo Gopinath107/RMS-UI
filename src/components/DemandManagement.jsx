@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Building,
   Calendar,
+  CalendarCheck,
   CheckCircle,
   AlertCircle,
   XCircle,
@@ -59,10 +60,82 @@ import {
   DialogFooter
 } from './ui/dialog.jsx';
 import { DemandService } from '../services/DemandService.js';
+import { InterviewService } from '../services/InterviewManagementService.js';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 // Timezone helpers for Asia/Kolkata (IST, UTC+05:30)
+const getISTDateString = (dateVal) => {
+  if (!dateVal) return null;
+  try {
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      return dateVal;
+    }
+    if (typeof dateVal === 'string' && /^\d{2}[-/]\d{2}[-/]\d{4}/.test(dateVal)) {
+      const parts = dateVal.split(/[-/]/);
+      return `${parts[2].slice(0, 4)}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return null;
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  } catch {
+    return null;
+  }
+};
+
+const getTodayISTString = () => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+};
+
+const getYesterdayISTString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+};
+
+const matchesDateFilter = (dateVal, filterType, fromDate, toDate) => {
+  if (!filterType || filterType === 'all') return true;
+  if (!dateVal) return false;
+  const dateStr = getISTDateString(dateVal);
+  if (!dateStr) return false;
+  const todayStr = getTodayISTString();
+  const yesterdayStr = getYesterdayISTString();
+
+  if (filterType === 'today') {
+    return dateStr === todayStr;
+  }
+  if (filterType === 'yesterday') {
+    return dateStr === yesterdayStr;
+  }
+  if (filterType === 'last7days') {
+    const d7 = new Date();
+    d7.setDate(d7.getDate() - 7);
+    const d7Str = getISTDateString(d7);
+    return dateStr >= d7Str && dateStr <= todayStr;
+  }
+  if (filterType === 'custom') {
+    if (fromDate && dateStr < fromDate) return false;
+    if (toDate && dateStr > toDate) return false;
+    return true;
+  }
+  return true;
+};
+
 const formatISTDateTime = (dateVal) => {
   if (!dateVal) return 'N/A';
   try {
@@ -389,7 +462,7 @@ export default function DemandManagement() {
 
   // Main 3-Tab Navigation State: 'active-demands' | 'submitted' | 'history'
   const [activeMainTab, setActiveMainTab] = useState(
-    urlTab === 'submitted' ? 'submitted' : urlTab === 'history' ? 'history' : 'active-demands'
+    urlTab === 'interviews' ? 'interviews' : urlTab === 'submitted' ? 'submitted' : urlTab === 'history' ? 'history' : 'active-demands'
   );
 
   // Sync tab with URL
@@ -406,7 +479,12 @@ export default function DemandManagement() {
   // User Identification from localStorage
   const currentUserId = useMemo(() => {
     const raw = localStorage.getItem('userId');
-    return raw ? Number(raw) : null;
+    if (raw) return Number(raw);
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u.userId || u.id) return Number(u.userId || u.id);
+    } catch {}
+    return 1;
   }, []);
   const currentUserName = useMemo(() => {
     return localStorage.getItem('userName') || localStorage.getItem('employeeName') || 'HR Manager';
@@ -418,7 +496,19 @@ export default function DemandManagement() {
   // ── Tab 1: Active Demands Controls ──
   const [viewMode, setViewMode] = useState('split'); // 'split' | 'table'
   const [selectedSplitDemandId, setSelectedSplitDemandId] = useState(null);
-  const [scopeFilter, setScopeFilter] = useState('ALL'); // 'ALL' | 'MY'
+  const [scopeFilter, setScopeFilter] = useState('MY'); // Dedicated User Report: strictly 'MY'
+  const [demandDateFilter, setDemandDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'last7days' | 'custom'
+  const [demandFromDate, setDemandFromDate] = useState('');
+  const [demandToDate, setDemandToDate] = useState('');
+
+  // ── Tab: Interviews Scheduled State ──
+  const [interviews, setInterviews] = useState([]);
+  const [interviewsLoading, setInterviewsLoading] = useState(false);
+  const [interviewDateFilter, setInterviewDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'last7days' | 'custom'
+  const [interviewFromDate, setInterviewFromDate] = useState('');
+  const [interviewToDate, setInterviewToDate] = useState('');
+  const [interviewStatusFilter, setInterviewStatusFilter] = useState('ALL');
+  const [interviewSearchQuery, setInterviewSearchQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
@@ -495,9 +585,39 @@ export default function DemandManagement() {
       if (currentUserName && demand.requesterName && demand.requesterName.toLowerCase() === currentUserName.toLowerCase()) {
         return true;
       }
+      if (demand.createdBy && currentUserName && demand.createdBy.toLowerCase() === currentUserName.toLowerCase()) {
+        return true;
+      }
+      if (currentUserId === 1 && (!demand.requesterUserId || Number(demand.requesterUserId) === 1)) {
+        return true;
+      }
       return false;
     },
     [currentUserId, currentUserEmail, currentUserName]
+  );
+
+  // Check if an interview was scheduled by or assigned to the current user
+  const isInterviewScheduledByCurrentUser = useCallback(
+    (iv) => {
+      if (!iv) return false;
+      if (currentUserId && iv.createdByUserId && Number(iv.createdByUserId) === currentUserId) return true;
+      if (currentUserId && iv.interviewerUserId && Number(iv.interviewerUserId) === currentUserId) return true;
+      if (Array.isArray(iv.levelProgress)) {
+        const meta = iv.levelProgress.find((l) => l.level === '__META__');
+        if (meta && meta.interviewerUserId && Number(meta.interviewerUserId) === currentUserId) return true;
+        const userLvl = iv.levelProgress.find((l) => l.interviewerUserId && Number(l.interviewerUserId) === currentUserId);
+        if (userLvl) return true;
+      }
+      if (currentUserName && iv.createdByUserName && iv.createdByUserName.toLowerCase() === currentUserName.toLowerCase()) return true;
+      if (currentUserName && iv.interviewerName && iv.interviewerName.toLowerCase() === currentUserName.toLowerCase()) return true;
+      if (iv.demandId) {
+        const parentDemand = demands.find((d) => Number(d.demandid) === Number(iv.demandId));
+        if (parentDemand && isCreatedByCurrentUser(parentDemand)) return true;
+      }
+      if (currentUserId === 1) return true;
+      return false;
+    },
+    [currentUserId, currentUserName, demands, isCreatedByCurrentUser]
   );
 
   // Load demands and flow data
@@ -506,9 +626,10 @@ export default function DemandManagement() {
     else setLoading(true);
 
     try {
-      const [listRes, flowRes] = await Promise.allSettled([
+      const [listRes, flowRes, ivRes] = await Promise.allSettled([
         DemandService.fetchDemandList(),
-        DemandService.fetchDemandFlowList()
+        DemandService.fetchDemandFlowList(),
+        InterviewService.fetchInterviewList()
       ]);
 
       let rawDemands = [];
@@ -526,10 +647,20 @@ export default function DemandManagement() {
         else if (val?.data && Array.isArray(val.data)) rawFlows = val.data;
       }
 
+      let rawInterviews = [];
+      if (ivRes.status === 'fulfilled') {
+        const val = ivRes.value;
+        if (Array.isArray(val?.data?.result)) rawInterviews = val.data.result;
+        else if (Array.isArray(val?.data)) rawInterviews = val.data;
+        else if (Array.isArray(val?.result)) rawInterviews = val.result;
+        else if (Array.isArray(val)) rawInterviews = val;
+      }
+
       // Sort newest first by demandid desc
       const sorted = [...rawDemands].sort((a, b) => (b.demandid || 0) - (a.demandid || 0));
       setDemands(sorted);
       setDemandFlows(rawFlows);
+      setInterviews(rawInterviews);
     } catch (err) {
       console.error('Failed to load demands data:', err);
       toast.error('Unable to load demands. Please try refreshing.');
@@ -796,13 +927,80 @@ export default function DemandManagement() {
     [getProfilesForDemand]
   );
 
-  // Filter demands by user scope ('MY' vs 'ALL')
+  // Demands created by the logged-in user (Strict User Scope)
   const scopedDemands = useMemo(() => {
-    if (scopeFilter === 'MY') {
-      return demands.filter((d) => isCreatedByCurrentUser(d));
-    }
-    return demands;
-  }, [demands, scopeFilter, isCreatedByCurrentUser]);
+    return demands.filter((d) => isCreatedByCurrentUser(d));
+  }, [demands, isCreatedByCurrentUser]);
+
+  // Date counts for Demands created by current user
+  const demandsTodayCount = useMemo(() => {
+    return scopedDemands.filter((d) => matchesDateFilter(d.createddt || d.demandOpenDt || d.demandopendt, 'today')).length;
+  }, [scopedDemands]);
+
+  const demandsYesterdayCount = useMemo(() => {
+    return scopedDemands.filter((d) => matchesDateFilter(d.createddt || d.demandOpenDt || d.demandopendt, 'yesterday')).length;
+  }, [scopedDemands]);
+
+  const demandsLast7Count = useMemo(() => {
+    return scopedDemands.filter((d) => matchesDateFilter(d.createddt || d.demandOpenDt || d.demandopendt, 'last7days')).length;
+  }, [scopedDemands]);
+
+  // Date-filtered demands
+  const dateFilteredDemands = useMemo(() => {
+    return scopedDemands.filter((d) =>
+      matchesDateFilter(d.createddt || d.demandOpenDt || d.demandopendt, demandDateFilter, demandFromDate, demandToDate)
+    );
+  }, [scopedDemands, demandDateFilter, demandFromDate, demandToDate]);
+
+  // Interviews scheduled by current user
+  const myInterviews = useMemo(() => {
+    return interviews.filter((iv) => isInterviewScheduledByCurrentUser(iv));
+  }, [interviews, isInterviewScheduledByCurrentUser]);
+
+  const interviewsTodayCount = useMemo(() => {
+    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'today')).length;
+  }, [myInterviews]);
+
+  const interviewsYesterdayCount = useMemo(() => {
+    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'yesterday')).length;
+  }, [myInterviews]);
+
+  const interviewsLast7Count = useMemo(() => {
+    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'last7days')).length;
+  }, [myInterviews]);
+
+  // Filtered interviews list based on date, status, and search
+  const filteredMyInterviews = useMemo(() => {
+    return myInterviews.filter((iv) => {
+      // Date filter
+      if (!matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, interviewDateFilter, interviewFromDate, interviewToDate)) {
+        return false;
+      }
+      // Status filter
+      if (interviewStatusFilter !== 'ALL') {
+        const st = (iv.status || '').toLowerCase();
+        if (interviewStatusFilter === 'SCHEDULED' && !st.includes('scheduled')) return false;
+        if (interviewStatusFilter === 'SELECTED' && !st.includes('selected') && !st.includes('cleared')) return false;
+        if (interviewStatusFilter === 'REJECTED' && !st.includes('reject')) return false;
+        if (interviewStatusFilter === 'COMPLETED' && !st.includes('complet')) return false;
+        if (interviewStatusFilter === 'CANCELLED' && !st.includes('cancel')) return false;
+      }
+      // Search
+      if (interviewSearchQuery.trim()) {
+        const q = interviewSearchQuery.toLowerCase();
+        const cand = (iv.candidateName || iv.employeeName || '').toLowerCase();
+        const dem = (iv.demandTitle || '').toLowerCase();
+        const proj = (iv.projectName || iv.accountName || '').toLowerCase();
+        const inter = (iv.interviewerName || '').toLowerCase();
+        const notes = (iv.feedback || iv.overallNotes || '').toLowerCase();
+        const id = String(iv.interviewId || '');
+        if (!cand.includes(q) && !dem.includes(q) && !proj.includes(q) && !inter.includes(q) && !notes.includes(q) && !id.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [myInterviews, interviewDateFilter, interviewFromDate, interviewToDate, interviewStatusFilter, interviewSearchQuery]);
 
   // Overall Statistics calculated across the active scope
   const stats = useMemo(() => {
@@ -839,11 +1037,11 @@ export default function DemandManagement() {
   const kpiCards = useMemo(() => {
     return [
       {
-        title: scopeFilter === 'MY' ? 'My Demands' : 'Total Demands',
-        value: stats.totalDemands,
-        icon: Layers,
+        title: 'Demands Created by You',
+        value: demandDateFilter === 'all' ? scopedDemands.length : dateFilteredDemands.length,
+        icon: Briefcase,
         onClick: () => handleTabChange('active-demands'),
-        desc: scopeFilter === 'MY' ? 'Demands created by you' : 'All active demands in RMS',
+        desc: `${demandsTodayCount} created today • ${demandsYesterdayCount} yesterday`,
         bg: 'linear-gradient(150deg, #faf8ff 0%, #f0ecff 100%)',
         border: 'rgba(196, 181, 253, 0.6)',
         topBorder: '#8b5cf6',
@@ -855,13 +1053,11 @@ export default function DemandManagement() {
         hoverShadow: '0 12px 28px rgba(139, 92, 246, 0.18)',
       },
       {
-        title: 'Profiles Shared',
-        value: sharedSummary ? sharedSummary.totalEvents : stats.totalProfilesShared,
-        icon: Users,
-        onClick: () => handleTabChange('submitted'),
-        desc: sharedSummary
-          ? `${sharedSummary.todayEvents} today • ${sharedSummary.yesterdayEvents} yesterday`
-          : 'Candidate & employee submissions',
+        title: 'Interviews Scheduled by You',
+        value: interviewDateFilter === 'all' ? myInterviews.length : filteredMyInterviews.length,
+        icon: CalendarCheck,
+        onClick: () => handleTabChange('interviews'),
+        desc: `${interviewsTodayCount} scheduled today • ${interviewsYesterdayCount} yesterday`,
         bg: 'linear-gradient(150deg, #f7fbff 0%, #eaf4ff 100%)',
         border: 'rgba(147, 210, 250, 0.6)',
         topBorder: '#3b82f6',
@@ -876,8 +1072,8 @@ export default function DemandManagement() {
         title: 'In Recruitment Pipeline',
         value: stats.inPipelineCount,
         icon: Clock,
-        onClick: () => handleTabChange('active-demands'),
-        desc: 'Active screening & interview rounds',
+        onClick: () => handleTabChange('submitted'),
+        desc: `${stats.totalProfilesShared} candidate profiles in process`,
         bg: 'linear-gradient(150deg, #fffdf5 0%, #fff8e0 100%)',
         border: 'rgba(251, 211, 141, 0.6)',
         topBorder: '#f59e0b',
@@ -905,7 +1101,19 @@ export default function DemandManagement() {
         hoverShadow: '0 12px 28px rgba(16, 185, 129, 0.16)',
       },
     ];
-  }, [stats, scopeFilter, sharedSummary]);
+  }, [
+    stats,
+    scopedDemands,
+    dateFilteredDemands,
+    myInterviews,
+    filteredMyInterviews,
+    demandsTodayCount,
+    demandsYesterdayCount,
+    interviewsTodayCount,
+    interviewsYesterdayCount,
+    demandDateFilter,
+    interviewDateFilter
+  ]);
 
   // Unique clients list for dropdown filters
   const clientOptions = useMemo(() => {
@@ -919,7 +1127,7 @@ export default function DemandManagement() {
 
   // Tab 1 Filtering & Sorting
   const filteredDemands = useMemo(() => {
-    let result = scopedDemands.filter((demand) => {
+    let result = dateFilteredDemands.filter((demand) => {
       // Status filter
       if (statusFilter !== 'ALL') {
         const s = (demand.overallStatus || '').toLowerCase();
@@ -1297,7 +1505,7 @@ export default function DemandManagement() {
             gap: '10px',
           }}
         >
-          {/* Tab 1 */}
+          {/* Tab 1: My Demands */}
           <button
             role="tab"
             id="tab-active-demands"
@@ -1336,7 +1544,7 @@ export default function DemandManagement() {
             }
           >
             <Briefcase className="w-5 h-5 flex-shrink-0" />
-            <span>Active Demands</span>
+            <span>My Demands</span>
             <span
               style={
                 activeMainTab === 'active-demands'
@@ -1359,6 +1567,71 @@ export default function DemandManagement() {
               }
             >
               {filteredDemands.length}
+            </span>
+          </button>
+
+          {/* Tab 2: Interviews Scheduled */}
+          <button
+            role="tab"
+            id="tab-interviews"
+            aria-selected={activeMainTab === 'interviews'}
+            aria-controls="panel-interviews"
+            tabIndex={activeMainTab === 'interviews' ? 0 : -1}
+            onClick={() => handleTabChange('interviews')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleTabChange('interviews');
+              }
+            }}
+            className="flex items-center cursor-pointer whitespace-nowrap focus:outline-none transition-all duration-200"
+            style={
+              activeMainTab === 'interviews'
+                ? {
+                    background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                    padding: '10px 22px',
+                    borderRadius: '14px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    gap: '10px',
+                  }
+                : {
+                    background: 'transparent',
+                    color: '#475569',
+                    padding: '10px 22px',
+                    borderRadius: '14px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    gap: '10px',
+                  }
+            }
+          >
+            <CalendarCheck className="w-5 h-5 flex-shrink-0" />
+            <span>Interviews Scheduled</span>
+            <span
+              style={
+                activeMainTab === 'interviews'
+                  ? {
+                      background: 'rgba(255, 255, 255, 0.28)',
+                      color: '#ffffff',
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                    }
+                  : {
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                    }
+              }
+            >
+              {filteredMyInterviews.length}
             </span>
           </button>
 
@@ -1491,40 +1764,101 @@ export default function DemandManagement() {
             {/* Primary Row: Scope Switcher + Status Filters + View Mode Toggle + Refresh */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between" style={{ gap: '14px' }}>
               <div className="flex flex-wrap items-center" style={{ gap: '14px' }}>
-                {/* Demand Scope Switcher */}
-                <div
-                  className="inline-flex bg-white p-1 rounded-xl border border-slate-200 h-10 items-center shadow-xs"
-                  style={{ gap: '6px' }}
-                >
-                  <button
-                    onClick={() => {
-                      setScopeFilter('ALL');
-                      setCurrentPage(1);
-                    }}
-                    className="h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                    style={
-                      scopeFilter === 'ALL'
-                        ? { background: '#2563eb', color: '#ffffff', boxShadow: '0 2px 6px rgba(37,99,235,0.3)' }
-                        : { background: 'transparent', color: '#475569' }
-                    }
-                  >
-                    All Demands ({demands.length})
-                  </button>
-                  <button
-                    onClick={() => {
-                      setScopeFilter('MY');
-                      setCurrentPage(1);
-                    }}
-                    className="h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                    style={
-                      scopeFilter === 'MY'
-                        ? { background: '#2563eb', color: '#ffffff', boxShadow: '0 2px 6px rgba(37,99,235,0.3)' }
-                        : { background: 'transparent', color: '#475569' }
-                    }
-                  >
-                    My Demands ({stats.myDemandsTotal})
-                  </button>
+                {/* User Scope Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  <span className="text-xs font-bold text-slate-800">{currentUserName}</span>
+                  <span className="text-xs font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                    {scopedDemands.length} {scopedDemands.length === 1 ? 'Demand' : 'Demands'}
+                  </span>
                 </div>
+
+                {/* Demand Date Quick-Filters (Today, Yesterday, Last 7 Days, Custom Date Range) */}
+                <div className="inline-flex items-center flex-wrap gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-blue-600" />
+                    Created:
+                  </span>
+                  {[
+                    { id: 'all', label: 'All', count: scopedDemands.length },
+                    { id: 'today', label: 'Today', count: demandsTodayCount },
+                    { id: 'yesterday', label: 'Yesterday', count: demandsYesterdayCount },
+                    { id: 'last7days', label: 'Last 7 Days', count: demandsLast7Count },
+                    { id: 'custom', label: 'Custom Date', count: null },
+                  ].map((df) => {
+                    const isAct = demandDateFilter === df.id;
+                    return (
+                      <button
+                        key={df.id}
+                        type="button"
+                        onClick={() => {
+                          setDemandDateFilter(df.id);
+                          setCurrentPage(1);
+                        }}
+                        className={`h-7 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          isAct
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>{df.label}</span>
+                        {df.count !== null && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                              isAct ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {df.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Date Inputs if Custom is selected */}
+                {demandDateFilter === 'custom' && (
+                  <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-blue-200 shadow-2xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">From:</span>
+                      <input
+                        type="date"
+                        value={demandFromDate}
+                        onChange={(e) => {
+                          setDemandFromDate(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">To:</span>
+                      <input
+                        type="date"
+                        value={demandToDate}
+                        onChange={(e) => {
+                          setDemandToDate(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
+                      />
+                    </div>
+                    {(demandFromDate || demandToDate) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDemandFromDate('');
+                          setDemandToDate('');
+                          setCurrentPage(1);
+                        }}
+                        className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer"
+                        title="Clear Dates"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Subtle Divider between Scope and Status Filters */}
                 <div className="hidden md:block" style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
@@ -2736,6 +3070,409 @@ export default function DemandManagement() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* TAB: INTERVIEWS SCHEDULED BY USER (User Activity & Reports)   */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeMainTab === 'interviews' && (
+        <div
+          id="panel-interviews"
+          role="tabpanel"
+          aria-labelledby="tab-interviews"
+          className="space-y-5 text-left rounded-2xl p-5 sm:p-6"
+          style={{
+            background: '#ffffff',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
+          }}
+        >
+          {/* Toolbar: Scope, Date Filters, Status Pills, and Search */}
+          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4 text-left">
+            {/* Primary Row: Scope Badge + Date Quick-Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* User Scope Badge */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  <span className="text-xs font-bold text-slate-800">{currentUserName}</span>
+                  <span className="text-xs font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                    {myInterviews.length} {myInterviews.length === 1 ? 'Interview' : 'Interviews'} Scheduled
+                  </span>
+                </div>
+
+                {/* Date Quick-Filters (Today, Yesterday, Last 7 Days, Custom Date Range) */}
+                <div className="inline-flex items-center flex-wrap gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-blue-600" />
+                    Scheduled:
+                  </span>
+                  {[
+                    { id: 'all', label: 'All Time', count: myInterviews.length },
+                    { id: 'today', label: 'Today', count: interviewsTodayCount },
+                    { id: 'yesterday', label: 'Yesterday', count: interviewsYesterdayCount },
+                    { id: 'last7days', label: 'Last 7 Days', count: interviewsLast7Count },
+                    { id: 'custom', label: 'Custom Date', count: null },
+                  ].map((df) => {
+                    const isAct = interviewDateFilter === df.id;
+                    return (
+                      <button
+                        key={df.id}
+                        type="button"
+                        onClick={() => setInterviewDateFilter(df.id)}
+                        className={`h-7 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          isAct
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>{df.label}</span>
+                        {df.count !== null && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                              isAct ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {df.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Date Inputs if Custom is selected */}
+                {interviewDateFilter === 'custom' && (
+                  <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-blue-200 shadow-2xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">From:</span>
+                      <input
+                        type="date"
+                        value={interviewFromDate}
+                        onChange={(e) => setInterviewFromDate(e.target.value)}
+                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500">To:</span>
+                      <input
+                        type="date"
+                        value={interviewToDate}
+                        onChange={(e) => setInterviewToDate(e.target.value)}
+                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
+                      />
+                    </div>
+                    {(interviewFromDate || interviewToDate) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInterviewFromDate('');
+                          setInterviewToDate('');
+                        }}
+                        className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer"
+                        title="Clear Dates"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Secondary Row: Status Pills + Search Input */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+              {/* Status Pills */}
+              <div className="inline-flex items-center flex-wrap gap-2">
+                {[
+                  { id: 'ALL', label: 'All Statuses', dot: null },
+                  { id: 'SCHEDULED', label: 'Scheduled', dot: '#3b82f6' },
+                  { id: 'SELECTED', label: 'Selected / Cleared', dot: '#10b981' },
+                  { id: 'COMPLETED', label: 'Completed', dot: '#0d9488' },
+                  { id: 'CANCELLED', label: 'Cancelled', dot: '#64748b' },
+                ].map((st) => {
+                  const isActive = interviewStatusFilter === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setInterviewStatusFilter(st.id)}
+                      className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {st.dot && (
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: isActive ? '#ffffff' : st.dot }}
+                        />
+                      )}
+                      <span>{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search candidate, demand, interviewer..."
+                  value={interviewSearchQuery}
+                  onChange={(e) => setInterviewSearchQuery(e.target.value)}
+                  className="w-full h-8 pl-9 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-blue-500 bg-white"
+                />
+                {interviewSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setInterviewSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Active Filter Pills Bar */}
+          {(interviewDateFilter !== 'all' || interviewStatusFilter !== 'ALL' || interviewSearchQuery) && (
+            <div className="flex items-center justify-between text-xs bg-blue-50/60 border border-blue-200/60 rounded-xl px-4 py-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-blue-900">Active Filters:</span>
+                {interviewDateFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
+                    Date: <strong className="font-bold capitalize">{interviewDateFilter}</strong>
+                  </span>
+                )}
+                {interviewStatusFilter !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
+                    Status: <strong className="font-bold">{interviewStatusFilter}</strong>
+                  </span>
+                )}
+                {interviewSearchQuery && (
+                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
+                    Search: <strong className="font-bold">"{interviewSearchQuery}"</strong>
+                  </span>
+                )}
+                <span className="text-slate-500 font-semibold ml-2">
+                  Showing {filteredMyInterviews.length} of {myInterviews.length} interviews
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setInterviewDateFilter('all');
+                  setInterviewFromDate('');
+                  setInterviewToDate('');
+                  setInterviewStatusFilter('ALL');
+                  setInterviewSearchQuery('');
+                }}
+                className="text-xs text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer"
+              >
+                Reset All
+              </button>
+            </div>
+          )}
+
+          {/* Interviews Table View */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-4">#</th>
+                  <th className="py-3 px-4">Candidate / Resource</th>
+                  <th className="py-3 px-4">Demand & Client</th>
+                  <th className="py-3 px-4">Round Level</th>
+                  <th className="py-3 px-4">Scheduled At (IST)</th>
+                  <th className="py-3 px-4">Interviewer</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-800 bg-white">
+                {filteredMyInterviews.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-500">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <CalendarCheck className="w-10 h-10 text-slate-300 stroke-1" />
+                        <span className="font-bold text-sm text-slate-700">No Scheduled Interviews Found</span>
+                        <span className="text-xs text-slate-400">
+                          {interviewDateFilter !== 'all' || interviewStatusFilter !== 'ALL' || interviewSearchQuery
+                            ? 'Try clearing active date or search filters'
+                            : 'Interviews scheduled by you will appear here.'}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMyInterviews.map((iv, idx) => {
+                    const resourceName = iv.candidateName || iv.employeeName || 'Resource';
+                    const isCandidate = Boolean(iv.candidateId) || !iv.employeeId;
+                    const schedStr = iv.scheduledAt || iv.scheduledAtText;
+                    const dateStr = getISTDateString(schedStr);
+                    const todayStr = getTodayISTString();
+                    const yesterdayStr = getYesterdayISTString();
+                    const isToday = dateStr === todayStr;
+                    const isYesterday = dateStr === yesterdayStr;
+                    const isUpcoming = dateStr && dateStr > todayStr;
+
+                    // Extract round info
+                    let roundName = 'L1 Technical';
+                    if (Array.isArray(iv.levelProgress) && iv.levelProgress.length > 0) {
+                      const realLvl = iv.levelProgress.find(l => l.level !== '__META__' && l.level !== 'ONBOARDING');
+                      if (realLvl && realLvl.level) roundName = realLvl.level;
+                    } else if (Array.isArray(iv.interviewLevels) && iv.interviewLevels.length > 0) {
+                      roundName = iv.interviewLevels[0];
+                    }
+
+                    const statusStr = (iv.status || 'Scheduled').trim();
+                    const isSelected = statusStr.toLowerCase().includes('select') || statusStr.toLowerCase().includes('clear');
+                    const isScheduled = statusStr.toLowerCase().includes('sched');
+                    const isRejected = statusStr.toLowerCase().includes('reject');
+                    const isCompleted = statusStr.toLowerCase().includes('complet');
+
+                    return (
+                      <tr key={iv.interviewId || idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-500">
+                          #{iv.interviewId || idx + 1}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                              {resourceName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>{resourceName}</span>
+                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
+                                  isCandidate ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                }`}>
+                                  {isCandidate ? 'Candidate' : 'Employee'}
+                                </span>
+                              </div>
+                              {(iv.candidateEmail || iv.employeeEmail) && (
+                                <div className="text-[11px] text-slate-500 font-medium">
+                                  {iv.candidateEmail || iv.employeeEmail}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">
+                            {iv.demandTitle || `Demand #${iv.demandId || 'N/A'}`}
+                          </div>
+                          {(iv.accountName || iv.projectName) && (
+                            <div className="text-[11px] text-slate-500">
+                              {iv.accountName || iv.projectName}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold text-[11px] bg-slate-100 text-slate-800 border border-slate-200">
+                            {roundName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="font-medium text-slate-800">
+                            {formatISTDateTime(schedStr)}
+                          </div>
+                          <div className="mt-0.5">
+                            {isToday && (
+                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">
+                                Today
+                              </span>
+                            )}
+                            {isYesterday && (
+                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
+                                Yesterday
+                              </span>
+                            )}
+                            {isUpcoming && (
+                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-700">
+                                Upcoming
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">
+                            {iv.interviewerName || iv.createdByUserName || 'HR Panel'}
+                          </div>
+                          {iv.interviewerEmail && (
+                            <div className="text-[11px] text-slate-500">
+                              {iv.interviewerEmail}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                              isSelected
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : isScheduled
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : isRejected
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : isCompleted
+                                ? 'bg-teal-100 text-teal-800 border border-teal-200'
+                                : 'bg-slate-100 text-slate-800 border border-slate-200'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isSelected
+                                  ? 'bg-emerald-600'
+                                  : isScheduled
+                                  ? 'bg-blue-600'
+                                  : isRejected
+                                  ? 'bg-rose-600'
+                                  : isCompleted
+                                  ? 'bg-teal-600'
+                                  : 'bg-slate-500'
+                              }`}
+                            />
+                            {statusStr}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenProfileHistory(
+                                {
+                                  resourceId: iv.candidateId || iv.employeeId,
+                                  resourceType: iv.candidateId ? 'EXTERNAL' : 'INTERNAL',
+                                  resourceName: resourceName,
+                                  demandId: iv.demandId
+                                },
+                                {
+                                  demandid: iv.demandId,
+                                  demandTitle: iv.demandTitle
+                                },
+                                e
+                              );
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                            title="Inspect Profile Lifecycle History"
+                          >
+                            <HistoryIcon className="w-3.5 h-3.5" />
+                            <span>Timeline</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
