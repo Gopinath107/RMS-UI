@@ -2860,11 +2860,19 @@ export default function ResourceManagement() {
         }
 
         const autoSelectDemandId = sharedDemands.length === 1 ? sharedDemands[0].demandId?.toString() : '';
+        const matchingAutoDemand = autoSelectDemandId
+            ? demandGroups.find(d => (d.demandid || d.demandId)?.toString() === autoSelectDemandId)
+            : null;
+        const autoDemandTitle = matchingAutoDemand
+            ? (matchingAutoDemand.demandTitle || matchingAutoDemand.demandtitle)
+            : (sharedDemands.length === 1 ? (sharedDemands[0].demandTitle || sharedDemands[0].title || '') : '');
 
         // Pre-fill candidate from row context
         setInterviewFormData({
             id: '',
             demandId: autoSelectDemandId,
+            _demandSearch: autoDemandTitle,
+            _demandDropdownOpen: false,
             requestId: '',      // Auto-fills once demand is selected
             candidateId: resource.id.toString(),  // Locked from row context
             candidateName: resource.name,         // For display
@@ -2898,6 +2906,11 @@ export default function ResourceManagement() {
             setDemandResourceRequests([]);
         }
 
+        clearInterviewFieldError('general');
+        clearInterviewFieldError('demandId');
+        clearInterviewFieldError('requestId');
+        clearInterviewFieldError('candidateId');
+
         setIsScheduleDialogOpen(true);
     };
 
@@ -2930,6 +2943,13 @@ export default function ResourceManagement() {
             ? interview.employeeId?.toString() || ''
             : interview.candidateId?.toString() || '';
 
+        const editDemand = interview.demandId
+            ? demandGroups.find(d => (d.demandid || d.demandId)?.toString() === interview.demandId?.toString())
+            : null;
+        const editDemandTitle = editDemand
+            ? (editDemand.demandTitle || editDemand.demandtitle)
+            : (interview.demandTitle || '');
+
         setInterviewFormData({
             id: interview.interviewId?.toString() || '',
             requestId: interview.requestId?.toString() || '',
@@ -2941,6 +2961,8 @@ export default function ResourceManagement() {
             interviewType,
             resourceType,
             demandId: interview.demandId?.toString() || '',
+            _demandSearch: editDemandTitle,
+            _demandDropdownOpen: false,
         });
 
         // Pre-load demand resource requests so the dropdown populates
@@ -2950,43 +2972,92 @@ export default function ResourceManagement() {
                 .catch(() => setDemandResourceRequests([]));
         }
 
+        clearInterviewFieldError('general');
+        clearInterviewFieldError('demandId');
+        clearInterviewFieldError('requestId');
+        clearInterviewFieldError('candidateId');
+
         setIsScheduleDialogOpen(true);
     };
 
     // Add this function in the ResourceManagement component, after the handleScheduleInterview function
-    const handleScheduleInterviewFromAudit = (resource, audit) => {
+    const handleScheduleInterviewFromAudit = async (resource, audit) => {
         if (resource.status === 'Inactive') {
             toast.error("Resource is inactive. Cannot schedule interview.");
             return;
         }
-        // Find the corresponding request from allRequests
-        let request = null;
 
-        if (audit.type === 'GROUP' || audit.type === 'OPPORTUNITY') {
-            // Find opportunity request
-            request = allRequests.find(req => req.groupId === audit.groupId);
-        } else if (audit.type === 'DEMAND') {
-            // Find demand request
-            request = allRequests.find(req => req.demandId === audit.demandId);
+        const isDemand = audit.type === 'DEMAND';
+        const targetDemandId = isDemand ? (audit.demandId?.toString() || '') : '';
+        const targetGroupId = !isDemand ? (audit.groupId?.toString() || '') : '';
+
+        // Find matching demand object to get title
+        const matchingDemand = demandGroups.find(d => (d.demandid || d.demandId)?.toString() === targetDemandId);
+        const demandTitle = matchingDemand
+            ? (matchingDemand.demandTitle || matchingDemand.demandtitle)
+            : (audit.demandTitle || audit.title || '');
+
+        // Fetch resource requests for this demand to auto-fill requestId and populate demandResourceRequests
+        let foundRequestId = '';
+        if (isDemand && targetDemandId) {
+            try {
+                const requests = await InterviewService.getResourceRequestsByDemand(targetDemandId);
+                const reqList = requests || [];
+                setDemandResourceRequests(reqList);
+
+                // Match request for this candidate
+                const matched = reqList.find(r =>
+                    (r.employeeId?.toString() === resource.id?.toString()) ||
+                    (r.candidateId?.toString() === resource.id?.toString())
+                ) || reqList[0];
+
+                if (matched) {
+                    foundRequestId = matched.requestId?.toString() || '';
+                }
+            } catch (err) {
+                console.error("Error fetching requests for demand:", err);
+            }
         }
 
-        if (!request) {
-            toast.error('Could not find the corresponding request. Please try again.');
-            return;
+        // Fallback to allRequests if foundRequestId is still empty
+        if (!foundRequestId) {
+            let request = null;
+            if (isDemand && targetDemandId) {
+                request = allRequests.find(req =>
+                    req.demandId?.toString() === targetDemandId &&
+                    ((req.employeeId?.toString() === resource.id?.toString()) || (req.candidateId?.toString() === resource.id?.toString()))
+                ) || allRequests.find(req => req.demandId?.toString() === targetDemandId);
+            } else if (!isDemand && targetGroupId) {
+                request = allRequests.find(req =>
+                    req.groupId?.toString() === targetGroupId &&
+                    ((req.employeeId?.toString() === resource.id?.toString()) || (req.candidateId?.toString() === resource.id?.toString()))
+                ) || allRequests.find(req => req.groupId?.toString() === targetGroupId);
+            }
+            if (request) {
+                foundRequestId = request.requestId?.toString() || '';
+            }
         }
 
-        // Set the interview form data with pre-filled values
+        // Pre-fill the interview form with the exact demand and candidate
         setInterviewFormData({
             id: '',
-            requestId: request.requestId.toString(),
-            candidateId: resource.id,
+            demandId: targetDemandId,
+            _demandSearch: demandTitle,
+            _demandDropdownOpen: false,
+            requestId: foundRequestId,
+            candidateId: resource.id?.toString() || '',
             candidateName: resource.name,
             resourceType: activeTab,
             interviewLevels: [],
             levelsDetails: [],
             originalLevels: [],
-            interviewType: audit.type === 'DEMAND' ? 'demand' : 'opportunity'
+            interviewType: isDemand ? 'demand' : 'opportunity'
         });
+
+        clearInterviewFieldError('general');
+        clearInterviewFieldError('demandId');
+        clearInterviewFieldError('requestId');
+        clearInterviewFieldError('candidateId');
 
         setIsScheduleDialogOpen(true);
     };
@@ -5704,9 +5775,16 @@ export default function ResourceManagement() {
                                         placeholder="Search demand by ID or title..."
                                         className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${interviewFormErrors.demandId ? 'border-red-500' : 'border-gray-300'
                                             }`}
-                                        value={interviewFormData._demandSearch ?? (interviewFormData.demandId
-                                            ? (() => { const d = demandGroups.find(d => (d.demandid || d.demandId)?.toString() === interviewFormData.demandId); return d ? `${(d.demandTitle || d.demandtitle)}` : ''; })()
-                                            : '')}
+                                        value={
+                                            interviewFormData._demandSearch !== undefined && interviewFormData._demandSearch !== null
+                                                ? interviewFormData._demandSearch
+                                                : (interviewFormData.demandId
+                                                    ? (() => {
+                                                        const d = demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString());
+                                                        return d ? (d.demandTitle || d.demandtitle || '') : '';
+                                                    })()
+                                                    : '')
+                                        }
                                         onChange={(e) => {
                                             const searchVal = e.target.value;
                                             setInterviewFormData(prev => ({ ...prev, _demandSearch: searchVal, demandId: '', requestId: '' }));
@@ -5723,12 +5801,18 @@ export default function ResourceManagement() {
                                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                             {demandGroups
                                                 .filter(d => {
-                                                    const search = (interviewFormData._demandSearch || '').toLowerCase();
+                                                    const search = (interviewFormData._demandSearch || '').toLowerCase().trim();
                                                     const dId = (d.demandid || d.demandId);
-                                                    const dTitle = (d.demandTitle || d.demandtitle);
+                                                    const dTitle = (d.demandTitle || d.demandtitle) || '';
+                                                    const cur = interviewFormData.demandId
+                                                        ? demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString())
+                                                        : null;
+                                                    const isCurrentSelected = cur && search === (cur.demandTitle || cur.demandtitle || '').toLowerCase().trim();
+
                                                     return !search ||
-                                                        `DM-${dId}`.toLowerCase().includes(search) ||
-                                                        (dTitle || '').toLowerCase().includes(search);
+                                                        isCurrentSelected ||
+                                                        `dm-${dId}`.toLowerCase().includes(search) ||
+                                                        dTitle.toLowerCase().includes(search);
                                                 })
                                                 .map(d => {
                                                     const dId = (d.demandid || d.demandId);
@@ -5753,12 +5837,18 @@ export default function ResourceManagement() {
                                                 })
                                             }
                                             {demandGroups.filter(d => {
-                                                const search = (interviewFormData._demandSearch || '').toLowerCase();
+                                                const search = (interviewFormData._demandSearch || '').toLowerCase().trim();
                                                 const dId = (d.demandid || d.demandId);
-                                                const dTitle = (d.demandTitle || d.demandtitle);
+                                                const dTitle = (d.demandTitle || d.demandtitle) || '';
+                                                const cur = interviewFormData.demandId
+                                                    ? demandGroups.find(dg => (dg.demandid || dg.demandId)?.toString() === interviewFormData.demandId?.toString())
+                                                    : null;
+                                                const isCurrentSelected = cur && search === (cur.demandTitle || cur.demandtitle || '').toLowerCase().trim();
+
                                                 return !search ||
-                                                    `DM-${dId}`.toLowerCase().includes(search) ||
-                                                    (dTitle || '').toLowerCase().includes(search);
+                                                    isCurrentSelected ||
+                                                    `dm-${dId}`.toLowerCase().includes(search) ||
+                                                    dTitle.toLowerCase().includes(search);
                                             }).length === 0 && (
                                                     <div className="px-3 py-2 text-sm text-gray-400">No demands found</div>
                                                 )}
