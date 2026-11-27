@@ -799,62 +799,6 @@ export default function DemandManagement() {
     }
   }, []);
 
-  // User-scoped submitted profiles filter
-  const userDemandIds = useMemo(() => {
-    return new Set(scopedDemands.map((d) => Number(d.demandid)));
-  }, [scopedDemands]);
-
-  const isProfileAccordingToUser = useCallback(
-    (profile) => {
-      if (!profile) return false;
-      if (currentUserId && profile.submittedByUserId && Number(profile.submittedByUserId) === currentUserId) {
-        return true;
-      }
-      if (currentUserName && profile.submittedByName && profile.submittedByName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
-        return true;
-      }
-      if (profile.demandId && userDemandIds.has(Number(profile.demandId))) {
-        return true;
-      }
-      return false;
-    },
-    [currentUserId, currentUserName, userDemandIds]
-  );
-
-  const userSubmittedProfiles = useMemo(() => {
-    return submittedProfiles.filter((p) => isProfileAccordingToUser(p));
-  }, [submittedProfiles, isProfileAccordingToUser]);
-
-  const userTodaySubmissionsCount = useMemo(() => {
-    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today')).length;
-  }, [userSubmittedProfiles]);
-
-  const userYesterdaySubmissionsCount = useMemo(() => {
-    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday')).length;
-  }, [userSubmittedProfiles]);
-
-  const userTodayUnique = useMemo(() => {
-    const set = new Set();
-    userSubmittedProfiles
-      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today'))
-      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
-    return set.size;
-  }, [userSubmittedProfiles]);
-
-  const userYesterdayUnique = useMemo(() => {
-    const set = new Set();
-    userSubmittedProfiles
-      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday'))
-      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
-    return set.size;
-  }, [userSubmittedProfiles]);
-
-  const userTotalUnique = useMemo(() => {
-    const set = new Set();
-    userSubmittedProfiles.forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
-    return set.size;
-  }, [userSubmittedProfiles]);
-
   // Extract all profiles associated with a demand by unifying sharedResumes & demandFlow childRequestDetails
   const getProfilesForDemand = useCallback(
     (demand) => {
@@ -1019,6 +963,62 @@ export default function DemandManagement() {
   const scopedDemands = useMemo(() => {
     return demands.filter((d) => isCreatedByCurrentUser(d));
   }, [demands, isCreatedByCurrentUser]);
+
+  // User-scoped submitted profiles filter
+  const userDemandIds = useMemo(() => {
+    return new Set(scopedDemands.map((d) => Number(d.demandid)));
+  }, [scopedDemands]);
+
+  const isProfileAccordingToUser = useCallback(
+    (profile) => {
+      if (!profile) return false;
+      if (currentUserId && profile.submittedByUserId && Number(profile.submittedByUserId) === currentUserId) {
+        return true;
+      }
+      if (currentUserName && profile.submittedByName && profile.submittedByName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
+        return true;
+      }
+      if (profile.demandId && userDemandIds.has(Number(profile.demandId))) {
+        return true;
+      }
+      return false;
+    },
+    [currentUserId, currentUserName, userDemandIds]
+  );
+
+  const userSubmittedProfiles = useMemo(() => {
+    return submittedProfiles.filter((p) => isProfileAccordingToUser(p));
+  }, [submittedProfiles, isProfileAccordingToUser]);
+
+  const userTodaySubmissionsCount = useMemo(() => {
+    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today')).length;
+  }, [userSubmittedProfiles]);
+
+  const userYesterdaySubmissionsCount = useMemo(() => {
+    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday')).length;
+  }, [userSubmittedProfiles]);
+
+  const userTodayUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles
+      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today'))
+      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
+
+  const userYesterdayUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles
+      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday'))
+      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
+
+  const userTotalUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles.forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
 
   // Date counts for Demands created by current user
   const demandsTodayCount = useMemo(() => {
