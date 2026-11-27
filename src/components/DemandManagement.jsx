@@ -235,6 +235,13 @@ const exportToCSV = (filename, headers, rows) => {
   URL.revokeObjectURL(url);
 };
 
+const formatEventRemarks = (remarks, demandTitle, clientName) => {
+  if (!remarks) return '';
+  if (!demandTitle) return remarks;
+  const suffix = clientName ? `${demandTitle} (${clientName})` : demandTitle;
+  return String(remarks).replace(/against\s+demand\s+#\d+/i, `for ${suffix}`);
+};
+
 const formatISTDate = (dateVal) => {
   if (!dateVal) return 'N/A';
   try {
@@ -592,6 +599,7 @@ export default function DemandManagement() {
   const [interviewClientFilter, setInterviewClientFilter] = useState('ALL');
   const [interviewDemandFilter, setInterviewDemandFilter] = useState('ALL');
   const [interviewLevelFilter, setInterviewLevelFilter] = useState('ALL');
+  const [interviewTypeFilter, setInterviewTypeFilter] = useState('ALL');
   const [interviewSearchQuery, setInterviewSearchQuery] = useState('');
   const [interviewPage, setInterviewPage] = useState(1);
   const [interviewPerPage, setInterviewPerPage] = useState(10);
@@ -649,6 +657,7 @@ export default function DemandManagement() {
   const [activityCandidateFilter, setActivityCandidateFilter] = useState('ALL');
   const [activityDemandFilter, setActivityDemandFilter] = useState('ALL');
   const [activityActionFilter, setActivityActionFilter] = useState('ALL');
+  const [activityTypeFilter, setActivityTypeFilter] = useState('ALL');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
   const [activityPage, setActivityPage] = useState(1);
   const [activityPerPage, setActivityPerPage] = useState(10);
@@ -1239,6 +1248,11 @@ export default function DemandManagement() {
         if (activityActionFilter === 'ALLOCATED' && t !== 'ALLOCATED' && !s.includes('allocat')) return false;
         if (activityActionFilter === 'REJECTED' && t !== 'REJECTED' && !s.includes('reject')) return false;
       }
+      if (activityTypeFilter !== 'ALL') {
+        const isExt = evt.resourceType === 'EXTERNAL' || evt.resourceType === 'CANDIDATE';
+        if (activityTypeFilter === 'EXTERNAL' && !isExt) return false;
+        if (activityTypeFilter === 'INTERNAL' && isExt) return false;
+      }
       if (activitySearchQuery.trim()) {
         const q = activitySearchQuery.toLowerCase();
         const hay = [
@@ -1267,6 +1281,7 @@ export default function DemandManagement() {
     activityCandidateFilter,
     activityDemandFilter,
     activityActionFilter,
+    activityTypeFilter,
     activitySearchQuery,
   ]);
 
@@ -1279,6 +1294,7 @@ export default function DemandManagement() {
     activityCandidateFilter,
     activityDemandFilter,
     activityActionFilter,
+    activityTypeFilter,
     activitySearchQuery,
   ]);
 
@@ -1357,6 +1373,12 @@ export default function DemandManagement() {
       if (interviewLevelFilter !== 'ALL') {
         if (getInterviewLevel(iv) !== interviewLevelFilter) return false;
       }
+      // Resource Type (Internal / External) filter
+      if (interviewTypeFilter !== 'ALL') {
+        const isExt = Boolean(iv.candidateId) || !iv.employeeId;
+        if (interviewTypeFilter === 'EXTERNAL' && !isExt) return false;
+        if (interviewTypeFilter === 'INTERNAL' && isExt) return false;
+      }
       // Search across candidate, demand, level, client, notes
       if (interviewSearchQuery.trim()) {
         const q = interviewSearchQuery.toLowerCase();
@@ -1381,6 +1403,7 @@ export default function DemandManagement() {
     interviewClientFilter,
     interviewDemandFilter,
     interviewLevelFilter,
+    interviewTypeFilter,
     interviewSearchQuery,
   ]);
 
@@ -1394,6 +1417,7 @@ export default function DemandManagement() {
     interviewClientFilter,
     interviewDemandFilter,
     interviewLevelFilter,
+    interviewTypeFilter,
     interviewSearchQuery,
   ]);
 
@@ -3900,11 +3924,24 @@ export default function DemandManagement() {
                   options={interviewLevelOptions}
                   allLabel={`All Levels (${interviewLevelOptions.length})`}
                   searchPlaceholder="Search level..."
-                  minWidth="130px"
-                  maxWidth="170px"
+                  minWidth="125px"
+                  maxWidth="160px"
                 />
 
-                <div style={{ width: '280px', flexShrink: 0 }}>
+                <SearchableSelect
+                  value={interviewTypeFilter}
+                  onChange={setInterviewTypeFilter}
+                  options={[
+                    { value: 'INTERNAL', label: 'Internal' },
+                    { value: 'EXTERNAL', label: 'External' },
+                  ]}
+                  allLabel="All Types"
+                  searchPlaceholder="Search type..."
+                  minWidth="120px"
+                  maxWidth="150px"
+                />
+
+                <div style={{ width: '250px', flexShrink: 0 }}>
                   <SearchFilter
                     value={interviewSearchQuery}
                     onChange={(val) => setInterviewSearchQuery(val)}
@@ -3921,6 +3958,7 @@ export default function DemandManagement() {
             interviewClientFilter !== 'ALL' ||
             interviewDemandFilter !== 'ALL' ||
             interviewLevelFilter !== 'ALL' ||
+            interviewTypeFilter !== 'ALL' ||
             interviewSearchQuery) && (
             <div
               style={{
@@ -3980,6 +4018,7 @@ export default function DemandManagement() {
                   setInterviewClientFilter('ALL');
                   setInterviewDemandFilter('ALL');
                   setInterviewLevelFilter('ALL');
+                  setInterviewTypeFilter('ALL');
                   setInterviewSearchQuery('');
                 }}
                 style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
@@ -4392,7 +4431,7 @@ export default function DemandManagement() {
                         evt.newStatus || (evt.eventType ? evt.eventType.replace(/_/g, ' ') : ''),
                         evt.roundLevel || '',
                         evt.actionByName || '',
-                        evt.remarks || '',
+                        formatEventRemarks(evt.remarks, evt.demandTitle, evt.clientName),
                       ];
                     });
                     exportToCSV('profile-history-export.csv', headers, rows);
@@ -4545,13 +4584,27 @@ export default function DemandManagement() {
                   allLabel="All Actions / Statuses"
                   searchPlaceholder="Search action..."
                   minWidth="165px"
-                  maxWidth="210px"
+                  maxWidth="205px"
+                />
+
+                <SearchableSelect
+                  value={activityTypeFilter}
+                  onChange={setActivityTypeFilter}
+                  options={[
+                    { value: 'INTERNAL', label: 'Internal' },
+                    { value: 'EXTERNAL', label: 'External' },
+                  ]}
+                  allLabel="All Types"
+                  searchPlaceholder="Search type..."
+                  minWidth="120px"
+                  maxWidth="150px"
                 />
 
                 {(activityDateFilter !== 'all' ||
                   activityCandidateFilter !== 'ALL' ||
                   activityDemandFilter !== 'ALL' ||
                   activityActionFilter !== 'ALL' ||
+                  activityTypeFilter !== 'ALL' ||
                   activitySearchQuery) && (
                   <button
                     type="button"
@@ -4562,6 +4615,7 @@ export default function DemandManagement() {
                       setActivityCandidateFilter('ALL');
                       setActivityDemandFilter('ALL');
                       setActivityActionFilter('ALL');
+                      setActivityTypeFilter('ALL');
                       setActivitySearchQuery('');
                     }}
                     style={{
@@ -4756,8 +4810,11 @@ export default function DemandManagement() {
                             <div className="font-semibold text-slate-700">{evt.actionByName}</div>
                           )}
                           {evt.remarks && (
-                            <div className="text-[11px] text-slate-500 truncate max-w-[200px]" title={evt.remarks}>
-                              {evt.remarks}
+                            <div
+                              className="text-[11px] text-slate-500 truncate max-w-[240px]"
+                              title={formatEventRemarks(evt.remarks, evt.demandTitle, evt.clientName)}
+                            >
+                              {formatEventRemarks(evt.remarks, evt.demandTitle, evt.clientName)}
                             </div>
                           )}
                           {!evt.actionByName && !evt.remarks && <span className="text-slate-400">-</span>}
