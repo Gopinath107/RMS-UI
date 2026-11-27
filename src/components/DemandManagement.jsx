@@ -721,7 +721,6 @@ export default function DemandManagement() {
         const parentDemand = demands.find((d) => Number(d.demandid) === Number(iv.demandId));
         if (parentDemand && isCreatedByCurrentUser(parentDemand)) return true;
       }
-      if (currentUserId === 1) return true;
       return false;
     },
     [currentUserId, currentUserName, demands, isCreatedByCurrentUser]
