@@ -45,8 +45,10 @@ import {
   ExternalLink,
   Send,
   Globe,
-  Columns
+  Columns,
+  Download
 } from 'lucide-react';
+import { SearchableSelect } from './ui/SearchableSelect.jsx';
 import { Card, CardContent } from './ui/card.jsx';
 import { Button } from './ui/button.jsx';
 import { Input } from './ui/input.jsx';
@@ -214,6 +216,23 @@ const getInterviewLevel = (iv) => {
     return iv.interviewLevels[0];
   }
   return 'L1';
+};
+
+const exportToCSV = (filename, headers, rows) => {
+  const escape = (val) => {
+    const s = val == null ? '' : String(val);
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const csv = [headers.map(escape).join(','), ...rows.map((r) => r.map(escape).join(','))].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 const formatISTDate = (dateVal) => {
@@ -2163,8 +2182,53 @@ export default function DemandManagement() {
                 </div>
               </div>
 
-              {/* Right: Refresh Button (Split View only) */}
+              {/* Right: Export & Refresh Buttons (Split View only) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const headers = ['Demand Title', 'Project', 'Client', 'Openings', 'Status', 'Priority', 'Date Opened', 'Target Date', 'Skills', 'Profiles Count'];
+                    const rows = filteredDemands.map((d) => {
+                      const pStats = getDemandProfileStats(d);
+                      return [
+                        d.demandTitle || '',
+                        d.projectName || '',
+                        d.accountName || d.companyName || '',
+                        d.noOfPositions || d.positions || 1,
+                        d.overallStatus || 'Open',
+                        d.priority || 'Medium',
+                        formatISTDate(d.demandOpenDt || d.demandopendt || d.createddt),
+                        formatISTDate(d.targetFulfillmentDt || d.targetDate),
+                        Array.isArray(d.skills) ? d.skills.join(', ') : (d.skills || ''),
+                        pStats.total || 0,
+                      ];
+                    });
+                    exportToCSV('my-demands-export.csv', headers, rows);
+                    toast.success(`Exported ${rows.length} demand(s)`);
+                  }}
+                  disabled={filteredDemands.length === 0}
+                  title="Export Demands to CSV"
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #bfdbfe',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: filteredDemands.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: filteredDemands.length === 0 ? 0.5 : 1,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => loadData(true)}
@@ -2351,31 +2415,18 @@ export default function DemandManagement() {
 
               {/* Right: Client Filter & Search Field */}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-                <select
+                <SearchableSelect
                   value={clientFilter}
-                  onChange={(e) => {
-                    setClientFilter(e.target.value);
+                  onChange={(val) => {
+                    setClientFilter(val);
                     setCurrentPage(1);
                   }}
-                  style={{
-                    height: '36px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    border: '1.5px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#334155',
-                    padding: '0 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ALL">All Clients ({clientOptions.length})</option>
-                  {clientOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  options={clientOptions}
+                  allLabel={`All Clients (${clientOptions.length})`}
+                  searchPlaceholder="Search client..."
+                  minWidth="160px"
+                  maxWidth="220px"
+                />
 
                 {(searchQuery || statusFilter !== 'ALL' || clientFilter !== 'ALL' || demandDateFilter !== 'all') && (
                   <button
@@ -3602,8 +3653,52 @@ export default function DemandManagement() {
                 </div>
               </div>
 
-              {/* Refresh Interviews Button */}
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              {/* Export & Refresh Interviews Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const headers = ['Candidate / Resource', 'Type', 'Email', 'Demand', 'Client', 'Round Level', 'Scheduled At (IST)', 'Status'];
+                    const rows = filteredMyInterviews.map((iv) => {
+                      const resourceName = iv.candidateName || iv.employeeName || 'Resource';
+                      const isExternal = Boolean(iv.candidateId) || !iv.employeeId;
+                      return [
+                        resourceName,
+                        isExternal ? 'External' : 'Internal',
+                        iv.candidateEmail || iv.employeeEmail || '',
+                        iv.demandTitle || `Demand #${iv.demandId || 'N/A'}`,
+                        iv.accountName || iv.projectName || '',
+                        getInterviewLevel(iv),
+                        formatISTDateTime(getInterviewScheduledAt(iv)),
+                        (iv.status || 'Scheduled').trim(),
+                      ];
+                    });
+                    exportToCSV('interviews-scheduled-export.csv', headers, rows);
+                    toast.success(`Exported ${rows.length} interview(s)`);
+                  }}
+                  disabled={filteredMyInterviews.length === 0}
+                  title="Export Interviews to CSV"
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #bfdbfe',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: filteredMyInterviews.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: filteredMyInterviews.length === 0 ? 0.5 : 1,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => loadData(true)}
@@ -3737,75 +3832,35 @@ export default function DemandManagement() {
 
               {/* Dropdown Filters & Search Bar */}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-                <select
+                <SearchableSelect
                   value={interviewClientFilter}
-                  onChange={(e) => setInterviewClientFilter(e.target.value)}
-                  style={{
-                    height: '36px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    border: '1.5px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#334155',
-                    padding: '0 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ALL">All Clients ({interviewClientOptions.length})</option>
-                  {interviewClientOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setInterviewClientFilter}
+                  options={interviewClientOptions}
+                  allLabel={`All Clients (${interviewClientOptions.length})`}
+                  searchPlaceholder="Search client..."
+                  minWidth="145px"
+                  maxWidth="200px"
+                />
 
-                <select
+                <SearchableSelect
                   value={interviewDemandFilter}
-                  onChange={(e) => setInterviewDemandFilter(e.target.value)}
-                  style={{
-                    height: '36px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    border: '1.5px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#334155',
-                    padding: '0 12px',
-                    maxWidth: '200px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ALL">All Demands ({interviewDemandOptions.length})</option>
-                  {interviewDemandOptions.map((title) => (
-                    <option key={title} value={title}>
-                      {title}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setInterviewDemandFilter}
+                  options={interviewDemandOptions}
+                  allLabel={`All Demands (${interviewDemandOptions.length})`}
+                  searchPlaceholder="Search demand..."
+                  minWidth="155px"
+                  maxWidth="210px"
+                />
 
-                <select
+                <SearchableSelect
                   value={interviewLevelFilter}
-                  onChange={(e) => setInterviewLevelFilter(e.target.value)}
-                  style={{
-                    height: '36px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    border: '1.5px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#334155',
-                    padding: '0 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ALL">All Levels ({interviewLevelOptions.length})</option>
-                  {interviewLevelOptions.map((lvl) => (
-                    <option key={lvl} value={lvl}>
-                      {lvl}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setInterviewLevelFilter}
+                  options={interviewLevelOptions}
+                  allLabel={`All Levels (${interviewLevelOptions.length})`}
+                  searchPlaceholder="Search level..."
+                  minWidth="130px"
+                  maxWidth="170px"
+                />
 
                 <div style={{ width: '280px', flexShrink: 0 }}>
                   <SearchFilter
@@ -4263,30 +4318,76 @@ export default function DemandManagement() {
                 </div>
               </div>
 
-              {/* Refresh Button */}
-              <button
-                type="button"
-                onClick={loadActivityFeed}
-                disabled={activityFeedLoading}
-                style={{
-                  height: '36px',
-                  padding: '0 14px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #e2e8f0',
-                  background: '#ffffff',
-                  color: '#334155',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                }}
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${activityFeedLoading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
+              {/* Export & Refresh Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const headers = ['Date & Time (IST)', 'Candidate / Resource', 'Type', 'Demand', 'Client', 'Action / Status', 'Round', 'Action By', 'Remarks'];
+                    const rows = filteredActivityEvents.map((evt) => {
+                      const isExternal = evt.resourceType === 'EXTERNAL' || evt.resourceType === 'CANDIDATE';
+                      return [
+                        formatISTDateTime(evt.timestamp),
+                        evt.resourceName || '',
+                        isExternal ? 'External' : 'Internal',
+                        evt.demandTitle || '',
+                        evt.clientName || '',
+                        evt.newStatus || (evt.eventType ? evt.eventType.replace(/_/g, ' ') : ''),
+                        evt.roundLevel || '',
+                        evt.actionByName || '',
+                        evt.remarks || '',
+                      ];
+                    });
+                    exportToCSV('profile-history-export.csv', headers, rows);
+                    toast.success(`Exported ${rows.length} event(s)`);
+                  }}
+                  disabled={filteredActivityEvents.length === 0}
+                  title="Export Profile History to CSV"
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #bfdbfe',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: filteredActivityEvents.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: filteredActivityEvents.length === 0 ? 0.5 : 1,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadActivityFeed}
+                  disabled={activityFeedLoading}
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${activityFeedLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
             {/* Custom Date Drawer */}
@@ -4353,41 +4454,42 @@ export default function DemandManagement() {
               }}
             >
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-                <select
+                <SearchableSelect
                   value={activityCandidateFilter}
-                  onChange={(e) => setActivityCandidateFilter(e.target.value)}
-                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', maxWidth: '200px', cursor: 'pointer' }}
-                >
-                  <option value="ALL">All Candidates ({activityCandidateOptions.length})</option>
-                  {activityCandidateOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={setActivityCandidateFilter}
+                  options={activityCandidateOptions}
+                  allLabel={`All Candidates (${activityCandidateOptions.length})`}
+                  searchPlaceholder="Search candidate..."
+                  minWidth="165px"
+                  maxWidth="210px"
+                />
 
-                <select
+                <SearchableSelect
                   value={activityDemandFilter}
-                  onChange={(e) => setActivityDemandFilter(e.target.value)}
-                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', maxWidth: '200px', cursor: 'pointer' }}
-                >
-                  <option value="ALL">All Demands ({activityDemandOptions.length})</option>
-                  {activityDemandOptions.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                  onChange={setActivityDemandFilter}
+                  options={activityDemandOptions}
+                  allLabel={`All Demands (${activityDemandOptions.length})`}
+                  searchPlaceholder="Search demand..."
+                  minWidth="155px"
+                  maxWidth="210px"
+                />
 
-                <select
+                <SearchableSelect
                   value={activityActionFilter}
-                  onChange={(e) => setActivityActionFilter(e.target.value)}
-                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', cursor: 'pointer' }}
-                >
-                  <option value="ALL">All Actions / Statuses</option>
-                  <option value="SUBMITTED">Profile Submitted</option>
-                  <option value="INTERVIEW_SCHEDULED">Interview Scheduled</option>
-                  <option value="INTERVIEW_COMPLETED">Interview Completed</option>
-                  <option value="SELECTED">Selected / Cleared</option>
-                  <option value="ALLOCATED">Allocated</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+                  onChange={setActivityActionFilter}
+                  options={[
+                    { value: 'SUBMITTED', label: 'Profile Submitted' },
+                    { value: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled' },
+                    { value: 'INTERVIEW_COMPLETED', label: 'Interview Completed' },
+                    { value: 'SELECTED', label: 'Selected / Cleared' },
+                    { value: 'ALLOCATED', label: 'Allocated' },
+                    { value: 'REJECTED', label: 'Rejected' },
+                  ]}
+                  allLabel="All Actions / Statuses"
+                  searchPlaceholder="Search action..."
+                  minWidth="165px"
+                  maxWidth="210px"
+                />
 
                 {(activityDateFilter !== 'all' ||
                   activityCandidateFilter !== 'ALL' ||
@@ -4452,202 +4554,202 @@ export default function DemandManagement() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filteredActivityEvents.map((evt) => {
-                const t = (evt.eventType || '').toUpperCase();
-                const s = (evt.newStatus || '').toLowerCase();
-                const isSelect = t === 'SELECTED' || (t === 'INTERVIEW_COMPLETED' && (s.includes('select') || s.includes('clear')));
-                const isAlloc = t === 'ALLOCATED' || s.includes('allocat');
-                const isReject = t === 'REJECTED' || s.includes('reject');
-                const isSchedule = t === 'INTERVIEW_SCHEDULED';
-                const isExternal = evt.resourceType === 'EXTERNAL' || evt.resourceType === 'CANDIDATE';
+            <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-4">Date & Time (IST)</th>
+                    <th className="py-3 px-4">Candidate / Resource</th>
+                    <th className="py-3 px-4">Demand & Client</th>
+                    <th className="py-3 px-4">Action / Status</th>
+                    <th className="py-3 px-4">Round</th>
+                    <th className="py-3 px-4">By / Notes</th>
+                    <th className="py-3 px-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800 bg-white">
+                  {filteredActivityEvents.map((evt) => {
+                    const t = (evt.eventType || '').toUpperCase();
+                    const s = (evt.newStatus || '').toLowerCase();
+                    const isSelect = t === 'SELECTED' || (t === 'INTERVIEW_COMPLETED' && (s.includes('select') || s.includes('clear')));
+                    const isAlloc = t === 'ALLOCATED' || s.includes('allocat');
+                    const isReject = t === 'REJECTED' || s.includes('reject');
+                    const isSchedule = t === 'INTERVIEW_SCHEDULED';
+                    const isExternal = evt.resourceType === 'EXTERNAL' || evt.resourceType === 'CANDIDATE';
 
-                let pillBg = '#dbeafe';
-                let pillColor = '#1e40af';
-                let pillBorder = '#bfdbfe';
-                let dotColor = '#2563eb';
-                if (isSelect || isAlloc) {
-                  pillBg = '#d1fae5';
-                  pillColor = '#065f46';
-                  pillBorder = '#a7f3d0';
-                  dotColor = '#059669';
-                } else if (isReject) {
-                  pillBg = '#ffe4e6';
-                  pillColor = '#9f1239';
-                  pillBorder = '#fecdd3';
-                  dotColor = '#e11d48';
-                } else if (isSchedule) {
-                  pillBg = '#e0e7ff';
-                  pillColor = '#3730a3';
-                  pillBorder = '#c7d2fe';
-                  dotColor = '#4f46e5';
-                }
+                    let pillBg = '#dbeafe';
+                    let pillColor = '#1e40af';
+                    let pillBorder = '#bfdbfe';
+                    let dotColor = '#2563eb';
+                    if (isSelect || isAlloc) {
+                      pillBg = '#d1fae5';
+                      pillColor = '#065f46';
+                      pillBorder = '#a7f3d0';
+                      dotColor = '#059669';
+                    } else if (isReject) {
+                      pillBg = '#ffe4e6';
+                      pillColor = '#9f1239';
+                      pillBorder = '#fecdd3';
+                      dotColor = '#e11d48';
+                    } else if (isSchedule) {
+                      pillBg = '#e0e7ff';
+                      pillColor = '#3730a3';
+                      pillBorder = '#c7d2fe';
+                      dotColor = '#4f46e5';
+                    }
 
-                const dateStr = getISTDateString(evt.timestamp);
-                const isToday = dateStr === getTodayISTString();
-                const isYesterday = dateStr === getYesterdayISTString();
+                    const dateStr = getISTDateString(evt.timestamp);
+                    const isToday = dateStr === getTodayISTString();
+                    const isYesterday = dateStr === getYesterdayISTString();
 
-                return (
-                  <div
-                    key={evt._id}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '14px',
-                      padding: '14px 18px',
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '1 1 420px' }}>
-                      <div
-                        style={{
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '9999px',
-                          background: dotColor,
-                          marginTop: '6px',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              padding: '3px 10px',
-                              borderRadius: '9999px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: pillBg,
-                              color: pillColor,
-                              border: `1px solid ${pillBorder}`,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {evt.newStatus || (evt.eventType ? evt.eventType.replace(/_/g, ' ') : 'Event')}
-                          </span>
-                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
-                            {evt.resourceName}
-                          </span>
-                          <span
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              background: isExternal ? '#ecfdf5' : '#eef2ff',
-                              color: isExternal ? '#047857' : '#4338ca',
-                              border: isExternal ? '1px solid #a7f3d0' : '1px solid #c7d2fe',
-                            }}
-                          >
-                            {isExternal ? 'External' : 'Internal'}
-                          </span>
-                          <span style={{ fontSize: '12px', color: '#64748b' }}>on</span>
-                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#1e293b' }}>
-                            {evt.demandTitle}
-                          </span>
-                          {evt.clientName && (
-                            <span style={{ fontSize: '11.5px', color: '#64748b' }}>({evt.clientName})</span>
+                    return (
+                      <tr key={evt._id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="font-medium text-slate-800">
+                            {formatISTDateTime(evt.timestamp)}
+                          </div>
+                          {(isToday || isYesterday) && (
+                            <div style={{ marginTop: '3px' }}>
+                              <span
+                                style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '9999px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  background: isToday ? '#dbeafe' : '#fef3c7',
+                                  color: isToday ? '#1d4ed8' : '#92400e',
+                                }}
+                              >
+                                {isToday ? 'Today' : 'Yesterday'}
+                              </span>
+                            </div>
                           )}
-                          {evt.roundLevel && (
+                        </td>
+                        <td className="py-3 px-4">
+                          <div style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{evt.resourceName}</span>
                             <span
                               style={{
                                 padding: '2px 8px',
-                                borderRadius: '6px',
-                                fontSize: '10.5px',
+                                borderRadius: '9999px',
+                                fontSize: '10px',
                                 fontWeight: 700,
+                                background: isExternal ? '#ecfdf5' : '#eef2ff',
+                                color: isExternal ? '#047857' : '#4338ca',
+                                border: isExternal ? '1px solid #a7f3d0' : '1px solid #c7d2fe',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {isExternal ? 'External' : 'Internal'}
+                            </span>
+                          </div>
+                          {evt.resourceEmail && (
+                            <div className="text-[11px] text-slate-500 font-medium">{evt.resourceEmail}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">{evt.demandTitle}</div>
+                          {evt.clientName && (
+                            <div className="text-[11px] text-slate-500">{evt.clientName}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                              background: pillBg,
+                              color: pillColor,
+                              border: `1px solid ${pillBorder}`,
+                            }}
+                          >
+                            <span style={{ width: '6px', height: '6px', borderRadius: '9999px', background: dotColor }} />
+                            {evt.newStatus || (evt.eventType ? evt.eventType.replace(/_/g, ' ') : 'Event')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {evt.roundLevel ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 10px',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                fontSize: '11px',
                                 background: '#f1f5f9',
-                                color: '#334155',
+                                color: '#1e293b',
                                 border: '1px solid #e2e8f0',
                               }}
                             >
                               {evt.roundLevel}
                             </span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
                           )}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#475569' }}>
+                        </td>
+                        <td className="py-3 px-4">
                           {evt.actionByName && (
-                            <span>
-                              By: <strong style={{ color: '#1e293b' }}>{evt.actionByName}</strong>
-                            </span>
+                            <div className="font-semibold text-slate-700">{evt.actionByName}</div>
                           )}
                           {evt.remarks && (
-                            <span style={{ color: '#64748b', fontStyle: 'italic' }}>"{evt.remarks}"</span>
+                            <div className="text-[11px] text-slate-500 truncate max-w-[200px]" title={evt.remarks}>
+                              {evt.remarks}
+                            </div>
                           )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
-                          {formatISTDateTime(evt.timestamp)}
-                        </div>
-                        {(isToday || isYesterday) && (
-                          <div style={{ marginTop: '2px' }}>
-                            <span
-                              style={{
-                                padding: '1px 8px',
-                                borderRadius: '9999px',
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                background: isToday ? '#dbeafe' : '#fef3c7',
-                                color: isToday ? '#1d4ed8' : '#92400e',
-                              }}
-                            >
-                              {isToday ? 'Today' : 'Yesterday'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) =>
-                          handleOpenProfileHistory(
-                            {
-                              resourceId: evt.resourceId,
-                              resourceType: evt.resourceType,
-                              resourceName: evt.resourceName,
-                              demandId: evt.demandId,
-                              sharedAt: evt.sharedAt,
-                            },
-                            {
-                              demandid: evt.demandId,
-                              demandTitle: evt.demandTitle,
-                              accountName: evt.clientName,
-                            },
-                            e
-                          )
-                        }
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          height: '32px',
-                          padding: '0 12px',
-                          borderRadius: '10px',
-                          background: '#eff6ff',
-                          color: '#1d4ed8',
-                          border: '1px solid #bfdbfe',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <HistoryIcon className="w-3.5 h-3.5" />
-                        <span>Timeline</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                          {!evt.actionByName && !evt.remarks && <span className="text-slate-400">-</span>}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleOpenProfileHistory(
+                                {
+                                  resourceId: evt.resourceId,
+                                  resourceType: evt.resourceType,
+                                  resourceName: evt.resourceName,
+                                  demandId: evt.demandId,
+                                  sharedAt: evt.sharedAt,
+                                },
+                                {
+                                  demandid: evt.demandId,
+                                  demandTitle: evt.demandTitle,
+                                  accountName: evt.clientName,
+                                },
+                                e
+                              )
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              height: '32px',
+                              padding: '0 12px',
+                              borderRadius: '10px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <HistoryIcon className="w-3.5 h-3.5" />
+                            <span>Timeline</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
