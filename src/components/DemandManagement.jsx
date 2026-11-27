@@ -1130,6 +1130,22 @@ export default function DemandManagement() {
       if (res && res.content) records = res.content;
       else if (Array.isArray(res)) records = res;
 
+      // Strictly scope to profiles submitted by the currently logged-in user
+      records = records.filter((p) => {
+        if (!p) return false;
+        if (currentUserId && p.submittedByUserId && Number(p.submittedByUserId) === currentUserId) {
+          return true;
+        }
+        if (
+          currentUserName &&
+          p.submittedByName &&
+          p.submittedByName.trim().toLowerCase() === currentUserName.trim().toLowerCase()
+        ) {
+          return true;
+        }
+        return false;
+      });
+
       // Deduplicate by (demandId, resourceType, resourceId)
       const uniqueMap = new Map();
       records.forEach((p) => {
@@ -1139,9 +1155,16 @@ export default function DemandManagement() {
         if (!uniqueMap.has(key)) uniqueMap.set(key, { ...p, resourceType: rType });
       });
 
-      // Also include any interview records not already in shared-profiles
+      // Also include interviews directly created by or assigned to the logged-in user
       myInterviews.forEach((iv) => {
         if (!iv || !iv.demandId) return;
+        const isOwnInterview =
+          (currentUserId && iv.createdByUserId && Number(iv.createdByUserId) === currentUserId) ||
+          (currentUserId && iv.interviewerUserId && Number(iv.interviewerUserId) === currentUserId) ||
+          (currentUserName &&
+            iv.createdByUserName &&
+            iv.createdByUserName.trim().toLowerCase() === currentUserName.trim().toLowerCase());
+        if (!isOwnInterview) return;
         const resId = iv.candidateId || iv.employeeId;
         const rType = iv.candidateId ? 'EXTERNAL' : 'INTERNAL';
         if (!resId) return;
@@ -1202,7 +1225,7 @@ export default function DemandManagement() {
     } finally {
       setActivityFeedLoading(false);
     }
-  }, [currentUserId, myInterviews]);
+  }, [currentUserId, currentUserName, myInterviews]);
 
   useEffect(() => {
     if (activeMainTab === 'history') {
