@@ -184,6 +184,38 @@ const formatISTDateTime = (dateVal) => {
   }
 };
 
+const getInterviewScheduledAt = (iv) => {
+  if (!iv) return null;
+  if (iv.scheduledAt || iv.scheduledAtText) return iv.scheduledAt || iv.scheduledAtText;
+  if (Array.isArray(iv.levelProgress) && iv.levelProgress.length > 0) {
+    const realLevels = iv.levelProgress.filter(
+      (l) => l && l.level !== '__META__' && l.level !== 'ONBOARDING' && (l.scheduledAt || l.scheduledAtText)
+    );
+    if (realLevels.length > 0) {
+      const last = realLevels[realLevels.length - 1];
+      return last.scheduledAt || last.scheduledAtText;
+    }
+    const anyLvl = iv.levelProgress.find((l) => l && (l.scheduledAt || l.scheduledAtText));
+    if (anyLvl) return anyLvl.scheduledAt || anyLvl.scheduledAtText;
+  }
+  return null;
+};
+
+const getInterviewLevel = (iv) => {
+  if (!iv) return 'L1';
+  if (Array.isArray(iv.levelProgress) && iv.levelProgress.length > 0) {
+    const realLevels = iv.levelProgress.filter((l) => l && l.level !== '__META__' && l.level !== 'ONBOARDING');
+    if (realLevels.length > 0) {
+      const last = realLevels[realLevels.length - 1];
+      if (last && last.level) return last.level;
+    }
+  }
+  if (Array.isArray(iv.interviewLevels) && iv.interviewLevels.length > 0) {
+    return iv.interviewLevels[0];
+  }
+  return 'L1';
+};
+
 const formatISTDate = (dateVal) => {
   if (!dateVal) return 'N/A';
   try {
@@ -537,6 +569,9 @@ export default function DemandManagement() {
   const [interviewFromDate, setInterviewFromDate] = useState('');
   const [interviewToDate, setInterviewToDate] = useState('');
   const [interviewStatusFilter, setInterviewStatusFilter] = useState('ALL');
+  const [interviewClientFilter, setInterviewClientFilter] = useState('ALL');
+  const [interviewDemandFilter, setInterviewDemandFilter] = useState('ALL');
+  const [interviewLevelFilter, setInterviewLevelFilter] = useState('ALL');
   const [interviewSearchQuery, setInterviewSearchQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -1046,22 +1081,50 @@ export default function DemandManagement() {
   }, [interviews, isInterviewScheduledByCurrentUser]);
 
   const interviewsTodayCount = useMemo(() => {
-    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'today')).length;
+    return myInterviews.filter((iv) => matchesDateFilter(getInterviewScheduledAt(iv), 'today')).length;
   }, [myInterviews]);
 
   const interviewsYesterdayCount = useMemo(() => {
-    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'yesterday')).length;
+    return myInterviews.filter((iv) => matchesDateFilter(getInterviewScheduledAt(iv), 'yesterday')).length;
   }, [myInterviews]);
 
   const interviewsLast7Count = useMemo(() => {
-    return myInterviews.filter((iv) => matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, 'last7days')).length;
+    return myInterviews.filter((iv) => matchesDateFilter(getInterviewScheduledAt(iv), 'last7days')).length;
   }, [myInterviews]);
 
-  // Filtered interviews list based on date, status, and search
+  const interviewClientOptions = useMemo(() => {
+    const set = new Set();
+    myInterviews.forEach((iv) => {
+      const c = (iv.accountName || iv.projectName || '').trim();
+      if (c) set.add(c);
+    });
+    return Array.from(set).sort();
+  }, [myInterviews]);
+
+  const interviewDemandOptions = useMemo(() => {
+    const map = new Map();
+    myInterviews.forEach((iv) => {
+      if (iv.demandId) {
+        map.set(String(iv.demandId), iv.demandTitle || `Demand #${iv.demandId}`);
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [myInterviews]);
+
+  const interviewLevelOptions = useMemo(() => {
+    const set = new Set();
+    myInterviews.forEach((iv) => {
+      const lvl = getInterviewLevel(iv);
+      if (lvl) set.add(lvl);
+    });
+    return Array.from(set).sort();
+  }, [myInterviews]);
+
+  // Filtered interviews list based on date, status, client, demand, level, and search
   const filteredMyInterviews = useMemo(() => {
     return myInterviews.filter((iv) => {
       // Date filter
-      if (!matchesDateFilter(iv.scheduledAt || iv.scheduledAtText, interviewDateFilter, interviewFromDate, interviewToDate)) {
+      if (!matchesDateFilter(getInterviewScheduledAt(iv), interviewDateFilter, interviewFromDate, interviewToDate)) {
         return false;
       }
       // Status filter
@@ -1073,22 +1136,44 @@ export default function DemandManagement() {
         if (interviewStatusFilter === 'COMPLETED' && !st.includes('complet')) return false;
         if (interviewStatusFilter === 'CANCELLED' && !st.includes('cancel')) return false;
       }
+      // Client filter
+      if (interviewClientFilter !== 'ALL') {
+        const c = (iv.accountName || iv.projectName || '').trim();
+        if (c !== interviewClientFilter) return false;
+      }
+      // Demand filter
+      if (interviewDemandFilter !== 'ALL') {
+        if (String(iv.demandId) !== String(interviewDemandFilter)) return false;
+      }
+      // Interview Level filter
+      if (interviewLevelFilter !== 'ALL') {
+        if (getInterviewLevel(iv) !== interviewLevelFilter) return false;
+      }
       // Search
       if (interviewSearchQuery.trim()) {
         const q = interviewSearchQuery.toLowerCase();
         const cand = (iv.candidateName || iv.employeeName || '').toLowerCase();
         const dem = (iv.demandTitle || '').toLowerCase();
         const proj = (iv.projectName || iv.accountName || '').toLowerCase();
-        const inter = (iv.interviewerName || '').toLowerCase();
         const notes = (iv.feedback || iv.overallNotes || '').toLowerCase();
         const id = String(iv.interviewId || '');
-        if (!cand.includes(q) && !dem.includes(q) && !proj.includes(q) && !inter.includes(q) && !notes.includes(q) && !id.includes(q)) {
+        if (!cand.includes(q) && !dem.includes(q) && !proj.includes(q) && !notes.includes(q) && !id.includes(q)) {
           return false;
         }
       }
       return true;
     });
-  }, [myInterviews, interviewDateFilter, interviewFromDate, interviewToDate, interviewStatusFilter, interviewSearchQuery]);
+  }, [
+    myInterviews,
+    interviewDateFilter,
+    interviewFromDate,
+    interviewToDate,
+    interviewStatusFilter,
+    interviewClientFilter,
+    interviewDemandFilter,
+    interviewLevelFilter,
+    interviewSearchQuery,
+  ]);
 
   // Overall Statistics calculated across the active scope
   const stats = useMemo(() => {
@@ -3548,38 +3633,141 @@ export default function DemandManagement() {
                 })}
               </div>
 
-              {/* Search Bar */}
-              <div style={{ width: '300px', flexShrink: 0 }}>
-                <SearchFilter
-                  value={interviewSearchQuery}
-                  onChange={(val) => setInterviewSearchQuery(val)}
-                  placeholder="Search candidate, demand, interviewer..."
-                />
+              {/* Dropdown Filters & Search Bar */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                <select
+                  value={interviewClientFilter}
+                  onChange={(e) => setInterviewClientFilter(e.target.value)}
+                  style={{
+                    height: '36px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    padding: '0 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Clients ({interviewClientOptions.length})</option>
+                  {interviewClientOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={interviewDemandFilter}
+                  onChange={(e) => setInterviewDemandFilter(e.target.value)}
+                  style={{
+                    height: '36px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    padding: '0 12px',
+                    maxWidth: '200px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Demands ({interviewDemandOptions.length})</option>
+                  {interviewDemandOptions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      #DM-{d.id} - {d.title}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={interviewLevelFilter}
+                  onChange={(e) => setInterviewLevelFilter(e.target.value)}
+                  style={{
+                    height: '36px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    padding: '0 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Levels ({interviewLevelOptions.length})</option>
+                  {interviewLevelOptions.map((lvl) => (
+                    <option key={lvl} value={lvl}>
+                      {lvl}
+                    </option>
+                  ))}
+                </select>
+
+                <div style={{ width: '260px', flexShrink: 0 }}>
+                  <SearchFilter
+                    value={interviewSearchQuery}
+                    onChange={(val) => setInterviewSearchQuery(val)}
+                    placeholder="Search candidate, demand..."
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Active Filter Pills Bar */}
-          {(interviewDateFilter !== 'all' || interviewStatusFilter !== 'ALL' || interviewSearchQuery) && (
-            <div className="flex items-center justify-between text-xs bg-blue-50/60 border border-blue-200/60 rounded-xl px-4 py-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-blue-900">Active Filters:</span>
+          {(interviewDateFilter !== 'all' ||
+            interviewStatusFilter !== 'ALL' ||
+            interviewClientFilter !== 'ALL' ||
+            interviewDemandFilter !== 'ALL' ||
+            interviewLevelFilter !== 'ALL' ||
+            interviewSearchQuery) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '12px',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '12px',
+                padding: '8px 16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, color: '#1e3a8a' }}>Active Filters:</span>
                 {interviewDateFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
-                    Date: <strong className="font-bold capitalize">{interviewDateFilter}</strong>
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Date: <strong className="capitalize">{interviewDateFilter}</strong>
                   </span>
                 )}
                 {interviewStatusFilter !== 'ALL' && (
-                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
-                    Status: <strong className="font-bold">{interviewStatusFilter}</strong>
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Status: <strong>{interviewStatusFilter}</strong>
+                  </span>
+                )}
+                {interviewClientFilter !== 'ALL' && (
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Client: <strong>{interviewClientFilter}</strong>
+                  </span>
+                )}
+                {interviewDemandFilter !== 'ALL' && (
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Demand: <strong>#DM-{interviewDemandFilter}</strong>
+                  </span>
+                )}
+                {interviewLevelFilter !== 'ALL' && (
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Level: <strong>{interviewLevelFilter}</strong>
                   </span>
                 )}
                 {interviewSearchQuery && (
-                  <span className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 px-2.5 py-0.5 rounded-md font-medium">
-                    Search: <strong className="font-bold">"{interviewSearchQuery}"</strong>
+                  <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    Search: <strong>"{interviewSearchQuery}"</strong>
                   </span>
                 )}
-                <span className="text-slate-500 font-semibold ml-2">
+                <span style={{ color: '#64748b', fontWeight: 600, marginLeft: '6px' }}>
                   Showing {filteredMyInterviews.length} of {myInterviews.length} interviews
                 </span>
               </div>
@@ -3590,9 +3778,12 @@ export default function DemandManagement() {
                   setInterviewFromDate('');
                   setInterviewToDate('');
                   setInterviewStatusFilter('ALL');
+                  setInterviewClientFilter('ALL');
+                  setInterviewDemandFilter('ALL');
+                  setInterviewLevelFilter('ALL');
                   setInterviewSearchQuery('');
                 }}
-                className="text-xs text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer"
+                style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}
               >
                 Reset All
               </button>
@@ -3604,12 +3795,10 @@ export default function DemandManagement() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">#</th>
                   <th className="py-3 px-4">Candidate / Resource</th>
                   <th className="py-3 px-4">Demand & Client</th>
                   <th className="py-3 px-4">Round Level</th>
                   <th className="py-3 px-4">Scheduled At (IST)</th>
-                  <th className="py-3 px-4">Interviewer</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-center">Action</th>
                 </tr>
@@ -3617,13 +3806,18 @@ export default function DemandManagement() {
               <tbody className="divide-y divide-slate-100 text-slate-800 bg-white">
                 {filteredMyInterviews.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-500">
+                    <td colSpan={6} className="py-12 text-center text-slate-500">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <CalendarCheck className="w-10 h-10 text-slate-300 stroke-1" />
                         <span className="font-bold text-sm text-slate-700">No Scheduled Interviews Found</span>
                         <span className="text-xs text-slate-400">
-                          {interviewDateFilter !== 'all' || interviewStatusFilter !== 'ALL' || interviewSearchQuery
-                            ? 'Try clearing active date or search filters'
+                          {interviewDateFilter !== 'all' ||
+                          interviewStatusFilter !== 'ALL' ||
+                          interviewClientFilter !== 'ALL' ||
+                          interviewDemandFilter !== 'ALL' ||
+                          interviewLevelFilter !== 'ALL' ||
+                          interviewSearchQuery
+                            ? 'Try clearing active filters'
                             : 'Interviews scheduled by you will appear here.'}
                         </span>
                       </div>
@@ -3632,23 +3826,15 @@ export default function DemandManagement() {
                 ) : (
                   filteredMyInterviews.map((iv, idx) => {
                     const resourceName = iv.candidateName || iv.employeeName || 'Resource';
-                    const isCandidate = Boolean(iv.candidateId) || !iv.employeeId;
-                    const schedStr = iv.scheduledAt || iv.scheduledAtText;
+                    const isExternal = Boolean(iv.candidateId) || !iv.employeeId;
+                    const schedStr = getInterviewScheduledAt(iv);
                     const dateStr = getISTDateString(schedStr);
                     const todayStr = getTodayISTString();
                     const yesterdayStr = getYesterdayISTString();
                     const isToday = dateStr === todayStr;
                     const isYesterday = dateStr === yesterdayStr;
                     const isUpcoming = dateStr && dateStr > todayStr;
-
-                    // Extract round info
-                    let roundName = 'L1 Technical';
-                    if (Array.isArray(iv.levelProgress) && iv.levelProgress.length > 0) {
-                      const realLvl = iv.levelProgress.find(l => l.level !== '__META__' && l.level !== 'ONBOARDING');
-                      if (realLvl && realLvl.level) roundName = realLvl.level;
-                    } else if (Array.isArray(iv.interviewLevels) && iv.interviewLevels.length > 0) {
-                      roundName = iv.interviewLevels[0];
-                    }
+                    const roundName = getInterviewLevel(iv);
 
                     const statusStr = (iv.status || 'Scheduled').trim();
                     const isSelected = statusStr.toLowerCase().includes('select') || statusStr.toLowerCase().includes('clear');
@@ -3658,21 +3844,27 @@ export default function DemandManagement() {
 
                     return (
                       <tr key={iv.interviewId || idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-500">
-                          #{iv.interviewId || idx + 1}
-                        </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
                               {resourceName.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <div style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span>{resourceName}</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
-                                  isCandidate ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                }`}>
-                                  {isCandidate ? 'Candidate' : 'Employee'}
+                                <span
+                                  style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '9999px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    background: isExternal ? '#ecfdf5' : '#eef2ff',
+                                    color: isExternal ? '#047857' : '#4338ca',
+                                    border: isExternal ? '1px solid #a7f3d0' : '1px solid #c7d2fe',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {isExternal ? 'External' : 'Internal'}
                                 </span>
                               </div>
                               {(iv.candidateEmail || iv.employeeEmail) && (
@@ -3694,7 +3886,19 @@ export default function DemandManagement() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold text-[11px] bg-slate-100 text-slate-800 border border-slate-200">
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '3px 10px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              background: '#f1f5f9',
+                              color: '#1e293b',
+                              border: '1px solid #e2e8f0',
+                            }}
+                          >
                             {roundName}
                           </span>
                         </td>
@@ -3702,60 +3906,81 @@ export default function DemandManagement() {
                           <div className="font-medium text-slate-800">
                             {formatISTDateTime(schedStr)}
                           </div>
-                          <div className="mt-0.5">
-                            {isToday && (
-                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">
-                                Today
-                              </span>
-                            )}
-                            {isYesterday && (
-                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
-                                Yesterday
-                              </span>
-                            )}
-                            {isUpcoming && (
-                              <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-700">
-                                Upcoming
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-800">
-                            {iv.interviewerName || iv.createdByUserName || 'HR Panel'}
-                          </div>
-                          {iv.interviewerEmail && (
-                            <div className="text-[11px] text-slate-500">
-                              {iv.interviewerEmail}
+                          {(isToday || isYesterday || isUpcoming) && (
+                            <div style={{ marginTop: '3px' }}>
+                              {isToday && (
+                                <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, background: '#dbeafe', color: '#1d4ed8' }}>
+                                  Today
+                                </span>
+                              )}
+                              {isYesterday && (
+                                <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e' }}>
+                                  Yesterday
+                                </span>
+                              )}
+                              {isUpcoming && (
+                                <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, background: '#f3e8ff', color: '#7e22ce' }}>
+                                  Upcoming
+                                </span>
+                              )}
                             </div>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-                              isSelected
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                              background: isSelected
+                                ? '#d1fae5'
                                 : isScheduled
-                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                ? '#dbeafe'
                                 : isRejected
-                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                ? '#ffe4e6'
                                 : isCompleted
-                                ? 'bg-teal-100 text-teal-800 border border-teal-200'
-                                : 'bg-slate-100 text-slate-800 border border-slate-200'
-                            }`}
+                                ? '#ccfbf1'
+                                : '#f1f5f9',
+                              color: isSelected
+                                ? '#065f46'
+                                : isScheduled
+                                ? '#1e40af'
+                                : isRejected
+                                ? '#9f1239'
+                                : isCompleted
+                                ? '#115e59'
+                                : '#334155',
+                              border: isSelected
+                                ? '1px solid #a7f3d0'
+                                : isScheduled
+                                ? '1px solid #bfdbfe'
+                                : isRejected
+                                ? '1px solid #fecdd3'
+                                : isCompleted
+                                ? '1px solid #99f6e4'
+                                : '1px solid #e2e8f0',
+                            }}
                           >
                             <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                isSelected
-                                  ? 'bg-emerald-600'
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '9999px',
+                                background: isSelected
+                                  ? '#059669'
                                   : isScheduled
-                                  ? 'bg-blue-600'
+                                  ? '#2563eb'
                                   : isRejected
-                                  ? 'bg-rose-600'
+                                  ? '#e11d48'
                                   : isCompleted
-                                  ? 'bg-teal-600'
-                                  : 'bg-slate-500'
-                              }`}
+                                  ? '#0d9488'
+                                  : '#64748b',
+                              }}
                             />
                             {statusStr}
                           </span>
@@ -3779,7 +4004,22 @@ export default function DemandManagement() {
                                 e
                               );
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              height: '32px',
+                              padding: '0 12px',
+                              borderRadius: '10px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                            }}
                             title="Inspect Profile Lifecycle History"
                           >
                             <HistoryIcon className="w-3.5 h-3.5" />
