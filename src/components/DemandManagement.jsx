@@ -1343,6 +1343,69 @@ export default function DemandManagement() {
     return Array.from(set).sort();
   }, [myInterviews]);
 
+  const allocatedInterviewKeys = useMemo(() => {
+    const keys = new Set();
+    demandFlows.forEach((flow) => {
+      const demandId = flow.demandInfo?.demandid || flow.demandid || flow.id;
+      if (!demandId || !Array.isArray(flow.childRequestDetails)) return;
+      flow.childRequestDetails.forEach((req) => {
+        const pipeline = Array.isArray(req.pipeline) ? req.pipeline : [];
+        pipeline.forEach((p) => {
+          const cInfo = p.candidateInfo || {};
+          const resType = (cInfo.resourceType || '').toUpperCase();
+          const isInternal = resType === 'EMPLOYEE' || resType === 'INTERNAL' || Boolean(cInfo.employeeId);
+          const resId = isInternal ? cInfo.employeeId : cInfo.candidateId;
+          const rStatus = (cInfo.resumeStatus || req.requestStatus || '').toLowerCase();
+          if (resId && (p.allocation || rStatus.includes('allocat') || rStatus.includes('onboard') || rStatus.includes('complet'))) {
+            keys.add(`${demandId}_${isInternal ? 'INTERNAL' : 'EXTERNAL'}_${resId}`);
+          }
+        });
+      });
+    });
+    demands.forEach((d) => {
+      if (!d?.demandid || !Array.isArray(d.sharedResumes)) return;
+      d.sharedResumes.forEach((sr) => {
+        const st = (sr.status || '').toLowerCase();
+        if (st.includes('allocat') || st.includes('onboard') || st.includes('complet')) {
+          const isInternal = sr.resourceType === 'INTERNAL' || sr.resourceType === 'EMPLOYEE' || Boolean(sr.employeeId);
+          const resId = isInternal ? (sr.employeeId || sr.resourceId) : (sr.candidateId || sr.resourceId);
+          if (resId) keys.add(`${d.demandid}_${isInternal ? 'INTERNAL' : 'EXTERNAL'}_${resId}`);
+        }
+      });
+    });
+    return keys;
+  }, [demandFlows, demands]);
+
+  const getEffectiveInterviewStatus = useCallback(
+    (iv) => {
+      if (!iv) return 'Scheduled';
+      const raw = (iv.status || 'Scheduled').trim();
+      const onboard = (iv.onboardingStatus || '').toLowerCase();
+      const overall = (iv.overallStatus || '').toLowerCase();
+      const curr = (iv.currentStatus || '').toLowerCase();
+      const resId = iv.employeeId || iv.candidateId;
+      const rType = iv.candidateId ? 'EXTERNAL' : 'INTERNAL';
+      const isAllocatedInFlow =
+        iv.demandId && resId && allocatedInterviewKeys.has(`${iv.demandId}_${rType}_${resId}`);
+
+      if (
+        isAllocatedInFlow ||
+        onboard.includes('allocat') ||
+        onboard.includes('onboard') ||
+        overall.includes('allocat') ||
+        overall.includes('complet') ||
+        curr.includes('allocat') ||
+        curr.includes('complet') ||
+        raw.toLowerCase().includes('complet') ||
+        raw.toLowerCase().includes('allocat')
+      ) {
+        return 'Completed';
+      }
+      return raw;
+    },
+    [allocatedInterviewKeys]
+  );
+
   // Filtered interviews list based on date, status, client, demand, level, and search
   const filteredMyInterviews = useMemo(() => {
     return myInterviews.filter((iv) => {
@@ -1352,7 +1415,7 @@ export default function DemandManagement() {
       }
       // Status filter
       if (interviewStatusFilter !== 'ALL') {
-        const st = (iv.status || '').toLowerCase();
+        const st = getEffectiveInterviewStatus(iv).toLowerCase();
         if (interviewStatusFilter === 'SCHEDULED' && !st.includes('scheduled')) return false;
         if (interviewStatusFilter === 'SELECTED' && !st.includes('selected') && !st.includes('cleared')) return false;
         if (interviewStatusFilter === 'REJECTED' && !st.includes('reject')) return false;
@@ -1405,6 +1468,7 @@ export default function DemandManagement() {
     interviewLevelFilter,
     interviewTypeFilter,
     interviewSearchQuery,
+    getEffectiveInterviewStatus,
   ]);
 
   useEffect(() => {
@@ -1419,6 +1483,7 @@ export default function DemandManagement() {
     interviewLevelFilter,
     interviewTypeFilter,
     interviewSearchQuery,
+    getEffectiveInterviewStatus,
   ]);
 
   const interviewTotalPages = Math.max(1, Math.ceil(filteredMyInterviews.length / interviewPerPage));
@@ -3736,7 +3801,7 @@ export default function DemandManagement() {
                         iv.accountName || iv.projectName || '',
                         getInterviewLevel(iv),
                         formatISTDateTime(getInterviewScheduledAt(iv)),
-                        (iv.status || 'Scheduled').trim(),
+                        getEffectiveInterviewStatus(iv),
                       ];
                     });
                     exportToCSV('interviews-scheduled-export.csv', headers, rows);
@@ -4074,7 +4139,7 @@ export default function DemandManagement() {
                     const isUpcoming = dateStr && dateStr > todayStr;
                     const roundName = getInterviewLevel(iv);
 
-                    const statusStr = (iv.status || 'Scheduled').trim();
+                    const statusStr = getEffectiveInterviewStatus(iv);
                     const isSelected = statusStr.toLowerCase().includes('select') || statusStr.toLowerCase().includes('clear');
                     const isScheduled = statusStr.toLowerCase().includes('sched');
                     const isRejected = statusStr.toLowerCase().includes('reject');
