@@ -385,7 +385,7 @@ const Pagination = ({
   totalItems,
   label = 'demands'
 }) => {
-  const itemsPerPageOptions = [5, 10, 15, 20];
+  const itemsPerPageOptions = [3, 5, 10, 15, 20];
   const start = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
   const end = Math.min(currentPage * itemsPerPage, totalItems);
 
@@ -545,7 +545,7 @@ export default function DemandManagement() {
   const [sortField, setSortField] = useState('demandid');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
   const [expandedProfiles, setExpandedProfiles] = useState(new Set());
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedDemandForDetails, setSelectedDemandForDetails] = useState(null);
