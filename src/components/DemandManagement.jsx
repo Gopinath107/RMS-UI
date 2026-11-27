@@ -2260,7 +2260,7 @@ export default function DemandManagement() {
                         d.demandTitle || '',
                         d.projectName || '',
                         d.accountName || d.companyName || '',
-                        d.noOfPositions || d.positions || 1,
+                        d.resourceRequestsCount || d.openings || 1,
                         d.overallStatus || 'Open',
                         d.priority || 'Medium',
                         formatISTDate(d.demandOpenDt || d.demandopendt || d.createddt),
