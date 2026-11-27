@@ -1848,22 +1848,76 @@ export default function DemandManagement() {
           }}
         >
           {/* ── Active Demands Filter Toolbar (Clean Structured Layout) ── */}
-          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4 text-left">
-            {/* Primary Row: Scope Badge + Date Quick-Filters + View Mode Toggle & Refresh */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
+          <div
+            style={{
+              background: 'rgba(248, 250, 252, 0.85)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              textAlign: 'left',
+            }}
+          >
+            {/* Primary Row: Scope Badge + Date Quick-Filters + Refresh */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                 {/* User Scope Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-800">{currentUserName}</span>
-                  <span className="text-xs font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '10px',
+                    height: '36px',
+                  }}
+                >
+                  <div style={{ width: '8px', height: '8px', borderRadius: '9999px', background: '#2563eb' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    {currentUserName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '11.5px',
+                      fontWeight: 800,
+                      color: '#2563eb',
+                      background: '#dbeafe',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {scopedDemands.length} {scopedDemands.length === 1 ? 'Demand' : 'Demands'}
                   </span>
                 </div>
 
-                {/* Demand Date Quick-Filters (All, Today, Yesterday, Last 7 Days, Custom Date) */}
-                <div className="inline-flex items-center flex-wrap gap-2">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                {/* Demand Date Quick-Filters */}
+                <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginRight: '2px',
+                    }}
+                  >
                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
                     Created:
                   </span>
@@ -1883,18 +1937,35 @@ export default function DemandManagement() {
                           setDemandDateFilter(df.id);
                           setCurrentPage(1);
                         }}
-                        className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
-                          isAct
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                        }`}
+                        style={{
+                          height: '34px',
+                          padding: '0 14px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: isAct ? 700 : 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          whiteSpace: 'nowrap',
+                          border: isAct ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                          background: isAct ? '#2563eb' : '#ffffff',
+                          color: isAct ? '#ffffff' : '#334155',
+                          boxShadow: isAct ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                          transition: 'all 0.15s ease',
+                        }}
                       >
                         <span>{df.label}</span>
                         {df.count !== null && (
                           <span
-                            className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
-                              isAct ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}
+                            style={{
+                              padding: '1px 7px',
+                              borderRadius: '9999px',
+                              fontSize: '10.5px',
+                              fontWeight: 800,
+                              background: isAct ? 'rgba(29, 78, 216, 0.9)' : '#f1f5f9',
+                              color: isAct ? '#ffffff' : '#475569',
+                            }}
                           >
                             {df.count}
                           </span>
@@ -1905,59 +1976,64 @@ export default function DemandManagement() {
                 </div>
               </div>
 
-              {/* Right: View Mode Toggle & Refresh */}
-              <div className="flex items-center gap-2.5 self-start lg:self-center">
-                <div className="inline-flex bg-white p-1 rounded-xl border border-slate-200 h-10 items-center shadow-xs gap-1">
-                  <button
-                    onClick={() => setViewMode('split')}
-                    title="Split-Pane Master-Detail View"
-                    className="h-8 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    style={
-                      viewMode === 'split' || viewMode === 'cards'
-                        ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
-                        : { background: 'transparent', color: '#64748b' }
-                    }
-                  >
-                    <Columns className="w-4 h-4" />
-                    <span className="hidden sm:inline">Split View</span>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    title="Table View"
-                    className="h-8 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    style={
-                      viewMode === 'table'
-                        ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
-                        : { background: 'transparent', color: '#64748b' }
-                    }
-                  >
-                    <TableIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Table</span>
-                  </button>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
+              {/* Right: Refresh Button (Split View only) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
                   onClick={() => loadData(true)}
                   disabled={refreshing || loading}
-                  className="h-10 px-3.5 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer"
                   title="Refresh Active Demands"
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
                 >
-                  <RefreshCw className={`w-4 h-4 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
-                </Button>
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
             {/* Custom Date Drawer (Only rendered when Custom Date filter is active) */}
             {demandDateFilter === 'custom' && (
-              <div className="flex items-center flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-blue-200 shadow-2xs">
-                <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: '#ffffff',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #bfdbfe',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#1d4ed8',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
                   <Calendar className="w-3.5 h-3.5 text-blue-600" />
                   Custom Date Range:
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-500">From:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>From:</span>
                   <input
                     type="date"
                     value={demandFromDate}
@@ -1965,11 +2041,19 @@ export default function DemandManagement() {
                       setDemandFromDate(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                    style={{
+                      height: '32px',
+                      fontSize: '12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '0 10px',
+                      color: '#1e293b',
+                      background: '#f8fafc',
+                    }}
                   />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-500">To:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>To:</span>
                   <input
                     type="date"
                     value={demandToDate}
@@ -1977,7 +2061,15 @@ export default function DemandManagement() {
                       setDemandToDate(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                    style={{
+                      height: '32px',
+                      fontSize: '12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '0 10px',
+                      color: '#1e293b',
+                      background: '#f8fafc',
+                    }}
                   />
                 </div>
                 {(demandFromDate || demandToDate) && (
@@ -1988,8 +2080,16 @@ export default function DemandManagement() {
                       setDemandToDate('');
                       setCurrentPage(1);
                     }}
-                    className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 cursor-pointer bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200"
-                    title="Clear Dates"
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#e11d48',
+                      background: '#fff1f2',
+                      border: '1px solid #fecdd3',
+                      borderRadius: '8px',
+                      padding: '4px 10px',
+                      cursor: 'pointer',
+                    }}
                   >
                     Clear Dates
                   </button>
@@ -1998,9 +2098,19 @@ export default function DemandManagement() {
             )}
 
             {/* Secondary Row: Status Filter Pills on left, Client Filter + Search Field on right */}
-            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div
+              style={{
+                paddingTop: '12px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
               {/* Left: Status Filter Pills */}
-              <div className="inline-flex items-center flex-wrap gap-2">
+              <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
                 {[
                   { id: 'ALL', label: 'All Statuses', dot: null },
                   { id: 'INPROGRESS', label: 'In Progress', dot: '#f59e0b' },
@@ -2016,16 +2126,34 @@ export default function DemandManagement() {
                         setStatusFilter(tab.id);
                         setCurrentPage(1);
                       }}
-                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 border ${
-                        isActive
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                      }`}
+                      style={{
+                        height: '34px',
+                        padding: '0 14px',
+                        fontSize: '12px',
+                        fontWeight: isActive ? 700 : 600,
+                        borderRadius: '10px',
+                        border: isActive ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                        background: isActive ? '#2563eb' : '#ffffff',
+                        color: isActive ? '#ffffff' : '#334155',
+                        boxShadow: isActive ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
                       {tab.dot && (
                         <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ background: isActive ? '#ffffff' : tab.dot }}
+                          style={{
+                            width: '7px',
+                            height: '7px',
+                            borderRadius: '9999px',
+                            backgroundColor: isActive ? '#ffffff' : tab.dot,
+                            display: 'inline-block',
+                            flexShrink: 0,
+                          }}
                         />
                       )}
                       <span>{tab.label}</span>
@@ -2035,40 +2163,67 @@ export default function DemandManagement() {
               </div>
 
               {/* Right: Client Filter & Search Field */}
-              <div className="flex items-center gap-2.5 w-full md:w-auto">
-                <div className="relative">
-                  <select
-                    value={clientFilter}
-                    onChange={(e) => {
-                      setClientFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="h-8 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
-                  >
-                    <option value="ALL">All Clients ({clientOptions.length})</option>
-                    {clientOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                <select
+                  value={clientFilter}
+                  onChange={(e) => {
+                    setClientFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    height: '36px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    padding: '0 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Clients ({clientOptions.length})</option>
+                  {clientOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
 
-                {(searchQuery || statusFilter !== 'ALL' || clientFilter !== 'ALL') && (
+                {(searchQuery || statusFilter !== 'ALL' || clientFilter !== 'ALL' || demandDateFilter !== 'all') && (
                   <button
+                    type="button"
                     onClick={() => {
                       setSearchQuery('');
                       setStatusFilter('ALL');
                       setClientFilter('ALL');
+                      setDemandDateFilter('all');
+                      setDemandFromDate('');
+                      setDemandToDate('');
+                      setCurrentPage(1);
                     }}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors border border-rose-200 h-8 whitespace-nowrap flex items-center gap-1 cursor-pointer"
+                    style={{
+                      height: '36px',
+                      padding: '0 12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#e11d48',
+                      background: '#fff1f2',
+                      border: '1px solid #fecdd3',
+                      borderRadius: '10px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
                   >
                     <X className="w-3.5 h-3.5" />
                     Reset
                   </button>
                 )}
 
-                <div className="w-full sm:w-72 md:w-80">
+                <div style={{ width: '280px', flexShrink: 0 }}>
                   <SearchFilter
                     value={searchQuery}
                     onChange={(val) => {
@@ -3135,22 +3290,76 @@ export default function DemandManagement() {
           }}
         >
           {/* ── Scheduled Interviews Filter Toolbar ── */}
-          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4 text-left">
+          <div
+            style={{
+              background: 'rgba(248, 250, 252, 0.85)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              textAlign: 'left',
+            }}
+          >
             {/* Primary Row: Scope Badge + Date Quick-Filters + Refresh */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                 {/* User Scope Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-800">{currentUserName}</span>
-                  <span className="text-xs font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '10px',
+                    height: '36px',
+                  }}
+                >
+                  <div style={{ width: '8px', height: '8px', borderRadius: '9999px', background: '#2563eb' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    {currentUserName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '11.5px',
+                      fontWeight: 800,
+                      color: '#2563eb',
+                      background: '#dbeafe',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {myInterviews.length} {myInterviews.length === 1 ? 'Interview' : 'Interviews'} Scheduled
                   </span>
                 </div>
 
-                {/* Date Quick-Filters (All Time, Today, Yesterday, Last 7 Days, Custom Date) */}
-                <div className="inline-flex items-center flex-wrap gap-2">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                {/* Date Quick-Filters */}
+                <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginRight: '2px',
+                    }}
+                  >
                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
                     Scheduled:
                   </span>
@@ -3167,18 +3376,35 @@ export default function DemandManagement() {
                         key={df.id}
                         type="button"
                         onClick={() => setInterviewDateFilter(df.id)}
-                        className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
-                          isAct
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                        }`}
+                        style={{
+                          height: '34px',
+                          padding: '0 14px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: isAct ? 700 : 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          whiteSpace: 'nowrap',
+                          border: isAct ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                          background: isAct ? '#2563eb' : '#ffffff',
+                          color: isAct ? '#ffffff' : '#334155',
+                          boxShadow: isAct ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                          transition: 'all 0.15s ease',
+                        }}
                       >
                         <span>{df.label}</span>
                         {df.count !== null && (
                           <span
-                            className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
-                              isAct ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}
+                            style={{
+                              padding: '1px 7px',
+                              borderRadius: '9999px',
+                              fontSize: '10.5px',
+                              fontWeight: 800,
+                              background: isAct ? 'rgba(29, 78, 216, 0.9)' : '#f1f5f9',
+                              color: isAct ? '#ffffff' : '#475569',
+                            }}
                           >
                             {df.count}
                           </span>
@@ -3190,18 +3416,31 @@ export default function DemandManagement() {
               </div>
 
               {/* Refresh Interviews Button */}
-              <div className="flex items-center self-start lg:self-center">
-                <Button
-                  variant="outline"
-                  size="sm"
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <button
+                  type="button"
                   onClick={() => loadData(true)}
                   disabled={refreshing || loading}
-                  className="h-10 px-3.5 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2"
                   title="Refresh Scheduled Interviews"
+                  style={{
+                    height: '36px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
                 >
-                  <RefreshCw className={`w-4 h-4 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
-                  <span className="text-xs font-semibold">Refresh</span>
-                </Button>
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
@@ -3247,9 +3486,19 @@ export default function DemandManagement() {
             )}
 
             {/* Secondary Row: Status Pills on left + Search Input on right */}
-            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div
+              style={{
+                paddingTop: '12px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
               {/* Status Pills */}
-              <div className="inline-flex items-center flex-wrap gap-2">
+              <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
                 {[
                   { id: 'ALL', label: 'All Statuses', dot: null },
                   { id: 'SCHEDULED', label: 'Scheduled', dot: '#3b82f6' },
@@ -3263,16 +3512,34 @@ export default function DemandManagement() {
                       key={st.id}
                       type="button"
                       onClick={() => setInterviewStatusFilter(st.id)}
-                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 border ${
-                        isActive
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                      }`}
+                      style={{
+                        height: '34px',
+                        padding: '0 14px',
+                        fontSize: '12px',
+                        fontWeight: isActive ? 700 : 600,
+                        borderRadius: '10px',
+                        border: isActive ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                        background: isActive ? '#2563eb' : '#ffffff',
+                        color: isActive ? '#ffffff' : '#334155',
+                        boxShadow: isActive ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
                       {st.dot && (
                         <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ background: isActive ? '#ffffff' : st.dot }}
+                          style={{
+                            width: '7px',
+                            height: '7px',
+                            borderRadius: '9999px',
+                            backgroundColor: isActive ? '#ffffff' : st.dot,
+                            display: 'inline-block',
+                            flexShrink: 0,
+                          }}
                         />
                       )}
                       <span>{st.label}</span>
@@ -3282,24 +3549,12 @@ export default function DemandManagement() {
               </div>
 
               {/* Search Bar */}
-              <div className="relative w-full sm:w-72">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search candidate, demand, interviewer..."
+              <div style={{ width: '300px', flexShrink: 0 }}>
+                <SearchFilter
                   value={interviewSearchQuery}
-                  onChange={(e) => setInterviewSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-7 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-blue-500 bg-white shadow-2xs"
+                  onChange={(val) => setInterviewSearchQuery(val)}
+                  placeholder="Search candidate, demand, interviewer..."
                 />
-                {interviewSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setInterviewSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -3709,10 +3964,28 @@ export default function DemandManagement() {
           </div>
 
           {/* Filter Toolbar for Submitted Profiles */}
-          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-4">
+          <div
+            style={{
+              background: 'rgba(248, 250, 252, 0.85)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
             {/* Row 1: Date Presets & Reset Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex items-center flex-wrap gap-2">
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
                 {[
                   { id: 'today', label: 'Today', count: sharedSummary?.todayEvents ?? userTodaySubmissionsCount },
                   { id: 'yesterday', label: 'Yesterday', count: sharedSummary?.yesterdayEvents ?? userYesterdaySubmissionsCount },
@@ -3729,18 +4002,35 @@ export default function DemandManagement() {
                         setSubDateFilter(preset.id);
                         setSubmittedProfilesPage(1);
                       }}
-                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
-                        isActive
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                      }`}
+                      style={{
+                        height: '34px',
+                        padding: '0 14px',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        fontWeight: isActive ? 700 : 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        whiteSpace: 'nowrap',
+                        border: isActive ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                        background: isActive ? '#2563eb' : '#ffffff',
+                        color: isActive ? '#ffffff' : '#334155',
+                        boxShadow: isActive ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
                       <span>{preset.label}</span>
                       {preset.count !== null && (
                         <span
-                          className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
-                            isActive ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
-                          }`}
+                          style={{
+                            padding: '1px 7px',
+                            borderRadius: '9999px',
+                            fontSize: '10.5px',
+                            fontWeight: 800,
+                            background: isActive ? 'rgba(29, 78, 216, 0.9)' : '#f1f5f9',
+                            color: isActive ? '#ffffff' : '#475569',
+                          }}
                         >
                           {preset.count}
                         </span>
