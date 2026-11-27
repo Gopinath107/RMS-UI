@@ -434,9 +434,10 @@ const Pagination = ({
   itemsPerPage,
   onItemsPerPageChange,
   totalItems,
-  label = 'demands'
+  label = 'demands',
+  perPageOptions = [3, 5, 10, 15, 20],
 }) => {
-  const itemsPerPageOptions = [3, 5, 10, 15, 20];
+  const itemsPerPageOptions = perPageOptions;
   const start = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
   const end = Math.min(currentPage * itemsPerPage, totalItems);
 
@@ -592,6 +593,8 @@ export default function DemandManagement() {
   const [interviewDemandFilter, setInterviewDemandFilter] = useState('ALL');
   const [interviewLevelFilter, setInterviewLevelFilter] = useState('ALL');
   const [interviewSearchQuery, setInterviewSearchQuery] = useState('');
+  const [interviewPage, setInterviewPage] = useState(1);
+  const [interviewPerPage, setInterviewPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
@@ -647,6 +650,8 @@ export default function DemandManagement() {
   const [activityDemandFilter, setActivityDemandFilter] = useState('ALL');
   const [activityActionFilter, setActivityActionFilter] = useState('ALL');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPerPage, setActivityPerPage] = useState(10);
 
   // ── Modal Profile History Dialog State ──
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -1265,6 +1270,24 @@ export default function DemandManagement() {
     activitySearchQuery,
   ]);
 
+  useEffect(() => {
+    setActivityPage(1);
+  }, [
+    activityDateFilter,
+    activityFromDate,
+    activityToDate,
+    activityCandidateFilter,
+    activityDemandFilter,
+    activityActionFilter,
+    activitySearchQuery,
+  ]);
+
+  const activityTotalPages = Math.max(1, Math.ceil(filteredActivityEvents.length / activityPerPage));
+  const paginatedActivityEvents = useMemo(() => {
+    const start = (activityPage - 1) * activityPerPage;
+    return filteredActivityEvents.slice(start, start + activityPerPage);
+  }, [filteredActivityEvents, activityPage, activityPerPage]);
+
   const interviewsTodayCount = useMemo(() => {
     return myInterviews.filter((iv) => matchesDateFilter(getInterviewScheduledAt(iv), 'today')).length;
   }, [myInterviews]);
@@ -1360,6 +1383,25 @@ export default function DemandManagement() {
     interviewLevelFilter,
     interviewSearchQuery,
   ]);
+
+  useEffect(() => {
+    setInterviewPage(1);
+  }, [
+    interviewDateFilter,
+    interviewFromDate,
+    interviewToDate,
+    interviewStatusFilter,
+    interviewClientFilter,
+    interviewDemandFilter,
+    interviewLevelFilter,
+    interviewSearchQuery,
+  ]);
+
+  const interviewTotalPages = Math.max(1, Math.ceil(filteredMyInterviews.length / interviewPerPage));
+  const paginatedMyInterviews = useMemo(() => {
+    const start = (interviewPage - 1) * interviewPerPage;
+    return filteredMyInterviews.slice(start, start + interviewPerPage);
+  }, [filteredMyInterviews, interviewPage, interviewPerPage]);
 
   // Overall Statistics calculated across the active scope
   const stats = useMemo(() => {
@@ -3981,7 +4023,7 @@ export default function DemandManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredMyInterviews.map((iv, idx) => {
+                  paginatedMyInterviews.map((iv, idx) => {
                     const resourceName = iv.candidateName || iv.employeeName || 'Resource';
                     const isExternal = Boolean(iv.candidateId) || !iv.employeeId;
                     const schedStr = getInterviewScheduledAt(iv);
@@ -4189,6 +4231,21 @@ export default function DemandManagement() {
                 )}
               </tbody>
             </table>
+
+            {filteredMyInterviews.length > 0 && (
+              <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+                <Pagination
+                  currentPage={interviewPage}
+                  totalPages={interviewTotalPages}
+                  onPageChange={setInterviewPage}
+                  itemsPerPage={interviewPerPage}
+                  onItemsPerPageChange={setInterviewPerPage}
+                  totalItems={filteredMyInterviews.length}
+                  label="interviews"
+                  perPageOptions={[10, 20, 30, 50]}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -4568,7 +4625,7 @@ export default function DemandManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800 bg-white">
-                  {filteredActivityEvents.map((evt) => {
+                  {paginatedActivityEvents.map((evt) => {
                     const t = (evt.eventType || '').toUpperCase();
                     const s = (evt.newStatus || '').toLowerCase();
                     const isSelect = t === 'SELECTED' || (t === 'INTERVIEW_COMPLETED' && (s.includes('select') || s.includes('clear')));
@@ -4750,6 +4807,21 @@ export default function DemandManagement() {
                   })}
                 </tbody>
               </table>
+
+              {filteredActivityEvents.length > 0 && (
+                <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+                  <Pagination
+                    currentPage={activityPage}
+                    totalPages={activityTotalPages}
+                    onPageChange={setActivityPage}
+                    itemsPerPage={activityPerPage}
+                    onItemsPerPageChange={setActivityPerPage}
+                    totalItems={filteredActivityEvents.length}
+                    label="events"
+                    perPageOptions={[10, 20, 30, 50]}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
