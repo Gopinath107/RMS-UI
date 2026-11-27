@@ -822,168 +822,6 @@ export default function DemandManagement() {
     demands
   ]);
 
-  // Load Tab 3 Activity Feed / Audit Log (automatically aggregated across user's profiles & interviews)
-  const loadActivityFeed = useCallback(async () => {
-    setActivityFeedLoading(true);
-    try {
-      const res = await DemandService.fetchSharedProfilesList({
-        page: 0,
-        size: 200,
-        dateFilter: 'all',
-        userId: currentUserId,
-      });
-      let records = [];
-      if (res && res.content) records = res.content;
-      else if (Array.isArray(res)) records = res;
-
-      // Deduplicate by (demandId, resourceType, resourceId)
-      const uniqueMap = new Map();
-      records.forEach((p) => {
-        if (!p || !p.demandId || !p.resourceId) return;
-        const rType = p.resourceType || 'INTERNAL';
-        const key = `${p.demandId}_${rType}_${p.resourceId}`;
-        if (!uniqueMap.has(key)) uniqueMap.set(key, { ...p, resourceType: rType });
-      });
-
-      // Also include any interview records not already in shared-profiles
-      myInterviews.forEach((iv) => {
-        if (!iv || !iv.demandId) return;
-        const resId = iv.candidateId || iv.employeeId;
-        const rType = iv.candidateId ? 'EXTERNAL' : 'INTERNAL';
-        if (!resId) return;
-        const key = `${iv.demandId}_${rType}_${resId}`;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, {
-            demandId: iv.demandId,
-            demandTitle: iv.demandTitle || `Demand #${iv.demandId}`,
-            clientName: iv.accountName || iv.projectName || '',
-            resourceId: resId,
-            resourceType: rType,
-            resourceName: iv.candidateName || iv.employeeName || 'Resource',
-            resourceEmail: iv.candidateEmail || iv.employeeEmail || '',
-            submittedAt: getInterviewScheduledAt(iv),
-          });
-        }
-      });
-
-      const entries = Array.from(uniqueMap.values());
-      const results = await Promise.allSettled(
-        entries.map((entry) =>
-          DemandService.fetchProfileHistory(entry.demandId, entry.resourceType, entry.resourceId)
-        )
-      );
-
-      const aggregated = [];
-      results.forEach((r, idx) => {
-        const entry = entries[idx];
-        const rawEvents = r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [];
-        const cleaned = cleanAndSortProfileEvents(rawEvents, entry.submittedAt || entry.submittedDate);
-        cleaned.forEach((evt, eIdx) => {
-          aggregated.push({
-            ...evt,
-            _id: `${entry.demandId}_${entry.resourceType}_${entry.resourceId}_${evt.eventType}_${evt.timestamp || eIdx}_${eIdx}`,
-            resourceId: entry.resourceId,
-            resourceType: entry.resourceType,
-            resourceName: entry.resourceName || 'Resource',
-            resourceEmail: entry.resourceEmail || '',
-            demandId: entry.demandId,
-            demandTitle: entry.demandTitle || `Demand #${entry.demandId}`,
-            clientName: entry.clientName || '',
-            sharedAt: entry.submittedAt || entry.submittedDate,
-          });
-        });
-      });
-
-      // Sort newest-first chronologically
-      aggregated.sort((a, b) => {
-        const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
-      });
-
-      setActivityFeedEvents(aggregated);
-    } catch (err) {
-      console.error('Failed to load activity feed:', err);
-      toast.error('Failed to load profile history');
-    } finally {
-      setActivityFeedLoading(false);
-    }
-  }, [currentUserId, myInterviews]);
-
-  useEffect(() => {
-    if (activeMainTab === 'history') {
-      loadActivityFeed();
-    }
-  }, [activeMainTab, loadActivityFeed]);
-
-  const activityCandidateOptions = useMemo(() => {
-    const set = new Set();
-    activityFeedEvents.forEach((evt) => {
-      if (evt.resourceName) set.add(evt.resourceName.trim());
-    });
-    return Array.from(set).sort();
-  }, [activityFeedEvents]);
-
-  const activityDemandOptions = useMemo(() => {
-    const set = new Set();
-    activityFeedEvents.forEach((evt) => {
-      if (evt.demandTitle) set.add(evt.demandTitle.trim());
-    });
-    return Array.from(set).sort();
-  }, [activityFeedEvents]);
-
-  const filteredActivityEvents = useMemo(() => {
-    return activityFeedEvents.filter((evt) => {
-      if (!matchesDateFilter(evt.timestamp, activityDateFilter, activityFromDate, activityToDate)) {
-        return false;
-      }
-      if (activityCandidateFilter !== 'ALL' && (evt.resourceName || '').trim() !== activityCandidateFilter) {
-        return false;
-      }
-      if (activityDemandFilter !== 'ALL' && (evt.demandTitle || '').trim() !== activityDemandFilter) {
-        return false;
-      }
-      if (activityActionFilter !== 'ALL') {
-        const t = (evt.eventType || '').toUpperCase();
-        const s = (evt.newStatus || '').toLowerCase();
-        if (activityActionFilter === 'SUBMITTED' && t !== 'SUBMITTED') return false;
-        if (activityActionFilter === 'INTERVIEW_SCHEDULED' && t !== 'INTERVIEW_SCHEDULED') return false;
-        if (activityActionFilter === 'INTERVIEW_COMPLETED' && t !== 'INTERVIEW_COMPLETED') return false;
-        if (activityActionFilter === 'SELECTED' && t !== 'SELECTED' && !s.includes('select') && !s.includes('clear')) return false;
-        if (activityActionFilter === 'ALLOCATED' && t !== 'ALLOCATED' && !s.includes('allocat')) return false;
-        if (activityActionFilter === 'REJECTED' && t !== 'REJECTED' && !s.includes('reject')) return false;
-      }
-      if (activitySearchQuery.trim()) {
-        const q = activitySearchQuery.toLowerCase();
-        const hay = [
-          evt.resourceName,
-          evt.resourceEmail,
-          evt.demandTitle,
-          evt.clientName,
-          evt.eventType,
-          evt.newStatus,
-          evt.roundLevel,
-          evt.actionByName,
-          evt.remarks,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [
-    activityFeedEvents,
-    activityDateFilter,
-    activityFromDate,
-    activityToDate,
-    activityCandidateFilter,
-    activityDemandFilter,
-    activityActionFilter,
-    activitySearchQuery,
-  ]);
-
   // Load Tab 3 History for Selected Profile
   const fetchHistoryForProfile = useCallback(async (demandId, resourceType, resourceId) => {
     if (!demandId || !resourceId) return;
@@ -1245,6 +1083,168 @@ export default function DemandManagement() {
   const myInterviews = useMemo(() => {
     return interviews.filter((iv) => isInterviewScheduledByCurrentUser(iv));
   }, [interviews, isInterviewScheduledByCurrentUser]);
+
+  // Load Tab 3 Activity Feed / Audit Log (automatically aggregated across user's profiles & interviews)
+  const loadActivityFeed = useCallback(async () => {
+    setActivityFeedLoading(true);
+    try {
+      const res = await DemandService.fetchSharedProfilesList({
+        page: 0,
+        size: 200,
+        dateFilter: 'all',
+        userId: currentUserId,
+      });
+      let records = [];
+      if (res && res.content) records = res.content;
+      else if (Array.isArray(res)) records = res;
+
+      // Deduplicate by (demandId, resourceType, resourceId)
+      const uniqueMap = new Map();
+      records.forEach((p) => {
+        if (!p || !p.demandId || !p.resourceId) return;
+        const rType = p.resourceType || 'INTERNAL';
+        const key = `${p.demandId}_${rType}_${p.resourceId}`;
+        if (!uniqueMap.has(key)) uniqueMap.set(key, { ...p, resourceType: rType });
+      });
+
+      // Also include any interview records not already in shared-profiles
+      myInterviews.forEach((iv) => {
+        if (!iv || !iv.demandId) return;
+        const resId = iv.candidateId || iv.employeeId;
+        const rType = iv.candidateId ? 'EXTERNAL' : 'INTERNAL';
+        if (!resId) return;
+        const key = `${iv.demandId}_${rType}_${resId}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            demandId: iv.demandId,
+            demandTitle: iv.demandTitle || `Demand #${iv.demandId}`,
+            clientName: iv.accountName || iv.projectName || '',
+            resourceId: resId,
+            resourceType: rType,
+            resourceName: iv.candidateName || iv.employeeName || 'Resource',
+            resourceEmail: iv.candidateEmail || iv.employeeEmail || '',
+            submittedAt: getInterviewScheduledAt(iv),
+          });
+        }
+      });
+
+      const entries = Array.from(uniqueMap.values());
+      const results = await Promise.allSettled(
+        entries.map((entry) =>
+          DemandService.fetchProfileHistory(entry.demandId, entry.resourceType, entry.resourceId)
+        )
+      );
+
+      const aggregated = [];
+      results.forEach((r, idx) => {
+        const entry = entries[idx];
+        const rawEvents = r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [];
+        const cleaned = cleanAndSortProfileEvents(rawEvents, entry.submittedAt || entry.submittedDate);
+        cleaned.forEach((evt, eIdx) => {
+          aggregated.push({
+            ...evt,
+            _id: `${entry.demandId}_${entry.resourceType}_${entry.resourceId}_${evt.eventType}_${evt.timestamp || eIdx}_${eIdx}`,
+            resourceId: entry.resourceId,
+            resourceType: entry.resourceType,
+            resourceName: entry.resourceName || 'Resource',
+            resourceEmail: entry.resourceEmail || '',
+            demandId: entry.demandId,
+            demandTitle: entry.demandTitle || `Demand #${entry.demandId}`,
+            clientName: entry.clientName || '',
+            sharedAt: entry.submittedAt || entry.submittedDate,
+          });
+        });
+      });
+
+      // Sort newest-first chronologically
+      aggregated.sort((a, b) => {
+        const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+      });
+
+      setActivityFeedEvents(aggregated);
+    } catch (err) {
+      console.error('Failed to load activity feed:', err);
+      toast.error('Failed to load profile history');
+    } finally {
+      setActivityFeedLoading(false);
+    }
+  }, [currentUserId, myInterviews]);
+
+  useEffect(() => {
+    if (activeMainTab === 'history') {
+      loadActivityFeed();
+    }
+  }, [activeMainTab, loadActivityFeed]);
+
+  const activityCandidateOptions = useMemo(() => {
+    const set = new Set();
+    activityFeedEvents.forEach((evt) => {
+      if (evt.resourceName) set.add(evt.resourceName.trim());
+    });
+    return Array.from(set).sort();
+  }, [activityFeedEvents]);
+
+  const activityDemandOptions = useMemo(() => {
+    const set = new Set();
+    activityFeedEvents.forEach((evt) => {
+      if (evt.demandTitle) set.add(evt.demandTitle.trim());
+    });
+    return Array.from(set).sort();
+  }, [activityFeedEvents]);
+
+  const filteredActivityEvents = useMemo(() => {
+    return activityFeedEvents.filter((evt) => {
+      if (!matchesDateFilter(evt.timestamp, activityDateFilter, activityFromDate, activityToDate)) {
+        return false;
+      }
+      if (activityCandidateFilter !== 'ALL' && (evt.resourceName || '').trim() !== activityCandidateFilter) {
+        return false;
+      }
+      if (activityDemandFilter !== 'ALL' && (evt.demandTitle || '').trim() !== activityDemandFilter) {
+        return false;
+      }
+      if (activityActionFilter !== 'ALL') {
+        const t = (evt.eventType || '').toUpperCase();
+        const s = (evt.newStatus || '').toLowerCase();
+        if (activityActionFilter === 'SUBMITTED' && t !== 'SUBMITTED') return false;
+        if (activityActionFilter === 'INTERVIEW_SCHEDULED' && t !== 'INTERVIEW_SCHEDULED') return false;
+        if (activityActionFilter === 'INTERVIEW_COMPLETED' && t !== 'INTERVIEW_COMPLETED') return false;
+        if (activityActionFilter === 'SELECTED' && t !== 'SELECTED' && !s.includes('select') && !s.includes('clear')) return false;
+        if (activityActionFilter === 'ALLOCATED' && t !== 'ALLOCATED' && !s.includes('allocat')) return false;
+        if (activityActionFilter === 'REJECTED' && t !== 'REJECTED' && !s.includes('reject')) return false;
+      }
+      if (activitySearchQuery.trim()) {
+        const q = activitySearchQuery.toLowerCase();
+        const hay = [
+          evt.resourceName,
+          evt.resourceEmail,
+          evt.demandTitle,
+          evt.clientName,
+          evt.eventType,
+          evt.newStatus,
+          evt.roundLevel,
+          evt.actionByName,
+          evt.remarks,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [
+    activityFeedEvents,
+    activityDateFilter,
+    activityFromDate,
+    activityToDate,
+    activityCandidateFilter,
+    activityDemandFilter,
+    activityActionFilter,
+    activitySearchQuery,
+  ]);
 
   const interviewsTodayCount = useMemo(() => {
     return myInterviews.filter((iv) => matchesDateFilter(getInterviewScheduledAt(iv), 'today')).length;
