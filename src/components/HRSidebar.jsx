@@ -167,12 +167,19 @@ function HRSidebar({
           KEY FIX: when collapsed → overflow-visible so tooltip escapes sidebar bounds
                    when expanded → overflow-y-auto for normal scrolling               */}
       <nav
-        className={`mt-2 flex-1 min-h-0 hide-scrollbar ${isExpanded
+        className={`mt-4 flex-1 min-h-0 hide-scrollbar ${isExpanded
           ? 'px-3 overflow-y-auto overflow-x-hidden'
           : 'px-2 overflow-visible'
           }`}
       >
-        <div className={`space-y-1.5 ${isExpanded ? 'pb-4' : 'pb-2'}`}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            paddingBottom: isExpanded ? '16px' : '8px',
+          }}
+        >
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -187,7 +194,8 @@ function HRSidebar({
               >
                 <motion.button
                   onClick={() => handleMenuClick(item)}
-                  className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-3 py-2.5' : 'justify-center px-2 py-2.5'
+                  style={{ paddingTop: '10px', paddingBottom: '10px' }}
+                  className={`w-full flex items-center ${isExpanded ? 'space-x-3 px-3' : 'justify-center px-2'
                     } rounded-xl transition-all duration-200 relative group ${isActive
                       ? 'bg-gradient-to-r from-blue-500/30 to-indigo-500/30 text-white border border-blue-400/30 shadow-lg'
                       : 'text-blue-200 hover:bg-blue-500/20 hover:text-white'
