@@ -521,9 +521,9 @@ export default function DemandManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
 
-  // Main 3-Tab Navigation State: 'active-demands' | 'submitted' | 'history'
+  // Main 3-Tab Navigation State: 'active-demands' | 'interviews' | 'history'
   const [activeMainTab, setActiveMainTab] = useState(
-    urlTab === 'interviews' ? 'interviews' : urlTab === 'submitted' ? 'submitted' : urlTab === 'history' ? 'history' : 'active-demands'
+    urlTab === 'interviews' ? 'interviews' : urlTab === 'history' ? 'history' : 'active-demands'
   );
 
   // Sync tab with URL
@@ -613,11 +613,21 @@ export default function DemandManagement() {
   const [sharedSummary, setSharedSummary] = useState(null);
   const [sharedSummaryLoading, setSharedSummaryLoading] = useState(false);
 
-  // ── Tab 3: Profile History State ──
+  // ── Tab 3: Profile History (Recent Activity Feed / Audit Log) State ──
   const [historySelectedDemandId, setHistorySelectedDemandId] = useState('');
   const [historySelectedProfile, setHistorySelectedProfile] = useState(null);
   const [historyEvents, setHistoryEvents] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [activityFeedEvents, setActivityFeedEvents] = useState([]);
+  const [activityFeedLoading, setActivityFeedLoading] = useState(false);
+  const [activityDateFilter, setActivityDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'last7days' | 'custom'
+  const [activityFromDate, setActivityFromDate] = useState('');
+  const [activityToDate, setActivityToDate] = useState('');
+  const [activityCandidateFilter, setActivityCandidateFilter] = useState('ALL');
+  const [activityDemandFilter, setActivityDemandFilter] = useState('ALL');
+  const [activityActionFilter, setActivityActionFilter] = useState('ALL');
+  const [activitySearchQuery, setActivitySearchQuery] = useState('');
 
   // ── Modal Profile History Dialog State ──
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -812,11 +822,167 @@ export default function DemandManagement() {
     demands
   ]);
 
-  useEffect(() => {
-    if (activeMainTab === 'submitted') {
-      loadSubmittedProfiles();
+  // Load Tab 3 Activity Feed / Audit Log (automatically aggregated across user's profiles & interviews)
+  const loadActivityFeed = useCallback(async () => {
+    setActivityFeedLoading(true);
+    try {
+      const res = await DemandService.fetchSharedProfilesList({
+        page: 0,
+        size: 200,
+        dateFilter: 'all',
+        userId: currentUserId,
+      });
+      let records = [];
+      if (res && res.content) records = res.content;
+      else if (Array.isArray(res)) records = res;
+
+      // Deduplicate by (demandId, resourceType, resourceId)
+      const uniqueMap = new Map();
+      records.forEach((p) => {
+        if (!p || !p.demandId || !p.resourceId) return;
+        const rType = p.resourceType || 'INTERNAL';
+        const key = `${p.demandId}_${rType}_${p.resourceId}`;
+        if (!uniqueMap.has(key)) uniqueMap.set(key, { ...p, resourceType: rType });
+      });
+
+      // Also include any interview records not already in shared-profiles
+      myInterviews.forEach((iv) => {
+        if (!iv || !iv.demandId) return;
+        const resId = iv.candidateId || iv.employeeId;
+        const rType = iv.candidateId ? 'EXTERNAL' : 'INTERNAL';
+        if (!resId) return;
+        const key = `${iv.demandId}_${rType}_${resId}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            demandId: iv.demandId,
+            demandTitle: iv.demandTitle || `Demand #${iv.demandId}`,
+            clientName: iv.accountName || iv.projectName || '',
+            resourceId: resId,
+            resourceType: rType,
+            resourceName: iv.candidateName || iv.employeeName || 'Resource',
+            resourceEmail: iv.candidateEmail || iv.employeeEmail || '',
+            submittedAt: getInterviewScheduledAt(iv),
+          });
+        }
+      });
+
+      const entries = Array.from(uniqueMap.values());
+      const results = await Promise.allSettled(
+        entries.map((entry) =>
+          DemandService.fetchProfileHistory(entry.demandId, entry.resourceType, entry.resourceId)
+        )
+      );
+
+      const aggregated = [];
+      results.forEach((r, idx) => {
+        const entry = entries[idx];
+        const rawEvents = r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [];
+        const cleaned = cleanAndSortProfileEvents(rawEvents, entry.submittedAt || entry.submittedDate);
+        cleaned.forEach((evt, eIdx) => {
+          aggregated.push({
+            ...evt,
+            _id: `${entry.demandId}_${entry.resourceType}_${entry.resourceId}_${evt.eventType}_${evt.timestamp || eIdx}_${eIdx}`,
+            resourceId: entry.resourceId,
+            resourceType: entry.resourceType,
+            resourceName: entry.resourceName || 'Resource',
+            resourceEmail: entry.resourceEmail || '',
+            demandId: entry.demandId,
+            demandTitle: entry.demandTitle || `Demand #${entry.demandId}`,
+            clientName: entry.clientName || '',
+            sharedAt: entry.submittedAt || entry.submittedDate,
+          });
+        });
+      });
+
+      // Sort newest-first chronologically
+      aggregated.sort((a, b) => {
+        const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+      });
+
+      setActivityFeedEvents(aggregated);
+    } catch (err) {
+      console.error('Failed to load activity feed:', err);
+      toast.error('Failed to load profile history');
+    } finally {
+      setActivityFeedLoading(false);
     }
-  }, [activeMainTab, loadSubmittedProfiles]);
+  }, [currentUserId, myInterviews]);
+
+  useEffect(() => {
+    if (activeMainTab === 'history') {
+      loadActivityFeed();
+    }
+  }, [activeMainTab, loadActivityFeed]);
+
+  const activityCandidateOptions = useMemo(() => {
+    const set = new Set();
+    activityFeedEvents.forEach((evt) => {
+      if (evt.resourceName) set.add(evt.resourceName.trim());
+    });
+    return Array.from(set).sort();
+  }, [activityFeedEvents]);
+
+  const activityDemandOptions = useMemo(() => {
+    const set = new Set();
+    activityFeedEvents.forEach((evt) => {
+      if (evt.demandTitle) set.add(evt.demandTitle.trim());
+    });
+    return Array.from(set).sort();
+  }, [activityFeedEvents]);
+
+  const filteredActivityEvents = useMemo(() => {
+    return activityFeedEvents.filter((evt) => {
+      if (!matchesDateFilter(evt.timestamp, activityDateFilter, activityFromDate, activityToDate)) {
+        return false;
+      }
+      if (activityCandidateFilter !== 'ALL' && (evt.resourceName || '').trim() !== activityCandidateFilter) {
+        return false;
+      }
+      if (activityDemandFilter !== 'ALL' && (evt.demandTitle || '').trim() !== activityDemandFilter) {
+        return false;
+      }
+      if (activityActionFilter !== 'ALL') {
+        const t = (evt.eventType || '').toUpperCase();
+        const s = (evt.newStatus || '').toLowerCase();
+        if (activityActionFilter === 'SUBMITTED' && t !== 'SUBMITTED') return false;
+        if (activityActionFilter === 'INTERVIEW_SCHEDULED' && t !== 'INTERVIEW_SCHEDULED') return false;
+        if (activityActionFilter === 'INTERVIEW_COMPLETED' && t !== 'INTERVIEW_COMPLETED') return false;
+        if (activityActionFilter === 'SELECTED' && t !== 'SELECTED' && !s.includes('select') && !s.includes('clear')) return false;
+        if (activityActionFilter === 'ALLOCATED' && t !== 'ALLOCATED' && !s.includes('allocat')) return false;
+        if (activityActionFilter === 'REJECTED' && t !== 'REJECTED' && !s.includes('reject')) return false;
+      }
+      if (activitySearchQuery.trim()) {
+        const q = activitySearchQuery.toLowerCase();
+        const hay = [
+          evt.resourceName,
+          evt.resourceEmail,
+          evt.demandTitle,
+          evt.clientName,
+          evt.eventType,
+          evt.newStatus,
+          evt.roundLevel,
+          evt.actionByName,
+          evt.remarks,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [
+    activityFeedEvents,
+    activityDateFilter,
+    activityFromDate,
+    activityToDate,
+    activityCandidateFilter,
+    activityDemandFilter,
+    activityActionFilter,
+    activitySearchQuery,
+  ]);
 
   // Load Tab 3 History for Selected Profile
   const fetchHistoryForProfile = useCallback(async (demandId, resourceType, resourceId) => {
@@ -1806,71 +1972,6 @@ export default function DemandManagement() {
               }
             >
               {filteredMyInterviews.length}
-            </span>
-          </button>
-
-          {/* Tab 2 */}
-          <button
-            role="tab"
-            id="tab-submitted-profiles"
-            aria-selected={activeMainTab === 'submitted'}
-            aria-controls="panel-submitted-profiles"
-            tabIndex={activeMainTab === 'submitted' ? 0 : -1}
-            onClick={() => handleTabChange('submitted')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleTabChange('submitted');
-              }
-            }}
-            className="flex items-center cursor-pointer whitespace-nowrap focus:outline-none transition-all duration-200"
-            style={
-              activeMainTab === 'submitted'
-                ? {
-                    background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
-                    padding: '10px 22px',
-                    borderRadius: '14px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    gap: '10px',
-                  }
-                : {
-                    background: 'transparent',
-                    color: '#475569',
-                    padding: '10px 22px',
-                    borderRadius: '14px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    gap: '10px',
-                  }
-            }
-          >
-            <Users className="w-5 h-5 flex-shrink-0" />
-            <span>Submitted Profiles</span>
-            <span
-              style={
-                activeMainTab === 'submitted'
-                  ? {
-                      background: 'rgba(255, 255, 255, 0.28)',
-                      color: '#ffffff',
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                    }
-                  : {
-                      background: '#f1f5f9',
-                      color: '#475569',
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                    }
-              }
-            >
-              {submittedProfilesTotal || stats.totalProfilesShared}
             </span>
           </button>
 
@@ -4038,622 +4139,7 @@ export default function DemandManagement() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════ */}
-      {/* TAB 2: SUBMITTED PROFILES (Authoritative Backend Data)         */}
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {activeMainTab === 'submitted' && (
-        <div
-          id="panel-submitted-profiles"
-          role="tabpanel"
-          aria-labelledby="tab-submitted-profiles"
-          className="space-y-5 text-left rounded-2xl p-5 sm:p-6"
-          style={{
-            background: '#ffffff',
-            border: '1.5px solid #e2e8f0',
-            boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
-          }}
-        >
-          {/* Executive Shared Profiles Activity Block */}
-          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-200/60">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-                  style={{
-                    background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                  }}
-                >
-                  <Send className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Shared Profiles Activity</h3>
-                    <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-full border border-slate-200">
-                      <Globe className="w-3 h-3 text-slate-500" />
-                      Asia/Kolkata (IST)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">Real-time candidate & employee profiles submitted against active client demands</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    loadSharedSummary();
-                    loadSubmittedProfiles();
-                  }}
-                  disabled={sharedSummaryLoading || submittedProfilesLoading}
-                  className="h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-blue-600 shadow-xs transition-colors flex items-center gap-1.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${sharedSummaryLoading || submittedProfilesLoading ? 'animate-spin' : ''}`} />
-                  <span>Refresh</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 3 Executive Metric Cards as Interactive Date Selectors - Forced 3-Column Grid */}
-            <div
-              className="mt-4"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: '16px',
-              }}
-            >
-              {/* Today Card */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSubDateFilter('today');
-                  setSubmittedProfilesPage(1);
-                }}
-                className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                  subDateFilter === 'today'
-                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 shadow-xs'
-                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-slate-700 flex items-center gap-1.5 uppercase text-[10.5px] tracking-wider">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                    Shared Today
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white">Today</span>
-                </div>
-                <div className="mt-2.5 flex items-baseline gap-2">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.todayEvents ?? userTodaySubmissionsCount}
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">submission events</span>
-                </div>
-                <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
-                  <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span className="font-semibold text-blue-800 truncate">
-                    {sharedSummary?.todayUnique ?? userTodayUnique} unique resources
-                  </span>
-                </div>
-              </button>
-
-              {/* Yesterday Card */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSubDateFilter('yesterday');
-                  setSubmittedProfilesPage(1);
-                }}
-                className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                  subDateFilter === 'yesterday'
-                    ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40 shadow-xs'
-                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-slate-700 flex items-center gap-1.5 uppercase text-[10.5px] tracking-wider">
-                    <Clock className="w-3.5 h-3.5 text-purple-600" />
-                    Shared Yesterday
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-600 text-white">Yesterday</span>
-                </div>
-                <div className="mt-2.5 flex items-baseline gap-2">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.yesterdayEvents ?? userYesterdaySubmissionsCount}
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">submission events</span>
-                </div>
-                <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
-                  <UserCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  <span className="font-semibold text-purple-800 truncate">
-                    {sharedSummary?.yesterdayUnique ?? userYesterdayUnique} unique resources
-                  </span>
-                </div>
-              </button>
-
-              {/* All-Time Card */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSubDateFilter('all');
-                  setSubmittedProfilesPage(1);
-                }}
-                className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                  subDateFilter === 'all'
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 shadow-xs'
-                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-slate-700 flex items-center gap-1.5 uppercase text-[10.5px] tracking-wider">
-                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                    All-Time Submissions
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">All Records</span>
-                </div>
-                <div className="mt-2.5 flex items-baseline gap-2">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.totalEvents ?? userSubmittedProfiles.length}
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">total submissions</span>
-                </div>
-                <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="font-semibold text-emerald-800 truncate">
-                    {sharedSummary?.totalUnique ?? userTotalUnique} unique resources
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Toolbar for Submitted Profiles */}
-          <div
-            style={{
-              background: 'rgba(248, 250, 252, 0.85)',
-              borderRadius: '16px',
-              border: '1px solid #e2e8f0',
-              padding: '16px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            {/* Row 1: Date Presets & Reset Filters */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                {[
-                  { id: 'today', label: 'Today', count: sharedSummary?.todayEvents ?? userTodaySubmissionsCount },
-                  { id: 'yesterday', label: 'Yesterday', count: sharedSummary?.yesterdayEvents ?? userYesterdaySubmissionsCount },
-                  { id: 'last7days', label: 'Last 7 Days', count: null },
-                  { id: 'all', label: 'All Recent', count: sharedSummary?.totalEvents ?? userSubmittedProfiles.length },
-                  { id: 'custom', label: 'Custom Range', count: null },
-                ].map((preset) => {
-                  const isActive = subDateFilter === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => {
-                        setSubDateFilter(preset.id);
-                        setSubmittedProfilesPage(1);
-                      }}
-                      style={{
-                        height: '34px',
-                        padding: '0 14px',
-                        borderRadius: '10px',
-                        fontSize: '12px',
-                        fontWeight: isActive ? 700 : 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        whiteSpace: 'nowrap',
-                        border: isActive ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
-                        background: isActive ? '#2563eb' : '#ffffff',
-                        color: isActive ? '#ffffff' : '#334155',
-                        boxShadow: isActive ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <span>{preset.label}</span>
-                      {preset.count !== null && (
-                        <span
-                          style={{
-                            padding: '1px 7px',
-                            borderRadius: '9999px',
-                            fontSize: '10.5px',
-                            fontWeight: 800,
-                            background: isActive ? 'rgba(29, 78, 216, 0.9)' : '#f1f5f9',
-                            color: isActive ? '#ffffff' : '#475569',
-                          }}
-                        >
-                          {preset.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {hasActiveSubmittedFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetSubmittedFilters}
-                  className="h-8 px-2.5 text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-1.5 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Reset Filters</span>
-                </Button>
-              )}
-            </div>
-
-            {/* Custom Date Pickers Drawer */}
-            {subDateFilter === 'custom' && (
-              <div className="flex items-center flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-blue-200 shadow-2xs">
-                <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                  Custom Date Range:
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-500">From:</span>
-                  <input
-                    type="date"
-                    value={subFromDate}
-                    onChange={(e) => {
-                      setSubFromDate(e.target.value);
-                      setSubmittedProfilesPage(1);
-                    }}
-                    className="h-8 text-xs font-medium bg-slate-50/50 border border-slate-200 rounded-lg px-2.5 w-36 focus:outline-blue-500"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-500">To:</span>
-                  <input
-                    type="date"
-                    value={subToDate}
-                    onChange={(e) => {
-                      setSubToDate(e.target.value);
-                      setSubmittedProfilesPage(1);
-                    }}
-                    className="h-8 text-xs font-medium bg-slate-50/50 border border-slate-200 rounded-lg px-2.5 w-36 focus:outline-blue-500"
-                  />
-                </div>
-                {(subFromDate || subToDate) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubFromDate('');
-                      setSubToDate('');
-                      setSubmittedProfilesPage(1);
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 cursor-pointer bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200"
-                  >
-                    Clear Dates
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Row 2: Dropdowns on left, Search Box + Refresh on right */}
-            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              {/* Left: Dropdowns */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Client Filter */}
-                <select
-                  value={subClientFilter}
-                  onChange={(e) => {
-                    setSubClientFilter(e.target.value);
-                    setSubmittedProfilesPage(1);
-                  }}
-                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Clients ({clientOptions.length})</option>
-                  {clientOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Demand Filter - scoped to user's demands */}
-                <select
-                  value={subDemandFilter}
-                  onChange={(e) => {
-                    setSubDemandFilter(e.target.value);
-                    setSubmittedProfilesPage(1);
-                  }}
-                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[220px] truncate"
-                >
-                  <option value="ALL">All Demands ({scopedDemands.length})</option>
-                  {scopedDemands.map((d) => (
-                    <option key={d.demandid} value={d.demandid}>
-                      #DM-{d.demandid} - {d.demandTitle}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Status Filter */}
-                <select
-                  value={subStatusFilter}
-                  onChange={(e) => {
-                    setSubStatusFilter(e.target.value);
-                    setSubmittedProfilesPage(1);
-                  }}
-                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="Submitted">Submitted</option>
-                  <option value="Scheduled">Interview Scheduled</option>
-                  <option value="Selected">Selected</option>
-                  <option value="Allocated">Allocated</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-              </div>
-
-              {/* Right: Search Box & Refresh */}
-              <div className="flex items-center gap-2.5 w-full md:w-auto">
-                <div className="w-full sm:w-72 md:w-80">
-                  <SearchFilter
-                    value={subSearchInput}
-                    onChange={(val) => setSubSearchInput(val)}
-                    placeholder="Search candidate, email, demand, client..."
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={loadSubmittedProfiles}
-                  disabled={submittedProfilesLoading}
-                  title="Reload submitted profiles"
-                  className="h-8 w-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 shadow-2xs flex items-center justify-center shrink-0 transition-colors"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${submittedProfilesLoading ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Submitted Profiles Table */}
-          {submittedProfilesLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-sm font-semibold text-slate-700">Loading Submitted Profiles...</p>
-            </div>
-          ) : userSubmittedProfiles.length === 0 ? (
-            <div className="py-16 text-center bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
-              <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-800">
-                {subDateFilter === 'today'
-                  ? 'No profile submissions for today'
-                  : subDateFilter === 'yesterday'
-                  ? 'No profile submissions for yesterday'
-                  : 'No submitted profiles found'}
-              </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                {subDateFilter === 'today'
-                  ? 'When resumes are shared to demands today, they will automatically appear here.'
-                  : 'No profiles match your selected date range or filter criteria.'}
-              </p>
-              {hasActiveSubmittedFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetSubmittedFilters}
-                  className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-all inline-flex items-center gap-1.5 shadow-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Clear Filters</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse min-w-[1150px]">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3.5 px-4">Candidate / Employee</th>
-                      <th className="py-3.5 px-3">Resource Type</th>
-                      <th className="py-3.5 px-3.5">Demand</th>
-                      <th className="py-3.5 px-3">Client</th>
-                      <th className="py-3.5 px-3 whitespace-nowrap">Submitted At (IST)</th>
-                      <th className="py-3.5 px-3">Submitted By</th>
-                      <th className="py-3.5 px-3">Recruitment Status</th>
-                      <th className="py-3.5 px-3 text-center">Interview Stage</th>
-                      <th className="py-3.5 px-3 whitespace-nowrap">Last Update</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {userSubmittedProfiles.map((p, idx) => {
-                      const isInternal = p.resourceType === 'INTERNAL' || p.resourceType === 'EMPLOYEE';
-                      const stableKey = p.requestId || `${p.demandId}_${p.resourceType}_${p.resourceId}_${p.submittedAt || idx}`;
-                      const matchedDemand = demands.find(d => String(d.demandid) === String(p.demandId));
-
-                      return (
-                        <tr key={stableKey} className="hover:bg-slate-50/70 transition-colors">
-                          {/* Candidate / Employee info */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-2.5">
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold text-xs shadow-xs shrink-0"
-                                style={{
-                                  background: isInternal
-                                    ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                                    : 'linear-gradient(135deg, #10b981, #059669)',
-                                }}
-                              >
-                                {p.resourceName ? p.resourceName.charAt(0).toUpperCase() : 'R'}
-                              </div>
-                              <div className="min-w-0 max-w-[200px]">
-                                <div className="font-bold text-slate-900 leading-snug truncate" title={p.resourceName}>
-                                  {p.resourceName || 'Resource'}
-                                </div>
-                                {p.resourceEmail && (
-                                  <div className="text-[11px] text-slate-500 truncate" title={p.resourceEmail}>{p.resourceEmail}</div>
-                                )}
-                                {p.designation && (
-                                  <div className="text-[10px] text-slate-400 font-medium truncate" title={p.designation}>
-                                    {p.designation} {p.experienceYears ? `• ${p.experienceYears}y` : ''}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Resource Type */}
-                          <td className="py-3.5 px-3 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold border ${
-                                isInternal
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              }`}
-                            >
-                              {isInternal ? 'Internal' : 'External'}
-                            </span>
-                          </td>
-
-                          {/* Demand */}
-                          <td className="py-3.5 px-3.5 max-w-[220px]">
-                            <div
-                              onClick={() => matchedDemand && handleOpenDemandDetails(matchedDemand)}
-                              className={`font-semibold text-slate-900 leading-snug truncate ${
-                                matchedDemand ? 'hover:text-blue-600 cursor-pointer' : ''
-                              }`}
-                              title={p.demandTitle || `Demand #${p.demandId}`}
-                            >
-                              {p.demandTitle || `Demand #${p.demandId}`}
-                            </div>
-                            <span className="inline-block text-[10.5px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 mt-0.5">
-                              #DM-{p.demandId}
-                            </span>
-                          </td>
-
-                          {/* Client */}
-                          <td className="py-3.5 px-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-                              <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[120px]" title={p.clientName}>{p.clientName || '-'}</span>
-                            </div>
-                          </td>
-
-                          {/* Submitted Date & Time (IST) */}
-                          <td className="py-3.5 px-3 whitespace-nowrap text-slate-600 font-medium">
-                            {formatISTDateTime(p.submittedAt || p.submittedDate)}
-                          </td>
-
-                          {/* Submitted By */}
-                          <td className="py-3.5 px-3 max-w-[160px]">
-                            <div className="font-semibold text-slate-800 truncate" title={p.submittedByName}>{p.submittedByName || 'HR Team'}</div>
-                            {p.submittedByEmail && (
-                              <div className="text-[10px] text-slate-400 truncate" title={p.submittedByEmail}>{p.submittedByEmail}</div>
-                            )}
-                          </td>
-
-                          {/* Recruitment Status */}
-                          <td className="py-3.5 px-3 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                                (p.status || '').toLowerCase() === 'selected'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : (p.status || '').toLowerCase() === 'submitted'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : (p.status || '').toLowerCase().includes('sched')
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : (p.status || '').toLowerCase() === 'allocated'
-                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                  : (p.status || '').toLowerCase() === 'rejected'
-                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                  : 'bg-blue-50 text-blue-700 border-blue-200'
-                              }`}
-                            >
-                              {p.status || 'Submitted'}
-                            </span>
-                          </td>
-
-                          {/* Interview Stage */}
-                          <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10.5px] font-bold">
-                              {p.interviewStage || '-'}
-                            </span>
-                          </td>
-
-                          {/* Last Update */}
-                          <td className="py-3.5 px-3 whitespace-nowrap text-slate-500 font-medium">
-                            {p.lastStatusUpdate ? formatISTDateTime(p.lastStatusUpdate) : formatISTDate(p.submittedDate)}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div className="inline-flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) =>
-                                  handleOpenProfileHistory(
-                                    {
-                                      resourceId: p.resourceId,
-                                      resourceType: p.resourceType,
-                                      resourceName: p.resourceName,
-                                      email: p.resourceEmail,
-                                      status: p.status,
-                                      sharedAt: p.submittedAt || p.submittedDate,
-                                      sharedBy: p.submittedByName,
-                                    },
-                                    { demandid: p.demandId, demandTitle: p.demandTitle },
-                                    e
-                                  )
-                                }
-                                className="text-xs h-7 px-2.5 font-semibold text-blue-700 border-blue-200 hover:bg-blue-50 rounded-lg shadow-2xs"
-                              >
-                                <HistoryIcon className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                                <span>Timeline</span>
-                              </Button>
-                              {matchedDemand && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => handleOpenDemandDetails(matchedDemand, e)}
-                                  className="text-xs h-7 px-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg"
-                                  title="View Demand Details"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Submitted Profiles Pagination */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/50">
-                <Pagination
-                  currentPage={submittedProfilesPage}
-                  totalPages={Math.max(1, Math.ceil(userSubmittedProfiles.length / submittedProfilesPerPage))}
-                  onPageChange={setSubmittedProfilesPage}
-                  itemsPerPage={submittedProfilesPerPage}
-                  onItemsPerPageChange={setSubmittedProfilesPerPage}
-                  totalItems={userSubmittedProfiles.length}
-                  label="submitted profiles"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* TAB 3: PROFILE HISTORY (Dedicated Chronological Audit Trail)   */}
+      {/* TAB 3: PROFILE HISTORY (Recent Activity Feed / Audit Log)      */}
       {/* ══════════════════════════════════════════════════════════════ */}
       {activeMainTab === 'history' && (
         <div
@@ -4667,285 +4153,501 @@ export default function DemandManagement() {
             boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
           }}
         >
-          {/* Demand & Profile Selector Card */}
-          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 shadow-xs p-5">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+          {/* Activity Feed Filter Toolbar */}
+          <div
+            style={{
+              background: 'rgba(248, 250, 252, 0.85)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              textAlign: 'left',
+            }}
+          >
+            {/* Row 1: Title/Scope Badge + Date Range Quick-Filters + Refresh */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '10px',
+                    height: '36px',
                   }}
                 >
-                  <HistoryIcon className="w-5 h-5 text-white" />
+                  <HistoryIcon className="w-4 h-4 text-blue-600" />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    Activity Audit Log
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '11.5px',
+                      fontWeight: 800,
+                      color: '#2563eb',
+                      background: '#dbeafe',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {filteredActivityEvents.length} {filteredActivityEvents.length === 1 ? 'Event' : 'Events'}
+                  </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-extrabold text-slate-900 tracking-tight">Profile Recruitment History</h3>
-                    <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-full border border-slate-200">
-                      <Globe className="w-3 h-3 text-slate-500" />
-                      Asia/Kolkata (IST)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Chronological audit trail of genuine pipeline events & status transitions
-                  </p>
+
+                {/* Date Range Pills */}
+                <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginRight: '2px',
+                    }}
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                    Activity:
+                  </span>
+                  {[
+                    { id: 'all', label: 'All Time' },
+                    { id: 'today', label: 'Today' },
+                    { id: 'yesterday', label: 'Yesterday' },
+                    { id: 'last7days', label: 'Last 7 Days' },
+                    { id: 'custom', label: 'Custom Date' },
+                  ].map((df) => {
+                    const isAct = activityDateFilter === df.id;
+                    return (
+                      <button
+                        key={df.id}
+                        type="button"
+                        onClick={() => setActivityDateFilter(df.id)}
+                        style={{
+                          height: '34px',
+                          padding: '0 14px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: isAct ? 700 : 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          border: isAct ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                          background: isAct ? '#2563eb' : '#ffffff',
+                          color: isAct ? '#ffffff' : '#334155',
+                          boxShadow: isAct ? '0 2px 6px rgba(37,99,235,0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        <span>{df.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Selector Controls */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-                {/* Demand Selector */}
-                <div className="w-full sm:w-64">
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Select Demand:</label>
-                  <select
-                    value={historySelectedDemandId}
-                    onChange={(e) => {
-                      const dId = e.target.value;
-                      setHistorySelectedDemandId(dId);
-                      setHistorySelectedProfile(null);
-                      setHistoryEvents([]);
-                    }}
-                    className="w-full h-10 bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-xl px-3 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
-                  >
-                    <option value="">-- Choose Demand ({demands.length}) --</option>
-                    {demands.map((d) => (
-                      <option key={d.demandid} value={d.demandid}>
-                        #{d.demandid}: {d.demandTitle} ({d.accountName || d.companyName || 'Client'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Refresh Button */}
+              <button
+                type="button"
+                onClick={loadActivityFeed}
+                disabled={activityFeedLoading}
+                style={{
+                  height: '36px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #e2e8f0',
+                  background: '#ffffff',
+                  color: '#334155',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                }}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${activityFeedLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
 
-                {/* Profile Selector */}
-                <div className="w-full sm:w-72">
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Select Submitted Profile:</label>
-                  <select
-                    disabled={!historySelectedDemandId || profilesForSelectedDemandTab3.length === 0}
-                    value={historySelectedProfile?.resourceId || ''}
-                    onChange={(e) => {
-                      const resId = Number(e.target.value);
-                      const found = profilesForSelectedDemandTab3.find(p => Number(p.resourceId) === resId);
-                      setHistorySelectedProfile(found || null);
-                      if (found && historySelectedDemandId) {
-                        fetchHistoryForProfile(historySelectedDemandId, found.resourceType, found.resourceId);
-                      }
-                    }}
-                    className="w-full h-10 bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-xl px-3 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 truncate"
-                  >
-                    <option value="">
-                      {!historySelectedDemandId
-                        ? 'Select a demand first'
-                        : profilesForSelectedDemandTab3.length === 0
-                        ? 'No profiles submitted to this demand'
-                        : `-- Choose Profile (${profilesForSelectedDemandTab3.length}) --`}
-                    </option>
-                    {profilesForSelectedDemandTab3.map((p, idx) => (
-                      <option key={p.key || idx} value={p.resourceId}>
-                        {p.resourceName} ({p.resourceType === 'INTERNAL' || p.resourceType === 'EMPLOYEE' ? 'Internal' : 'External'}) - {p.status || 'Submitted'}
-                      </option>
-                    ))}
-                  </select>
+            {/* Custom Date Drawer */}
+            {activityDateFilter === 'custom' && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: '#ffffff',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #bfdbfe',
+                }}
+              >
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1d4ed8', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  Custom Date Range:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>From:</span>
+                  <input
+                    type="date"
+                    value={activityFromDate}
+                    onChange={(e) => setActivityFromDate(e.target.value)}
+                    style={{ height: '32px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', color: '#1e293b', background: '#f8fafc' }}
+                  />
                 </div>
-
-                {historySelectedProfile && (
-                  <div className="self-end pb-0.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setHistorySelectedProfile(null);
-                        setHistoryEvents([]);
-                      }}
-                      className="h-10 px-3 text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
-                    >
-                      Clear
-                    </Button>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>To:</span>
+                  <input
+                    type="date"
+                    value={activityToDate}
+                    onChange={(e) => setActivityToDate(e.target.value)}
+                    style={{ height: '32px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', color: '#1e293b', background: '#f8fafc' }}
+                  />
+                </div>
+                {(activityFromDate || activityToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivityFromDate('');
+                      setActivityToDate('');
+                    }}
+                    style={{ fontSize: '12px', fontWeight: 700, color: '#e11d48', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer' }}
+                  >
+                    Clear Dates
+                  </button>
                 )}
+              </div>
+            )}
+
+            {/* Row 2: Quick Filters (Candidate, Demand, Action/Status) + Search + Reset */}
+            <div
+              style={{
+                paddingTop: '12px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                <select
+                  value={activityCandidateFilter}
+                  onChange={(e) => setActivityCandidateFilter(e.target.value)}
+                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', maxWidth: '200px', cursor: 'pointer' }}
+                >
+                  <option value="ALL">All Candidates ({activityCandidateOptions.length})</option>
+                  {activityCandidateOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={activityDemandFilter}
+                  onChange={(e) => setActivityDemandFilter(e.target.value)}
+                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', maxWidth: '200px', cursor: 'pointer' }}
+                >
+                  <option value="ALL">All Demands ({activityDemandOptions.length})</option>
+                  {activityDemandOptions.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={activityActionFilter}
+                  onChange={(e) => setActivityActionFilter(e.target.value)}
+                  style={{ height: '36px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', border: '1.5px solid #e2e8f0', background: '#ffffff', color: '#334155', padding: '0 12px', cursor: 'pointer' }}
+                >
+                  <option value="ALL">All Actions / Statuses</option>
+                  <option value="SUBMITTED">Profile Submitted</option>
+                  <option value="INTERVIEW_SCHEDULED">Interview Scheduled</option>
+                  <option value="INTERVIEW_COMPLETED">Interview Completed</option>
+                  <option value="SELECTED">Selected / Cleared</option>
+                  <option value="ALLOCATED">Allocated</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+
+                {(activityDateFilter !== 'all' ||
+                  activityCandidateFilter !== 'ALL' ||
+                  activityDemandFilter !== 'ALL' ||
+                  activityActionFilter !== 'ALL' ||
+                  activitySearchQuery) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivityDateFilter('all');
+                      setActivityFromDate('');
+                      setActivityToDate('');
+                      setActivityCandidateFilter('ALL');
+                      setActivityDemandFilter('ALL');
+                      setActivityActionFilter('ALL');
+                      setActivitySearchQuery('');
+                    }}
+                    style={{
+                      height: '36px',
+                      padding: '0 12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#e11d48',
+                      background: '#fff1f2',
+                      border: '1px solid #fecdd3',
+                      borderRadius: '10px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              <div style={{ width: '280px', flexShrink: 0 }}>
+                <SearchFilter
+                  value={activitySearchQuery}
+                  onChange={(val) => setActivitySearchQuery(val)}
+                  placeholder="Search candidate, demand, action, notes..."
+                />
               </div>
             </div>
           </div>
 
-          {/* Profile Details & Timeline */}
-          {!historySelectedDemandId || !historySelectedProfile ? (
-            <div className="py-16 text-center bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
+          {/* Chronological Audit Log Feed */}
+          {activityFeedLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-slate-200/90">
+              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+              <p className="text-sm font-semibold text-slate-700">Loading Recent Activity Feed...</p>
+            </div>
+          ) : filteredActivityEvents.length === 0 ? (
+            <div className="py-16 text-center bg-white rounded-2xl border border-slate-200/90 p-6">
               <HistoryIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-800">Select a Demand & Profile</h3>
+              <h3 className="text-base font-bold text-slate-800">No Activity Events Found</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                Choose an active demand and submitted profile from the dropdowns above to inspect their genuine chronological audit history.
+                Status changes, interview rounds, selections, rejections, and allocations for your candidates and demands will appear here automatically.
               </p>
             </div>
-          ) : historyLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-sm font-semibold text-slate-700">Loading profile event history...</p>
-            </div>
           ) : (
-            <div className="space-y-4">
-              {/* Profile Summary Card */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs text-left">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div
-                      style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '15px',
-                        fontWeight: 700,
-                        ...getAvatarStyle(historySelectedProfile.resourceName?.slice(0, 2)),
-                      }}
-                    >
-                      {historySelectedProfile.resourceName?.slice(0, 2).toUpperCase() || 'R'}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-extrabold text-slate-900 text-base">{historySelectedProfile.resourceName}</h4>
-                        <Badge
-                          className={
-                            historySelectedProfile.resourceType === 'INTERNAL' || historySelectedProfile.resourceType === 'EMPLOYEE'
-                              ? 'bg-purple-100 text-purple-700 border-purple-200'
-                              : 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          }
-                        >
-                          {historySelectedProfile.resourceType === 'INTERNAL' || historySelectedProfile.resourceType === 'EMPLOYEE'
-                            ? 'Internal Employee'
-                            : 'Candidate'}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
-                        {historySelectedProfile.email && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3.5 h-3.5 text-slate-400" />
-                            {historySelectedProfile.email}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {filteredActivityEvents.map((evt) => {
+                const t = (evt.eventType || '').toUpperCase();
+                const s = (evt.newStatus || '').toLowerCase();
+                const isSelect = t === 'SELECTED' || (t === 'INTERVIEW_COMPLETED' && (s.includes('select') || s.includes('clear')));
+                const isAlloc = t === 'ALLOCATED' || s.includes('allocat');
+                const isReject = t === 'REJECTED' || s.includes('reject');
+                const isSchedule = t === 'INTERVIEW_SCHEDULED';
+                const isExternal = evt.resourceType === 'EXTERNAL' || evt.resourceType === 'CANDIDATE';
+
+                let pillBg = '#dbeafe';
+                let pillColor = '#1e40af';
+                let pillBorder = '#bfdbfe';
+                let dotColor = '#2563eb';
+                if (isSelect || isAlloc) {
+                  pillBg = '#d1fae5';
+                  pillColor = '#065f46';
+                  pillBorder = '#a7f3d0';
+                  dotColor = '#059669';
+                } else if (isReject) {
+                  pillBg = '#ffe4e6';
+                  pillColor = '#9f1239';
+                  pillBorder = '#fecdd3';
+                  dotColor = '#e11d48';
+                } else if (isSchedule) {
+                  pillBg = '#e0e7ff';
+                  pillColor = '#3730a3';
+                  pillBorder = '#c7d2fe';
+                  dotColor = '#4f46e5';
+                }
+
+                const dateStr = getISTDateString(evt.timestamp);
+                const isToday = dateStr === getTodayISTString();
+                const isYesterday = dateStr === getYesterdayISTString();
+
+                return (
+                  <div
+                    key={evt._id}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '14px',
+                      padding: '14px 18px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '1 1 420px' }}>
+                      <div
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '9999px',
+                          background: dotColor,
+                          marginTop: '6px',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: '9999px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: pillBg,
+                              color: pillColor,
+                              border: `1px solid ${pillBorder}`,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {evt.newStatus || (evt.eventType ? evt.eventType.replace(/_/g, ' ') : 'Event')}
                           </span>
-                        )}
-                        <span className="text-blue-700 font-semibold">
-                          Demand #{historySelectedDemandId}:{' '}
-                          {demands.find(d => String(d.demandid) === String(historySelectedDemandId))?.demandTitle}
-                        </span>
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+                            {evt.resourceName}
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              background: isExternal ? '#ecfdf5' : '#eef2ff',
+                              color: isExternal ? '#047857' : '#4338ca',
+                              border: isExternal ? '1px solid #a7f3d0' : '1px solid #c7d2fe',
+                            }}
+                          >
+                            {isExternal ? 'External' : 'Internal'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>on</span>
+                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#1e293b' }}>
+                            {evt.demandTitle}
+                          </span>
+                          {evt.clientName && (
+                            <span style={{ fontSize: '11.5px', color: '#64748b' }}>({evt.clientName})</span>
+                          )}
+                          {evt.roundLevel && (
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '10.5px',
+                                fontWeight: 700,
+                                background: '#f1f5f9',
+                                color: '#334155',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              {evt.roundLevel}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#475569' }}>
+                          {evt.actionByName && (
+                            <span>
+                              By: <strong style={{ color: '#1e293b' }}>{evt.actionByName}</strong>
+                            </span>
+                          )}
+                          {evt.remarks && (
+                            <span style={{ color: '#64748b', fontStyle: 'italic' }}>"{evt.remarks}"</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-                    Current Status: {historySelectedProfile.status}
-                  </span>
-                </div>
-
-                {/* Historical Events Count */}
-                <div className="pt-3 flex items-center justify-between text-xs text-slate-500">
-                  <span>Authoritative timeline records from recruitment pipeline</span>
-                  <span className="font-bold text-slate-800">{processedTab3Events.length} genuine events recorded</span>
-                </div>
-              </div>
-
-              {/* Chronological Timeline & Events */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs text-left">
-                <h4 className="text-sm font-extrabold text-slate-900 mb-6 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span>Chronological Event Timeline</span>
-                </h4>
-
-                {processedTab3Events.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <HistoryIcon className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-700">No historical events recorded for this submission.</p>
-                    <p className="text-slate-400 mt-0.5">When interview rounds or status changes are made, they will appear here in chronological order.</p>
-                  </div>
-                ) : (
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    {processedTab3Events.map((evt, eIdx) => {
-                      const isSchedule = evt.eventType === 'INTERVIEW_SCHEDULED';
-                      const isSelect = evt.eventType === 'SELECTED' || (evt.eventType === 'INTERVIEW_COMPLETED' && (evt.newStatus || '').toLowerCase().includes('select'));
-                      const isReject = evt.eventType === 'REJECTED';
-                      const isAlloc = evt.eventType === 'ALLOCATED';
-
-                      let badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
-                      let dotColor = 'bg-blue-600';
-                      if (isSelect || isAlloc) {
-                        badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                        dotColor = 'bg-emerald-600';
-                      } else if (isReject) {
-                        badgeColor = 'bg-rose-100 text-rose-800 border-rose-200';
-                        dotColor = 'bg-rose-600';
-                      } else if (isSchedule) {
-                        badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
-                        dotColor = 'bg-indigo-600';
-                      }
-
-                      return (
-                        <div key={eIdx} className="relative group text-left">
-                          {/* Timeline node dot */}
-                          <div
-                            className={`absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-xs ${dotColor}`}
-                          />
-
-                          <div className="bg-slate-50/80 rounded-xl border border-slate-200/80 p-4 hover:bg-slate-50 transition-colors">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2">
-                                <Badge className={`text-xs font-bold ${badgeColor}`}>
-                                  {evt.eventType ? evt.eventType.replace(/_/g, ' ') : 'EVENT'}
-                                </Badge>
-                                <span className="font-bold text-slate-900 text-sm">
-                                  {evt.newStatus || evt.eventType}
-                                </span>
-                              </div>
-                              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
-                                {formatISTDateTime(evt.timestamp)}
-                              </span>
-                            </div>
-
-                            {/* Event details */}
-                            <div className="text-xs text-slate-600 space-y-1.5 mt-2">
-                              {evt.actionByName && (
-                                <p className="font-semibold text-slate-700">
-                                  Action by: <span className="text-slate-900">{evt.actionByName}</span>
-                                  {evt.actionByEmail && (
-                                    <span className="text-slate-400 font-normal ml-1">({evt.actionByEmail})</span>
-                                  )}
-                                </p>
-                              )}
-                              {evt.roundLevel && (
-                                <p className="text-slate-700">
-                                  Interview Round:{' '}
-                                  <span className="font-bold text-indigo-700">{evt.roundLevel}</span>
-                                </p>
-                              )}
-                              {evt.rating && (
-                                <div className="flex items-center gap-1 text-amber-600 font-bold">
-                                  <span>Rating:</span>
-                                  <div className="flex items-center">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`w-3.5 h-3.5 ${
-                                          i < evt.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="ml-1 text-slate-700 text-xs">({evt.rating}/5)</span>
-                                  </div>
-                                </div>
-                              )}
-                              {evt.remarks && (
-                                <div className="mt-2 p-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs">
-                                  <span className="font-semibold text-slate-500 block mb-0.5">Notes / Feedback:</span>
-                                  {evt.remarks}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                          {formatISTDateTime(evt.timestamp)}
                         </div>
-                      );
-                    })}
+                        {(isToday || isYesterday) && (
+                          <div style={{ marginTop: '2px' }}>
+                            <span
+                              style={{
+                                padding: '1px 8px',
+                                borderRadius: '9999px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                background: isToday ? '#dbeafe' : '#fef3c7',
+                                color: isToday ? '#1d4ed8' : '#92400e',
+                              }}
+                            >
+                              {isToday ? 'Today' : 'Yesterday'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          handleOpenProfileHistory(
+                            {
+                              resourceId: evt.resourceId,
+                              resourceType: evt.resourceType,
+                              resourceName: evt.resourceName,
+                              demandId: evt.demandId,
+                              sharedAt: evt.sharedAt,
+                            },
+                            {
+                              demandid: evt.demandId,
+                              demandTitle: evt.demandTitle,
+                              accountName: evt.clientName,
+                            },
+                            e
+                          )
+                        }
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          height: '32px',
+                          padding: '0 12px',
+                          borderRadius: '10px',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <HistoryIcon className="w-3.5 h-3.5" />
+                        <span>Timeline</span>
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
