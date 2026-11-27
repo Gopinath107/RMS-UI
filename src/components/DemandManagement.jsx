@@ -1102,13 +1102,12 @@ export default function DemandManagement() {
   }, [myInterviews]);
 
   const interviewDemandOptions = useMemo(() => {
-    const map = new Map();
+    const set = new Set();
     myInterviews.forEach((iv) => {
-      if (iv.demandId) {
-        map.set(String(iv.demandId), iv.demandTitle || `Demand #${iv.demandId}`);
-      }
+      const t = (iv.demandTitle || '').trim();
+      if (t) set.add(t);
     });
-    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+    return Array.from(set).sort();
   }, [myInterviews]);
 
   const interviewLevelOptions = useMemo(() => {
@@ -1141,23 +1140,25 @@ export default function DemandManagement() {
         const c = (iv.accountName || iv.projectName || '').trim();
         if (c !== interviewClientFilter) return false;
       }
-      // Demand filter
+      // Demand filter (by Demand Title, no Demand ID)
       if (interviewDemandFilter !== 'ALL') {
-        if (String(iv.demandId) !== String(interviewDemandFilter)) return false;
+        const t = (iv.demandTitle || '').trim();
+        if (t !== interviewDemandFilter) return false;
       }
       // Interview Level filter
       if (interviewLevelFilter !== 'ALL') {
         if (getInterviewLevel(iv) !== interviewLevelFilter) return false;
       }
-      // Search
+      // Search across candidate, demand, level, client, notes
       if (interviewSearchQuery.trim()) {
         const q = interviewSearchQuery.toLowerCase();
         const cand = (iv.candidateName || iv.employeeName || '').toLowerCase();
         const dem = (iv.demandTitle || '').toLowerCase();
         const proj = (iv.projectName || iv.accountName || '').toLowerCase();
+        const lvl = (getInterviewLevel(iv) || '').toLowerCase();
         const notes = (iv.feedback || iv.overallNotes || '').toLowerCase();
         const id = String(iv.interviewId || '');
-        if (!cand.includes(q) && !dem.includes(q) && !proj.includes(q) && !notes.includes(q) && !id.includes(q)) {
+        if (!cand.includes(q) && !dem.includes(q) && !proj.includes(q) && !lvl.includes(q) && !notes.includes(q) && !id.includes(q)) {
           return false;
         }
       }
@@ -3675,9 +3676,9 @@ export default function DemandManagement() {
                   }}
                 >
                   <option value="ALL">All Demands ({interviewDemandOptions.length})</option>
-                  {interviewDemandOptions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      #DM-{d.id} - {d.title}
+                  {interviewDemandOptions.map((title) => (
+                    <option key={title} value={title}>
+                      {title}
                     </option>
                   ))}
                 </select>
@@ -3705,11 +3706,11 @@ export default function DemandManagement() {
                   ))}
                 </select>
 
-                <div style={{ width: '260px', flexShrink: 0 }}>
+                <div style={{ width: '280px', flexShrink: 0 }}>
                   <SearchFilter
                     value={interviewSearchQuery}
                     onChange={(val) => setInterviewSearchQuery(val)}
-                    placeholder="Search candidate, demand..."
+                    placeholder="Search candidate, demand, level, client..."
                   />
                 </div>
               </div>
@@ -3754,7 +3755,7 @@ export default function DemandManagement() {
                 )}
                 {interviewDemandFilter !== 'ALL' && (
                   <span style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '2px 10px', borderRadius: '6px', fontWeight: 600 }}>
-                    Demand: <strong>#DM-{interviewDemandFilter}</strong>
+                    Demand: <strong>{interviewDemandFilter}</strong>
                   </span>
                 )}
                 {interviewLevelFilter !== 'ALL' && (
