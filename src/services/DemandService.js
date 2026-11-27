@@ -122,11 +122,13 @@ createDepartment: async (payload) => {
 
   /**
    * Fetches the shared profiles summary metrics (Today, Yesterday, Total events vs unique resources)
-   * and recent records.
+   * and recent records, optionally scoped to a specific user.
    */
-  fetchSharedProfilesSummary: async function () {
+  fetchSharedProfilesSummary: async function (userId = null) {
     try {
-      const response = await api.get('/demands/shared-profiles/summary');
+      const params = {};
+      if (userId) params.userId = userId;
+      const response = await api.get('/demands/shared-profiles/summary', { params });
       return response.data?.result || response.data;
     } catch (error) {
       console.error('Error fetching shared profiles summary:', error);

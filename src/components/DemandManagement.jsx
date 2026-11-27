@@ -108,6 +108,20 @@ const getYesterdayISTString = () => {
   }).format(d);
 };
 
+const getInterviewScheduledDate = (iv) => {
+  if (!iv) return null;
+  if (iv.scheduledAt) return iv.scheduledAt;
+  if (iv.scheduledAtText) return iv.scheduledAtText;
+  if (Array.isArray(iv.levelProgress)) {
+    for (const lvl of iv.levelProgress) {
+      if (lvl.level !== '__META__' && lvl.scheduledAt) {
+        return lvl.scheduledAt;
+      }
+    }
+  }
+  return null;
+};
+
 const matchesDateFilter = (dateVal, filterType, fromDate, toDate) => {
   if (!filterType || filterType === 'all') return true;
   if (!dateVal) return false;
@@ -139,6 +153,21 @@ const matchesDateFilter = (dateVal, filterType, fromDate, toDate) => {
 const formatISTDateTime = (dateVal) => {
   if (!dateVal) return 'N/A';
   try {
+    if (typeof dateVal === 'string' && /^\d{2}-\d{2}-\d{4}\s+\d{2}[-:]\d{2}/.test(dateVal)) {
+      const [dPart, tPart] = dateVal.split(/\s+/);
+      const [day, month, year] = dPart.split('-');
+      const [hour, min] = tPart.split(/[-:]/);
+      const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min));
+      return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(d);
+    }
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return String(dateVal);
     return new Intl.DateTimeFormat('en-IN', {
@@ -673,14 +702,14 @@ export default function DemandManagement() {
   const loadSharedSummary = useCallback(async () => {
     try {
       setSharedSummaryLoading(true);
-      const data = await DemandService.fetchSharedProfilesSummary();
+      const data = await DemandService.fetchSharedProfilesSummary(currentUserId);
       setSharedSummary(data);
     } catch (err) {
       console.error('Failed to load shared profiles summary in DemandManagement:', err);
     } finally {
       setSharedSummaryLoading(false);
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     loadData();
@@ -696,6 +725,9 @@ export default function DemandManagement() {
         size: submittedProfilesPerPage,
         dateFilter: subDateFilter,
       };
+      if (currentUserId) {
+        params.userId = currentUserId;
+      }
       if (subDateFilter === 'custom') {
         if (subFromDate) params.fromDate = subFromDate;
         if (subToDate) params.toDate = subToDate;
@@ -716,16 +748,15 @@ export default function DemandManagement() {
       }
 
       const res = await DemandService.fetchSharedProfilesList(params);
+      let records = [];
       if (res && res.content) {
-        setSubmittedProfiles(res.content);
-        setSubmittedProfilesTotal(res.totalElements || res.content.length);
+        records = res.content;
       } else if (Array.isArray(res)) {
-        setSubmittedProfiles(res);
-        setSubmittedProfilesTotal(res.length);
-      } else {
-        setSubmittedProfiles([]);
-        setSubmittedProfilesTotal(0);
+        records = res;
       }
+
+      setSubmittedProfiles(records);
+      setSubmittedProfilesTotal(records.length);
     } catch (err) {
       console.error('Failed to load submitted profiles list:', err);
       toast.error('Failed to load submitted profiles');
@@ -733,6 +764,7 @@ export default function DemandManagement() {
       setSubmittedProfilesLoading(false);
     }
   }, [
+    currentUserId,
     submittedProfilesPage,
     submittedProfilesPerPage,
     subDateFilter,
@@ -766,6 +798,62 @@ export default function DemandManagement() {
       setHistoryLoading(false);
     }
   }, []);
+
+  // User-scoped submitted profiles filter
+  const userDemandIds = useMemo(() => {
+    return new Set(scopedDemands.map((d) => Number(d.demandid)));
+  }, [scopedDemands]);
+
+  const isProfileAccordingToUser = useCallback(
+    (profile) => {
+      if (!profile) return false;
+      if (currentUserId && profile.submittedByUserId && Number(profile.submittedByUserId) === currentUserId) {
+        return true;
+      }
+      if (currentUserName && profile.submittedByName && profile.submittedByName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
+        return true;
+      }
+      if (profile.demandId && userDemandIds.has(Number(profile.demandId))) {
+        return true;
+      }
+      return false;
+    },
+    [currentUserId, currentUserName, userDemandIds]
+  );
+
+  const userSubmittedProfiles = useMemo(() => {
+    return submittedProfiles.filter((p) => isProfileAccordingToUser(p));
+  }, [submittedProfiles, isProfileAccordingToUser]);
+
+  const userTodaySubmissionsCount = useMemo(() => {
+    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today')).length;
+  }, [userSubmittedProfiles]);
+
+  const userYesterdaySubmissionsCount = useMemo(() => {
+    return userSubmittedProfiles.filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday')).length;
+  }, [userSubmittedProfiles]);
+
+  const userTodayUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles
+      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'today'))
+      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
+
+  const userYesterdayUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles
+      .filter((p) => matchesDateFilter(p.submittedAt || p.submittedDate, 'yesterday'))
+      .forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
+
+  const userTotalUnique = useMemo(() => {
+    const set = new Set();
+    userSubmittedProfiles.forEach((p) => set.add(`${p.resourceType}_${p.resourceId}`));
+    return set.size;
+  }, [userSubmittedProfiles]);
 
   // Extract all profiles associated with a demand by unifying sharedResumes & demandFlow childRequestDetails
   const getProfilesForDemand = useCallback(
@@ -1759,13 +1847,13 @@ export default function DemandManagement() {
             boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
           }}
         >
-          {/* ── Active Demands Filter Toolbar (Clean Responsive Two-Row Layout) ── */}
+          {/* ── Active Demands Filter Toolbar (Clean Structured Layout) ── */}
           <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4 text-left">
-            {/* Primary Row: Scope Switcher + Status Filters + View Mode Toggle + Refresh */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between" style={{ gap: '14px' }}>
-              <div className="flex flex-wrap items-center" style={{ gap: '14px' }}>
+            {/* Primary Row: Scope Badge + Date Quick-Filters + View Mode Toggle & Refresh */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* User Scope Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/90 border border-blue-200/90 rounded-xl text-blue-900 shadow-2xs">
                   <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                   <span className="text-xs font-bold text-slate-800">{currentUserName}</span>
                   <span className="text-xs font-extrabold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
@@ -1773,10 +1861,10 @@ export default function DemandManagement() {
                   </span>
                 </div>
 
-                {/* Demand Date Quick-Filters (Today, Yesterday, Last 7 Days, Custom Date Range) */}
-                <div className="inline-flex items-center flex-wrap gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-blue-600" />
+                {/* Demand Date Quick-Filters (All, Today, Yesterday, Last 7 Days, Custom Date) */}
+                <div className="inline-flex items-center flex-wrap gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
                     Created:
                   </span>
                   {[
@@ -1795,17 +1883,17 @@ export default function DemandManagement() {
                           setDemandDateFilter(df.id);
                           setCurrentPage(1);
                         }}
-                        className={`h-7 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                        className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
                           isAct
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
                         <span>{df.label}</span>
                         {df.count !== null && (
                           <span
-                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                              isAct ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'
+                            className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
+                              isAct ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
                             }`}
                           >
                             {df.count}
@@ -1815,130 +1903,11 @@ export default function DemandManagement() {
                     );
                   })}
                 </div>
-
-                {/* Custom Date Inputs if Custom is selected */}
-                {demandDateFilter === 'custom' && (
-                  <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-blue-200 shadow-2xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">From:</span>
-                      <input
-                        type="date"
-                        value={demandFromDate}
-                        onChange={(e) => {
-                          setDemandFromDate(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">To:</span>
-                      <input
-                        type="date"
-                        value={demandToDate}
-                        onChange={(e) => {
-                          setDemandToDate(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
-                      />
-                    </div>
-                    {(demandFromDate || demandToDate) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDemandFromDate('');
-                          setDemandToDate('');
-                          setCurrentPage(1);
-                        }}
-                        className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer"
-                        title="Clear Dates"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Subtle Divider between Scope and Status Filters */}
-                <div className="hidden md:block" style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
-
-                {/* Status Filter Pills — Distinct, spaced, individual pill buttons */}
-                <div
-                  className="inline-flex items-center flex-wrap"
-                  style={{ gap: '8px' }}
-                >
-                  {[
-                    { id: 'ALL', label: 'All Statuses', dot: null },
-                    { id: 'INPROGRESS', label: 'In Progress', dot: '#f59e0b' },
-                    { id: 'OPEN', label: 'Open', dot: '#3b82f6' },
-                    { id: 'COMPLETED', label: 'Completed', dot: '#10b981' },
-                  ].map((tab) => {
-                    const isActive = statusFilter === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter(tab.id);
-                          setCurrentPage(1);
-                        }}
-                        className="transition-all cursor-pointer inline-flex items-center"
-                        style={{
-                          height: '36px',
-                          padding: '0 16px',
-                          fontSize: '12px',
-                          fontWeight: isActive ? 700 : 600,
-                          borderRadius: '10px',
-                          border: isActive ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
-                          background: isActive ? '#2563eb' : '#ffffff',
-                          color: isActive ? '#ffffff' : '#475569',
-                          boxShadow: isActive
-                            ? '0 2px 6px rgba(37,99,235,0.25)'
-                            : '0 1px 2px rgba(0,0,0,0.03)',
-                          gap: '7px',
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.borderColor = '#cbd5e1';
-                            e.currentTarget.style.background = '#f8fafc';
-                            e.currentTarget.style.color = '#0f172a';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.background = '#ffffff';
-                            e.currentTarget.style.color = '#475569';
-                          }
-                        }}
-                      >
-                        {tab.dot && (
-                          <span
-                            style={{
-                              width: '7px',
-                              height: '7px',
-                              borderRadius: '9999px',
-                              backgroundColor: isActive ? '#ffffff' : tab.dot,
-                              display: 'inline-block',
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <span>{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               {/* Right: View Mode Toggle & Refresh */}
-              <div className="flex items-center self-start lg:self-center" style={{ gap: '10px' }}>
-                <div
-                  className="inline-flex bg-white p-1 rounded-xl border border-slate-200 h-10 items-center shadow-xs"
-                  style={{ gap: '4px' }}
-                >
+              <div className="flex items-center gap-2.5 self-start lg:self-center">
+                <div className="inline-flex bg-white p-1 rounded-xl border border-slate-200 h-10 items-center shadow-xs gap-1">
                   <button
                     onClick={() => setViewMode('split')}
                     title="Split-Pane Master-Detail View"
@@ -1980,13 +1949,93 @@ export default function DemandManagement() {
               </div>
             </div>
 
-            {/* Secondary Row: Client Filter Dropdown + Reset + Search Field */}
-            <div
-              className="pt-3.5 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between"
-              style={{ gap: '14px' }}
-            >
-              {/* Left: Client Filter & Reset */}
-              <div className="flex items-center w-full sm:w-auto" style={{ gap: '10px' }}>
+            {/* Custom Date Drawer (Only rendered when Custom Date filter is active) */}
+            {demandDateFilter === 'custom' && (
+              <div className="flex items-center flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-blue-200 shadow-2xs">
+                <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  Custom Date Range:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">From:</span>
+                  <input
+                    type="date"
+                    value={demandFromDate}
+                    onChange={(e) => {
+                      setDemandFromDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">To:</span>
+                  <input
+                    type="date"
+                    value={demandToDate}
+                    onChange={(e) => {
+                      setDemandToDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                  />
+                </div>
+                {(demandFromDate || demandToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDemandFromDate('');
+                      setDemandToDate('');
+                      setCurrentPage(1);
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 cursor-pointer bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200"
+                    title="Clear Dates"
+                  >
+                    Clear Dates
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Secondary Row: Status Filter Pills on left, Client Filter + Search Field on right */}
+            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              {/* Left: Status Filter Pills */}
+              <div className="inline-flex items-center flex-wrap gap-2">
+                {[
+                  { id: 'ALL', label: 'All Statuses', dot: null },
+                  { id: 'INPROGRESS', label: 'In Progress', dot: '#f59e0b' },
+                  { id: 'OPEN', label: 'Open', dot: '#3b82f6' },
+                  { id: 'COMPLETED', label: 'Completed', dot: '#10b981' },
+                ].map((tab) => {
+                  const isActive = statusFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(tab.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 border ${
+                        isActive
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      {tab.dot && (
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: isActive ? '#ffffff' : tab.dot }}
+                        />
+                      )}
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right: Client Filter & Search Field */}
+              <div className="flex items-center gap-2.5 w-full md:w-auto">
                 <div className="relative">
                   <select
                     value={clientFilter}
@@ -1994,7 +2043,7 @@ export default function DemandManagement() {
                       setClientFilter(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-4 py-2 shadow-xs focus:ring-2 focus:ring-blue-400 min-w-[200px] h-10 transition-all cursor-pointer hover:border-slate-400"
+                    className="h-8 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                   >
                     <option value="ALL">All Clients ({clientOptions.length})</option>
                     {clientOptions.map((c) => (
@@ -2005,33 +2054,30 @@ export default function DemandManagement() {
                   </select>
                 </div>
 
-                {(searchQuery || statusFilter !== 'ALL' || clientFilter !== 'ALL' || scopeFilter !== 'ALL') && (
+                {(searchQuery || statusFilter !== 'ALL' || clientFilter !== 'ALL') && (
                   <button
                     onClick={() => {
                       setSearchQuery('');
                       setStatusFilter('ALL');
-                      setPriorityFilter('ALL');
                       setClientFilter('ALL');
-                      setScopeFilter('ALL');
                     }}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 rounded-xl transition-colors border border-rose-200 h-10 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors border border-rose-200 h-8 whitespace-nowrap flex items-center gap-1 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
-                    Reset Filters
+                    Reset
                   </button>
                 )}
-              </div>
 
-              {/* Right: Search Input */}
-              <div className="w-full sm:w-80 md:w-96">
-                <SearchFilter
-                  value={searchQuery}
-                  onChange={(val) => {
-                    setSearchQuery(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search by demand ID, title, client, skill..."
-                />
+                <div className="w-full sm:w-72 md:w-80">
+                  <SearchFilter
+                    value={searchQuery}
+                    onChange={(val) => {
+                      setSearchQuery(val);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search by demand ID, title, client..."
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -3088,9 +3134,9 @@ export default function DemandManagement() {
             boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
           }}
         >
-          {/* Toolbar: Scope, Date Filters, Status Pills, and Search */}
+          {/* ── Scheduled Interviews Filter Toolbar ── */}
           <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4 text-left">
-            {/* Primary Row: Scope Badge + Date Quick-Filters */}
+            {/* Primary Row: Scope Badge + Date Quick-Filters + Refresh */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 {/* User Scope Badge */}
@@ -3102,10 +3148,10 @@ export default function DemandManagement() {
                   </span>
                 </div>
 
-                {/* Date Quick-Filters (Today, Yesterday, Last 7 Days, Custom Date Range) */}
-                <div className="inline-flex items-center flex-wrap gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-blue-600" />
+                {/* Date Quick-Filters (All Time, Today, Yesterday, Last 7 Days, Custom Date) */}
+                <div className="inline-flex items-center flex-wrap gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
                     Scheduled:
                   </span>
                   {[
@@ -3121,17 +3167,17 @@ export default function DemandManagement() {
                         key={df.id}
                         type="button"
                         onClick={() => setInterviewDateFilter(df.id)}
-                        className={`h-7 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                        className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
                           isAct
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
                         <span>{df.label}</span>
                         {df.count !== null && (
                           <span
-                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                              isAct ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'
+                            className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
+                              isAct ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
                             }`}
                           >
                             {df.count}
@@ -3141,48 +3187,67 @@ export default function DemandManagement() {
                     );
                   })}
                 </div>
+              </div>
 
-                {/* Custom Date Inputs if Custom is selected */}
-                {interviewDateFilter === 'custom' && (
-                  <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-blue-200 shadow-2xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">From:</span>
-                      <input
-                        type="date"
-                        value={interviewFromDate}
-                        onChange={(e) => setInterviewFromDate(e.target.value)}
-                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold text-slate-500">To:</span>
-                      <input
-                        type="date"
-                        value={interviewToDate}
-                        onChange={(e) => setInterviewToDate(e.target.value)}
-                        className="h-7 text-xs border border-slate-200 rounded-md px-2 text-slate-800 focus:outline-blue-500"
-                      />
-                    </div>
-                    {(interviewFromDate || interviewToDate) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setInterviewFromDate('');
-                          setInterviewToDate('');
-                        }}
-                        className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer"
-                        title="Clear Dates"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                )}
+              {/* Refresh Interviews Button */}
+              <div className="flex items-center self-start lg:self-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadInterviews}
+                  disabled={interviewsLoading}
+                  className="h-10 px-3.5 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2"
+                  title="Refresh Scheduled Interviews"
+                >
+                  <RefreshCw className={`w-4 h-4 text-slate-600 ${interviewsLoading ? 'animate-spin' : ''}`} />
+                  <span className="text-xs font-semibold">Refresh</span>
+                </Button>
               </div>
             </div>
 
-            {/* Secondary Row: Status Pills + Search Input */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+            {/* Custom Date Inputs if Custom is selected */}
+            {interviewDateFilter === 'custom' && (
+              <div className="flex items-center flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-blue-200 shadow-2xs">
+                <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  Custom Date Range:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">From:</span>
+                  <input
+                    type="date"
+                    value={interviewFromDate}
+                    onChange={(e) => setInterviewFromDate(e.target.value)}
+                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">To:</span>
+                  <input
+                    type="date"
+                    value={interviewToDate}
+                    onChange={(e) => setInterviewToDate(e.target.value)}
+                    className="h-8 text-xs border border-slate-200 rounded-lg px-2.5 text-slate-800 focus:outline-blue-500 bg-slate-50/50"
+                  />
+                </div>
+                {(interviewFromDate || interviewToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInterviewFromDate('');
+                      setInterviewToDate('');
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 cursor-pointer bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200"
+                    title="Clear Dates"
+                  >
+                    Clear Dates
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Secondary Row: Status Pills on left + Search Input on right */}
+            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
               {/* Status Pills */}
               <div className="inline-flex items-center flex-wrap gap-2">
                 {[
@@ -3198,10 +3263,10 @@ export default function DemandManagement() {
                       key={st.id}
                       type="button"
                       onClick={() => setInterviewStatusFilter(st.id)}
-                      className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 border ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-2xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                       }`}
                     >
                       {st.dot && (
@@ -3218,13 +3283,13 @@ export default function DemandManagement() {
 
               {/* Search Bar */}
               <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search candidate, demand, interviewer..."
                   value={interviewSearchQuery}
                   onChange={(e) => setInterviewSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-9 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-blue-500 bg-white"
+                  className="w-full h-8 pl-8 pr-7 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-blue-500 bg-white shadow-2xs"
                 />
                 {interviewSearchQuery && (
                   <button
@@ -3530,8 +3595,15 @@ export default function DemandManagement() {
               </div>
             </div>
 
-            {/* 3 Executive Metric Cards as Interactive Date Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-4">
+            {/* 3 Executive Metric Cards as Interactive Date Selectors - Forced 3-Column Grid */}
+            <div
+              className="mt-4"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: '16px',
+              }}
+            >
               {/* Today Card */}
               <button
                 type="button"
@@ -3541,8 +3613,8 @@ export default function DemandManagement() {
                 }}
                 className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
                   subDateFilter === 'today'
-                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/30 shadow-xs'
-                    : 'border-slate-200/90 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/40 shadow-xs'
+                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
@@ -3554,13 +3626,15 @@ export default function DemandManagement() {
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-2">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.todayEvents || 0}
+                    {sharedSummary?.todayEvents ?? userTodaySubmissionsCount}
                   </span>
                   <span className="text-xs text-slate-500 font-medium">submission events</span>
                 </div>
                 <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
                   <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span className="font-semibold text-blue-800 truncate">{sharedSummary?.todayUnique || 0} unique resources</span>
+                  <span className="font-semibold text-blue-800 truncate">
+                    {sharedSummary?.todayUnique ?? userTodayUnique} unique resources
+                  </span>
                 </div>
               </button>
 
@@ -3573,8 +3647,8 @@ export default function DemandManagement() {
                 }}
                 className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
                   subDateFilter === 'yesterday'
-                    ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/30 shadow-xs'
-                    : 'border-slate-200/90 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40 shadow-xs'
+                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
@@ -3586,13 +3660,15 @@ export default function DemandManagement() {
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-2">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.yesterdayEvents || 0}
+                    {sharedSummary?.yesterdayEvents ?? userYesterdaySubmissionsCount}
                   </span>
                   <span className="text-xs text-slate-500 font-medium">submission events</span>
                 </div>
                 <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
                   <UserCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  <span className="font-semibold text-purple-800 truncate">{sharedSummary?.yesterdayUnique || 0} unique resources</span>
+                  <span className="font-semibold text-purple-800 truncate">
+                    {sharedSummary?.yesterdayUnique ?? userYesterdayUnique} unique resources
+                  </span>
                 </div>
               </button>
 
@@ -3605,8 +3681,8 @@ export default function DemandManagement() {
                 }}
                 className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
                   subDateFilter === 'all'
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/30 shadow-xs'
-                    : 'border-slate-200/90 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 shadow-xs'
+                    : 'border-slate-200/90 bg-white hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
@@ -3618,29 +3694,31 @@ export default function DemandManagement() {
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-2">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-none">
-                    {sharedSummary?.totalEvents ?? (stats.totalProfilesShared || 0)}
+                    {sharedSummary?.totalEvents ?? userSubmittedProfiles.length}
                   </span>
                   <span className="text-xs text-slate-500 font-medium">total submissions</span>
                 </div>
                 <div className="mt-3 text-xs text-slate-600 flex items-center gap-1.5 pt-2 border-t border-slate-200/70">
                   <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="font-semibold text-emerald-800 truncate">{sharedSummary?.totalUnique ?? 0} unique resources</span>
+                  <span className="font-semibold text-emerald-800 truncate">
+                    {sharedSummary?.totalUnique ?? userTotalUnique} unique resources
+                  </span>
                 </div>
               </button>
             </div>
           </div>
 
           {/* Filter Toolbar for Submitted Profiles */}
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-3.5">
+          <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-4">
             {/* Row 1: Date Presets & Reset Filters */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl flex-wrap">
+              <div className="inline-flex items-center flex-wrap gap-2">
                 {[
-                  { id: 'today', label: `Today (${sharedSummary?.todayEvents || 0})` },
-                  { id: 'yesterday', label: `Yesterday (${sharedSummary?.yesterdayEvents || 0})` },
-                  { id: 'last7days', label: 'Last 7 Days' },
-                  { id: 'all', label: `All Recent (${sharedSummary?.totalEvents ?? (stats.totalProfilesShared || 0)})` },
-                  { id: 'custom', label: 'Custom Range' },
+                  { id: 'today', label: 'Today', count: sharedSummary?.todayEvents ?? userTodaySubmissionsCount },
+                  { id: 'yesterday', label: 'Yesterday', count: sharedSummary?.yesterdayEvents ?? userYesterdaySubmissionsCount },
+                  { id: 'last7days', label: 'Last 7 Days', count: null },
+                  { id: 'all', label: 'All Recent', count: sharedSummary?.totalEvents ?? userSubmittedProfiles.length },
+                  { id: 'custom', label: 'Custom Range', count: null },
                 ].map((preset) => {
                   const isActive = subDateFilter === preset.id;
                   return (
@@ -3651,14 +3729,22 @@ export default function DemandManagement() {
                         setSubDateFilter(preset.id);
                         setSubmittedProfilesPage(1);
                       }}
-                      className="h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                      style={
+                      className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 border ${
                         isActive
-                          ? { background: '#2563eb', color: '#ffffff', boxShadow: '0 2px 6px rgba(37,99,235,0.25)' }
-                          : { background: 'transparent', color: '#475569' }
-                      }
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
                     >
-                      {preset.label}
+                      <span>{preset.label}</span>
+                      {preset.count !== null && (
+                        <span
+                          className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${
+                            isActive ? 'bg-blue-700/90 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {preset.count}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -3677,63 +3763,15 @@ export default function DemandManagement() {
               )}
             </div>
 
-            {/* Row 2: Dropdowns, Custom Date Pickers, Search & Refresh */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-100">
-              {/* Client Filter */}
-              <select
-                value={subClientFilter}
-                onChange={(e) => {
-                  setSubClientFilter(e.target.value);
-                  setSubmittedProfilesPage(1);
-                }}
-                className="h-10 text-xs font-semibold rounded-xl border border-slate-200 shadow-xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="ALL">All Clients ({clientOptions.length})</option>
-                {clientOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-
-              {/* Demand Filter */}
-              <select
-                value={subDemandFilter}
-                onChange={(e) => {
-                  setSubDemandFilter(e.target.value);
-                  setSubmittedProfilesPage(1);
-                }}
-                className="h-10 text-xs font-semibold rounded-xl border border-slate-200 shadow-xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[220px] truncate"
-              >
-                <option value="ALL">All Demands ({demands.length})</option>
-                {demands.map((d) => (
-                  <option key={d.demandid} value={d.demandid}>
-                    #{d.demandid} - {d.demandTitle}
-                  </option>
-                ))}
-              </select>
-
-              {/* Status Filter */}
-              <select
-                value={subStatusFilter}
-                onChange={(e) => {
-                  setSubStatusFilter(e.target.value);
-                  setSubmittedProfilesPage(1);
-                }}
-                className="h-10 text-xs font-semibold rounded-xl border border-slate-200 shadow-xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="Submitted">Submitted</option>
-                <option value="Scheduled">Interview Scheduled</option>
-                <option value="Selected">Selected</option>
-                <option value="Allocated">Allocated</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-
-              {/* Custom Date Pickers */}
-              {subDateFilter === 'custom' && (
-                <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-500 px-1">From:</span>
+            {/* Custom Date Pickers Drawer */}
+            {subDateFilter === 'custom' && (
+              <div className="flex items-center flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-blue-200 shadow-2xs">
+                <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  Custom Date Range:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">From:</span>
                   <input
                     type="date"
                     value={subFromDate}
@@ -3741,9 +3779,11 @@ export default function DemandManagement() {
                       setSubFromDate(e.target.value);
                       setSubmittedProfilesPage(1);
                     }}
-                    className="h-8 text-xs font-medium bg-white border border-slate-200 rounded-lg px-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-8 text-xs font-medium bg-slate-50/50 border border-slate-200 rounded-lg px-2.5 w-36 focus:outline-blue-500"
                   />
-                  <span className="text-[11px] font-bold text-slate-500 px-1">To:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500">To:</span>
                   <input
                     type="date"
                     value={subToDate}
@@ -3751,26 +3791,98 @@ export default function DemandManagement() {
                       setSubToDate(e.target.value);
                       setSubmittedProfilesPage(1);
                     }}
-                    className="h-8 text-xs font-medium bg-white border border-slate-200 rounded-lg px-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-8 text-xs font-medium bg-slate-50/50 border border-slate-200 rounded-lg px-2.5 w-36 focus:outline-blue-500"
                   />
                 </div>
-              )}
+                {(subFromDate || subToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubFromDate('');
+                      setSubToDate('');
+                      setSubmittedProfilesPage(1);
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-1 cursor-pointer bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200"
+                  >
+                    Clear Dates
+                  </button>
+                )}
+              </div>
+            )}
 
-              {/* Search Box */}
-              <div className="w-full sm:w-72 md:w-80 ml-auto flex items-center gap-2">
-                <SearchFilter
-                  value={subSearchInput}
-                  onChange={(val) => setSubSearchInput(val)}
-                  placeholder="Search candidate, email, demand, client..."
-                />
+            {/* Row 2: Dropdowns on left, Search Box + Refresh on right */}
+            <div className="pt-3.5 border-t border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              {/* Left: Dropdowns */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Client Filter */}
+                <select
+                  value={subClientFilter}
+                  onChange={(e) => {
+                    setSubClientFilter(e.target.value);
+                    setSubmittedProfilesPage(1);
+                  }}
+                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ALL">All Clients ({clientOptions.length})</option>
+                  {clientOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Demand Filter - scoped to user's demands */}
+                <select
+                  value={subDemandFilter}
+                  onChange={(e) => {
+                    setSubDemandFilter(e.target.value);
+                    setSubmittedProfilesPage(1);
+                  }}
+                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[220px] truncate"
+                >
+                  <option value="ALL">All Demands ({scopedDemands.length})</option>
+                  {scopedDemands.map((d) => (
+                    <option key={d.demandid} value={d.demandid}>
+                      #DM-{d.demandid} - {d.demandTitle}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Status Filter */}
+                <select
+                  value={subStatusFilter}
+                  onChange={(e) => {
+                    setSubStatusFilter(e.target.value);
+                    setSubmittedProfilesPage(1);
+                  }}
+                  className="h-8 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs bg-white text-slate-700 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Scheduled">Interview Scheduled</option>
+                  <option value="Selected">Selected</option>
+                  <option value="Allocated">Allocated</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Right: Search Box & Refresh */}
+              <div className="flex items-center gap-2.5 w-full md:w-auto">
+                <div className="w-full sm:w-72 md:w-80">
+                  <SearchFilter
+                    value={subSearchInput}
+                    onChange={(val) => setSubSearchInput(val)}
+                    placeholder="Search candidate, email, demand, client..."
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={loadSubmittedProfiles}
                   disabled={submittedProfilesLoading}
                   title="Reload submitted profiles"
-                  className="h-10 w-10 p-0 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 shadow-xs flex items-center justify-center shrink-0 transition-colors"
+                  className="h-8 w-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-blue-600 shadow-2xs flex items-center justify-center shrink-0 transition-colors"
                 >
-                  <RefreshCw className={`w-4 h-4 ${submittedProfilesLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${submittedProfilesLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
@@ -3782,7 +3894,7 @@ export default function DemandManagement() {
               <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
               <p className="text-sm font-semibold text-slate-700">Loading Submitted Profiles...</p>
             </div>
-          ) : submittedProfiles.length === 0 ? (
+          ) : userSubmittedProfiles.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6">
               <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-800">
@@ -3827,7 +3939,7 @@ export default function DemandManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {submittedProfiles.map((p, idx) => {
+                    {userSubmittedProfiles.map((p, idx) => {
                       const isInternal = p.resourceType === 'INTERNAL' || p.resourceType === 'EMPLOYEE';
                       const stableKey = p.requestId || `${p.demandId}_${p.resourceType}_${p.resourceId}_${p.submittedAt || idx}`;
                       const matchedDemand = demands.find(d => String(d.demandid) === String(p.demandId));
@@ -3996,11 +4108,11 @@ export default function DemandManagement() {
               <div className="p-4 border-t border-slate-200 bg-slate-50/50">
                 <Pagination
                   currentPage={submittedProfilesPage}
-                  totalPages={Math.max(1, Math.ceil(submittedProfilesTotal / submittedProfilesPerPage))}
+                  totalPages={Math.max(1, Math.ceil(userSubmittedProfiles.length / submittedProfilesPerPage))}
                   onPageChange={setSubmittedProfilesPage}
                   itemsPerPage={submittedProfilesPerPage}
                   onItemsPerPageChange={setSubmittedProfilesPerPage}
-                  totalItems={submittedProfilesTotal}
+                  totalItems={userSubmittedProfiles.length}
                   label="submitted profiles"
                 />
               </div>
